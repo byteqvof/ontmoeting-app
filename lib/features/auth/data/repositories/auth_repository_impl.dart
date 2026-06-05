@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 
 import '../../../../core/errors/failures.dart';
 import '../../../../core/utils/app_logger.dart';
+import '../../domain/entities/auth_oauth_provider.dart';
 import '../../domain/entities/auth_user.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../datasources/auth_remote_data_source.dart';
@@ -31,6 +32,16 @@ class AuthRepositoryImpl implements AuthRepository {
     return _guardNetworkCall(
       operation: 'signIn',
       () => _remoteDataSource.signIn(email: email, password: password),
+    );
+  }
+
+  @override
+  Future<Either<Failure, void>> signInWithOAuth(
+    AuthOAuthProvider provider,
+  ) async {
+    return _guardNetworkCall(
+      operation: 'signInWithOAuth:${provider.name}',
+      () => _remoteDataSource.signInWithOAuth(provider),
     );
   }
 

@@ -3,16 +3,16 @@ import 'package:flutter/material.dart';
 class TochColors {
   const TochColors._();
 
-  static const green = Color(0xFF1F4D3A);
-  static const green700 = Color(0xFF2E5C48);
-  static const green200 = Color(0xFFD9E6DE);
-  static const green100 = Color(0xFFE9F1EC);
-  static const orange = Color(0xFFE8833A);
-  static const orangeSoft = Color(0xFFF0A968);
-  static const cream = Color(0xFFF2EFE9);
-  static const card = Color(0xFFFBFAF6);
-  static const ink = Color(0xFF1B1B18);
-  static const line = Color(0x241F4D3A);
+  static const green = Color(0xFF1E5740);
+  static const green700 = Color(0xFF404843);
+  static const green200 = Color(0xFFD6E5DC);
+  static const green100 = Color(0xFFE6EFE9);
+  static const orange = Color(0xFFE0913A);
+  static const orangeSoft = Color(0xFFFBEEDB);
+  static const cream = Color(0xFFF5F2EB);
+  static const card = Color(0xFFFFFFFF);
+  static const ink = Color(0xFF19211C);
+  static const line = Color(0xFFEBE6DB);
   static const categoryVisel = Color(0xFF3E8E8C);
   static const categoryKoffie = Color(0xFFB07A52);
   static const categoryPaars = Color(0xFF7E5C9E);

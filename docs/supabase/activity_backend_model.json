@@ -1,0 +1,409 @@
+{
+  "name": "TOCH activity backend model",
+  "version": 1,
+  "purpose": "Supabase data model and API contract for location-based activity discovery in the TOCH Flutter app.",
+  "agent_instructions": {
+    "goal": "Create a production-ready Supabase backend for location-based activities.",
+    "must_use": [
+      "Postgres tables with UUID primary keys",
+      "Supabase Auth user ids for profiles and hosts",
+      "PostGIS for location-based queries",
+      "activity_categories as the single source of truth for category label, icon_key, color_hex and background_color_hex",
+      "Row Level Security policies",
+      "RPC or Edge Function for nearby feed queries"
+    ],
+    "do_not_use": [
+      "display-only date labels as source of truth",
+      "hardcoded distances",
+      "comma-separated participant fields",
+      "client-side distance filtering for production"
+    ]
+  },
+  "database_extensions": [
+    {
+      "name": "postgis",
+      "reason": "Required for efficient radius queries with ST_DWithin and distance sorting."
+    },
+    {
+      "name": "pgcrypto",
+      "reason": "Required for gen_random_uuid() if not already enabled."
+    }
+  ],
+  "enums": {
+    "activity_status": ["draft", "published", "cancelled", "completed"],
+    "participant_status": ["joined", "cancelled", "waitlisted"],
+    "visibility": ["public", "private"]
+  },
+  "tables": {
+    "profiles": {
+      "description": "Public app profile linked to Supabase Auth.",
+      "columns": {
+        "id": {
+          "type": "uuid",
+          "primary_key": true,
+          "references": "auth.users.id"
+        },
+        "display_name": {
+          "type": "text",
+          "required": true
+        },
+        "initials": {
+          "type": "text",
+          "required": true
+        },
+        "city_name": {
+          "type": "text",
+          "required": false
+        },
+        "avatar_url": {
+          "type": "text",
+          "required": false
+        },
+        "attendance_score": {
+          "type": "integer",
+          "required": true,
+          "default": 100
+        },
+        "is_verified": {
+          "type": "boolean",
+          "required": true,
+          "default": false
+        },
+        "created_at": {
+          "type": "timestamptz",
+          "required": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "type": "timestamptz",
+          "required": true,
+          "default": "now()"
+        }
+      }
+    },
+    "activity_categories": {
+      "description": "Reusable category definitions for filtering and rendering. This table owns all category presentation metadata: label, icon_key, color_hex and background_color_hex.",
+      "columns": {
+        "id": {
+          "type": "uuid",
+          "primary_key": true,
+          "default": "gen_random_uuid()"
+        },
+        "slug": {
+          "type": "text",
+          "required": true,
+          "unique": true,
+          "examples": [
+            "fishing",
+            "walking",
+            "coffee",
+            "sport",
+            "gaming",
+            "motor",
+            "boardgames",
+            "photo",
+            "social"
+          ]
+        },
+        "label": {
+          "type": "text",
+          "required": true
+        },
+        "icon_key": {
+          "type": "text",
+          "required": true,
+          "description": "Flutter maps this key to an IconData locally."
+        },
+        "color_hex": {
+          "type": "text",
+          "required": true
+        },
+        "background_color_hex": {
+          "type": "text",
+          "required": true
+        },
+        "sort_order": {
+          "type": "integer",
+          "required": true,
+          "default": 0
+        },
+        "is_active": {
+          "type": "boolean",
+          "required": true,
+          "default": true
+        }
+      }
+    },
+    "activities": {
+      "description": "Canonical activity table. Location and time fields here are source of truth.",
+      "columns": {
+        "id": {
+          "type": "uuid",
+          "primary_key": true,
+          "default": "gen_random_uuid()"
+        },
+        "host_id": {
+          "type": "uuid",
+          "required": true,
+          "references": "profiles.id"
+        },
+        "category_id": {
+          "type": "uuid",
+          "required": true,
+          "references": "activity_categories.id"
+        },
+        "title": {
+          "type": "text",
+          "required": true
+        },
+        "description": {
+          "type": "text",
+          "required": true
+        },
+        "meeting_point": {
+          "type": "text",
+          "required": true,
+          "examples": ["Vertrek P+R Valkenburg"]
+        },
+        "city_name": {
+          "type": "text",
+          "required": true,
+          "examples": ["Maastricht", "Valkenburg"]
+        },
+        "address_line": {
+          "type": "text",
+          "required": false
+        },
+        "latitude": {
+          "type": "double precision",
+          "required": true,
+          "description": "Can be stored directly or generated from location geography."
+        },
+        "longitude": {
+          "type": "double precision",
+          "required": true,
+          "description": "Can be stored directly or generated from location geography."
+        },
+        "location": {
+          "type": "geography(Point,4326)",
+          "required": true,
+          "description": "Use ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)::geography."
+        },
+        "start_at": {
+          "type": "timestamptz",
+          "required": true
+        },
+        "end_at": {
+          "type": "timestamptz",
+          "required": false
+        },
+        "timezone": {
+          "type": "text",
+          "required": true,
+          "default": "Europe/Amsterdam"
+        },
+        "capacity": {
+          "type": "integer",
+          "required": true,
+          "description": "Maximum number of participants excluding or including host must be decided and documented."
+        },
+        "status": {
+          "type": "activity_status",
+          "required": true,
+          "default": "published"
+        },
+        "visibility": {
+          "type": "visibility",
+          "required": true,
+          "default": "public"
+        },
+        "created_at": {
+          "type": "timestamptz",
+          "required": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "type": "timestamptz",
+          "required": true,
+          "default": "now()"
+        }
+      },
+      "constraints": [
+        "capacity > 0",
+        "start_at > now() for new published activities",
+        "latitude between -90 and 90",
+        "longitude between -180 and 180"
+      ],
+      "indexes": [
+        {
+          "name": "activities_location_gist_idx",
+          "type": "gist",
+          "columns": ["location"],
+          "reason": "Required for fast radius queries."
+        },
+        {
+          "name": "activities_start_at_idx",
+          "type": "btree",
+          "columns": ["start_at"]
+        },
+        {
+          "name": "activities_category_id_idx",
+          "type": "btree",
+          "columns": ["category_id"]
+        },
+        {
+          "name": "activities_status_visibility_idx",
+          "type": "btree",
+          "columns": ["status", "visibility"]
+        }
+      ]
+    },
+    "activity_participants": {
+      "description": "Join table for attendees, waitlist, cancellation and current user joined state.",
+      "columns": {
+        "id": {
+          "type": "uuid",
+          "primary_key": true,
+          "default": "gen_random_uuid()"
+        },
+        "activity_id": {
+          "type": "uuid",
+          "required": true,
+          "references": "activities.id",
+          "on_delete": "cascade"
+        },
+        "user_id": {
+          "type": "uuid",
+          "required": true,
+          "references": "profiles.id"
+        },
+        "status": {
+          "type": "participant_status",
+          "required": true,
+          "default": "joined"
+        },
+        "joined_at": {
+          "type": "timestamptz",
+          "required": true,
+          "default": "now()"
+        },
+        "cancelled_at": {
+          "type": "timestamptz",
+          "required": false
+        }
+      },
+      "constraints": [
+        "unique(activity_id, user_id)"
+      ],
+      "indexes": [
+        {
+          "name": "activity_participants_activity_id_idx",
+          "type": "btree",
+          "columns": ["activity_id"]
+        },
+        {
+          "name": "activity_participants_user_id_idx",
+          "type": "btree",
+          "columns": ["user_id"]
+        }
+      ]
+    }
+  },
+  "recommended_rpc": {
+    "edge_function_name": "nearby-activities",
+    "name": "search_activities_nearby",
+    "input": {
+      "p_latitude": "double precision",
+      "p_longitude": "double precision",
+      "p_radius_km": "integer",
+      "p_category_id": "uuid nullable",
+      "p_limit": "integer default 50"
+    },
+    "behavior": [
+      "Only return activities where status = published and visibility = public.",
+      "Join activity_categories and return each activity with its category object.",
+      "Filter by radius using ST_DWithin(location, user_point, radius_km * 1000).",
+      "Calculate distance_km using ST_Distance(location, user_point) / 1000.",
+      "Sort by start_at ascending, then distance_km ascending.",
+      "Return participant preview and available spot count.",
+      "Return is_joined for auth.uid()."
+    ],
+    "sql_core": "ST_DWithin(a.location, ST_SetSRID(ST_MakePoint(p_longitude, p_latitude), 4326)::geography, p_radius_km * 1000)",
+    "distance_expression": "round((ST_Distance(a.location, ST_SetSRID(ST_MakePoint(p_longitude, p_latitude), 4326)::geography) / 1000)::numeric, 1)"
+  },
+  "flutter_feed_response_shape": {
+    "locationName": "string from client reverse geocode or backend city_name",
+    "selectedDistanceKm": "integer",
+    "timeFilters": ["Alles", "Vandaag", "Dit weekend"],
+    "distanceFilters": [5, 10, 25, 50],
+    "categories": [
+      {
+        "id": "category uuid",
+        "slug": "motor",
+        "label": "Motor",
+        "iconKey": "two_wheeler",
+        "colorHex": "#5E6770",
+        "backgroundColorHex": "#E8ECEF",
+        "sortOrder": 6
+      }
+    ],
+    "activities": [
+      {
+        "id": "activity uuid",
+        "category": {
+          "id": "category uuid",
+          "slug": "motor",
+          "label": "Motor",
+          "iconKey": "two_wheeler",
+          "colorHex": "#5E6770",
+          "backgroundColorHex": "#E8ECEF"
+        },
+        "distanceKm": 5.8,
+        "distanceLabel": "5,8 km",
+        "title": "Toertocht door het Heuvelland",
+        "startAt": "2026-06-08T10:00:00+02:00",
+        "dateLabel": "zondag 8 jun",
+        "timeLabel": "10:00",
+        "locationName": "Valkenburg",
+        "meetingPoint": "Vertrek P+R Valkenburg",
+        "description": "Rustige toer langs de mooiste weggetjes. +/- 120 km, lunchstop onderweg. Gewoon meerijden.",
+        "host": {
+          "id": "profile uuid",
+          "displayName": "Joost Bakker",
+          "shortName": "Joost",
+          "initials": "JB",
+          "subtitle": "Valkenburg · sinds 2024",
+          "attendanceScore": 99,
+          "isVerified": true
+        },
+        "participantPreview": [
+          {
+            "id": "profile uuid",
+            "displayName": "Joost Bakker",
+            "initials": "JB",
+            "isHost": true
+          }
+        ],
+        "participantCount": 5,
+        "availableSpots": 3,
+        "spotsLabel": "nog 3 plekken",
+        "isJoined": true
+      }
+    ]
+  },
+  "rls_requirements": [
+    "Anyone authenticated can read published public activities.",
+    "Only the host can update or cancel their own activities.",
+    "Authenticated users can insert their own participant row.",
+    "Users can cancel only their own participant row.",
+    "Prevent joining cancelled, completed or full activities in database logic, preferably with an RPC."
+  ],
+  "notes_for_current_flutter_app": [
+    "The current HomeActivity dummy object is a presentation/domain object, not a backend source model.",
+    "distanceKm and distanceLabel must be computed from user location and activity location, not stored as static values.",
+    "dateLabel and timeLabel should be formatted client-side from start_at and timezone, or returned by an API adapter as display fields.",
+    "Category label, icon_key, color_hex and background_color_hex should be fetched by joining activity_categories; do not duplicate these values on activities.",
+    "participantInitials should be derived from profiles and limited in the Flutter widget; do not store '+X' as participant data.",
+    "The app already passes user latitude, longitude and selectedDistanceKm through the repository/usecase boundary, so the remote datasource can call the nearby-activities Edge Function without changing UI code."
+  ]
+}

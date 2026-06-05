@@ -7,10 +7,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/usecases/usecase.dart';
 import '../../../../core/utils/app_logger.dart';
+import '../../domain/entities/auth_oauth_provider.dart';
 import '../../domain/entities/auth_user.dart';
 import '../../domain/usecases/auth_state_changes.dart';
 import '../../domain/usecases/get_current_user.dart';
 import '../../domain/usecases/sign_in.dart';
+import '../../domain/usecases/sign_in_with_oauth.dart';
 import '../../domain/usecases/sign_out.dart';
 import '../../domain/usecases/sign_up.dart';
 
@@ -20,6 +22,7 @@ part 'auth_state.dart';
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   AuthBloc(
     this._signIn,
+    this._signInWithOAuth,
     this._signUp,
     this._signOut,
     this._getCurrentUser,
@@ -27,6 +30,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) : super(const AuthInitial()) {
     on<AuthStarted>(_onStarted);
     on<AuthSignInRequested>(_onSignInRequested);
+    on<AuthOAuthSignInRequested>(_onOAuthSignInRequested);
     on<AuthSignUpRequested>(_onSignUpRequested);
     on<AuthSignOutRequested>(_onSignOutRequested);
     on<AuthUserChanged>(_onUserChanged);
@@ -34,6 +38,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   final SignIn _signIn;
+  final SignInWithOAuth _signInWithOAuth;
   final SignUp _signUp;
   final SignOut _signOut;
   final GetCurrentUser _getCurrentUser;
@@ -78,6 +83,31 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       (user) {
         AppLogger.debug('AuthBloc sign-in authenticated ${user.id}');
         emit(AuthAuthenticated(user));
+      },
+    );
+  }
+
+  Future<void> _onOAuthSignInRequested(
+    AuthOAuthSignInRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    AppLogger.debug(
+      'AuthBloc OAuth sign-in requested for ${event.provider.name}',
+    );
+    emit(const AuthLoading());
+    final result = await _signInWithOAuth(
+      SignInWithOAuthParams(event.provider),
+    );
+    result.fold(
+      (failure) {
+        AppLogger.debug('AuthBloc OAuth sign-in failed: ${failure.message}');
+        emit(AuthError(failure.message));
+      },
+      (_) {
+        AppLogger.debug(
+          'AuthBloc OAuth sign-in launched for ${event.provider.name}',
+        );
+        emit(const AuthUnauthenticated());
       },
     );
   }

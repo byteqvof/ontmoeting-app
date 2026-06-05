@@ -1,0 +1,52 @@
+import 'package:equatable/equatable.dart';
+
+import 'profile_interest.dart';
+
+class Profile extends Equatable {
+  const Profile({
+    required this.id,
+    required this.displayName,
+    required this.initials,
+    required this.cityName,
+    required this.memberSince,
+    required this.avatarUrl,
+    required this.attendanceScore,
+    required this.activitiesJoinedCount,
+    required this.activitiesHostedCount,
+    required this.rating,
+    required this.isVerified,
+    required this.isPremium,
+    required this.interests,
+  });
+
+  final String id;
+  final String displayName;
+  final String initials;
+  final String cityName;
+  final DateTime memberSince;
+  final String? avatarUrl;
+  final int attendanceScore;
+  final int activitiesJoinedCount;
+  final int activitiesHostedCount;
+  final double rating;
+  final bool isVerified;
+  final bool isPremium;
+  final List<ProfileInterest> interests;
+
+  @override
+  List<Object?> get props => [
+    id,
+    displayName,
+    initials,
+    cityName,
+    memberSince,
+    avatarUrl,
+    attendanceScore,
+    activitiesJoinedCount,
+    activitiesHostedCount,
+    rating,
+    isVerified,
+    isPremium,
+    interests,
+  ];
+}

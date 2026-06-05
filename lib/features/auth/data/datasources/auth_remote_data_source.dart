@@ -1,6 +1,8 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../../core/config/supabase_config.dart';
 import '../../../../core/utils/app_logger.dart';
+import '../../domain/entities/auth_oauth_provider.dart';
 import '../models/auth_user_model.dart';
 
 abstract interface class AuthRemoteDataSource {
@@ -13,6 +15,8 @@ abstract interface class AuthRemoteDataSource {
     required String email,
     required String password,
   });
+
+  Future<void> signInWithOAuth(AuthOAuthProvider provider);
 
   Future<void> signOut();
 
@@ -68,6 +72,33 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       'Supabase auth.signInWithPassword succeeded for ${user.id}',
     );
     return AuthUserModel.fromSupabaseUser(user);
+  }
+
+  @override
+  Future<void> signInWithOAuth(AuthOAuthProvider provider) async {
+    final supabaseProvider = switch (provider) {
+      AuthOAuthProvider.apple => OAuthProvider.apple,
+      AuthOAuthProvider.google => OAuthProvider.google,
+    };
+
+    AppLogger.debug(
+      'Supabase auth.signInWithOAuth started for ${provider.name}',
+    );
+
+    final launched = await _client.auth.signInWithOAuth(
+      supabaseProvider,
+      redirectTo: SupabaseConfig.oauthRedirectTo,
+    );
+
+    if (!launched) {
+      throw AuthException(
+        'Could not open ${provider.name} sign-in. Please try again.',
+      );
+    }
+
+    AppLogger.debug(
+      'Supabase auth.signInWithOAuth launched for ${provider.name}',
+    );
   }
 
   @override
