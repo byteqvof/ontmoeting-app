@@ -3,17 +3,84 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_router.dart';
 import '../../../../app/theme/toch_theme.dart';
+import '../../../../core/di/injection_container.dart';
 import '../../domain/entities/home_activity.dart';
+import '../../domain/usecases/set_activity_participation.dart';
 import '../widgets/activity_detail_action_bar.dart';
 import '../widgets/activity_detail_hero.dart';
 import '../widgets/activity_detail_host_card.dart';
 import '../widgets/activity_detail_info_card.dart';
 import '../widgets/activity_detail_participants_card.dart';
 
-class ActivityDetailPage extends StatelessWidget {
+class ActivityDetailPage extends StatefulWidget {
   const ActivityDetailPage({required this.activity, super.key});
 
   final HomeActivity activity;
+
+  @override
+  State<ActivityDetailPage> createState() => _ActivityDetailPageState();
+}
+
+class _ActivityDetailPageState extends State<ActivityDetailPage> {
+  late HomeActivity _activity = widget.activity;
+  final SetActivityParticipation _setActivityParticipation = sl();
+  bool _isParticipationPending = false;
+
+  Future<void> _toggleParticipation() async {
+    if (_activity.isOwnedByCurrentUser || _isParticipationPending) {
+      return;
+    }
+
+    if (!_activity.isJoined && _activity.availableSpots <= 0) {
+      _showMessage('Deze activiteit zit vol.');
+      return;
+    }
+
+    setState(() {
+      _isParticipationPending = true;
+    });
+
+    final result = await _setActivityParticipation(
+      SetActivityParticipationParams(
+        activityId: _activity.id,
+        join: !_activity.isJoined,
+      ),
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    result.fold(
+      (failure) {
+        setState(() {
+          _isParticipationPending = false;
+        });
+        _showMessage(failure.message);
+      },
+      (update) {
+        setState(() {
+          _activity = _activity.applyParticipationUpdate(update);
+          _isParticipationPending = false;
+        });
+      },
+    );
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _openChat() {
+    if (!_activity.isOwnedByCurrentUser && !_activity.isJoined) {
+      _showMessage('Meld je eerst aan om de chat te openen.');
+      return;
+    }
+
+    context.push(AppRoutes.activityChatPath(_activity.id), extra: _activity);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,25 +96,28 @@ class ActivityDetailPage extends StatelessWidget {
               CustomScrollView(
                 slivers: [
                   SliverToBoxAdapter(
-                    child: ActivityDetailHero(activity: activity),
+                    child: ActivityDetailHero(
+                      activity: _activity,
+                      onBackPressed: () => context.pop(_activity),
+                    ),
                   ),
                   SliverPadding(
                     padding: const EdgeInsets.fromLTRB(18, 16, 18, 126),
                     sliver: SliverList.list(
                       children: [
-                        ActivityDetailInfoCard(activity: activity),
+                        ActivityDetailInfoCard(activity: _activity),
                         const SizedBox(height: TochSpacing.md),
                         ActivityDetailHostCard(
-                          activity: activity,
+                          activity: _activity,
                           onProfilePressed: (profileId) {
                             context.push(AppRoutes.profilePath(profileId));
                           },
                         ),
                         const SizedBox(height: TochSpacing.md),
-                        _DescriptionCard(activity: activity),
+                        _DescriptionCard(activity: _activity),
                         const SizedBox(height: TochSpacing.md),
                         ActivityDetailParticipantsCard(
-                          activity: activity,
+                          activity: _activity,
                           onProfilePressed: (profileId) {
                             context.push(AppRoutes.profilePath(profileId));
                           },
@@ -63,7 +133,12 @@ class ActivityDetailPage extends StatelessWidget {
                 left: 0,
                 right: 0,
                 bottom: 0,
-                child: ActivityDetailActionBar(activity: activity),
+                child: ActivityDetailActionBar(
+                  activity: _activity,
+                  isParticipationPending: _isParticipationPending,
+                  onParticipationPressed: _toggleParticipation,
+                  onChatPressed: _openChat,
+                ),
               ),
             ],
           ),

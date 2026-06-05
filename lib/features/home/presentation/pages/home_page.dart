@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/app_router.dart';
 import '../../../../app/theme/toch_theme.dart';
 import '../../../../core/di/injection_container.dart';
+import '../../domain/entities/home_activity.dart';
 import '../bloc/home_bloc.dart';
 import '../widgets/home_activity_card.dart';
 import '../widgets/home_bottom_nav.dart';
@@ -39,22 +40,41 @@ class _HomeView extends StatelessWidget {
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 480),
-          child: BlocBuilder<HomeBloc, HomeState>(
-            builder: (context, state) {
-              return switch (state) {
-                HomeInitial() ||
-                HomeLoading() ||
-                HomeResolvingLocation() => const _LocationLoading(),
-                HomeLoadingFeed(:final location) => _FeedLoading(
-                  cityName: location.cityName,
-                ),
-                HomeLocationBlocked(:final message) => _LocationBlocked(
-                  message: message,
-                ),
-                HomeError(:final message) => _HomeError(message: message),
-                HomeLoaded() => _HomeFeed(state: state),
-              };
+          child: BlocListener<HomeBloc, HomeState>(
+            listenWhen: (previous, current) {
+              final previousError = previous is HomeLoaded
+                  ? previous.participationError
+                  : null;
+              final currentError = current is HomeLoaded
+                  ? current.participationError
+                  : null;
+              return currentError != null && currentError != previousError;
             },
+            listener: (context, state) {
+              if (state is! HomeLoaded || state.participationError == null) {
+                return;
+              }
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(state.participationError!)),
+              );
+            },
+            child: BlocBuilder<HomeBloc, HomeState>(
+              builder: (context, state) {
+                return switch (state) {
+                  HomeInitial() ||
+                  HomeLoading() ||
+                  HomeResolvingLocation() => const _LocationLoading(),
+                  HomeLoadingFeed(:final location) => _FeedLoading(
+                    cityName: location.cityName,
+                  ),
+                  HomeLocationBlocked(:final message) => _LocationBlocked(
+                    message: message,
+                  ),
+                  HomeError(:final message) => _HomeError(message: message),
+                  HomeLoaded() => _HomeFeed(state: state),
+                };
+              },
+            ),
           ),
         ),
       ),
@@ -146,13 +166,28 @@ class _HomeFeed extends StatelessWidget {
                       padding: const EdgeInsets.fromLTRB(20, 6, 20, 12),
                       child: HomeActivityCard(
                         activity: activity,
+                        isJoinPending: state.isParticipationPending(
+                          activity.id,
+                        ),
+                        onJoinPressed: () {
+                          context.read<HomeBloc>().add(
+                            HomeActivityParticipationToggled(activity.id),
+                          );
+                        },
                         onProfilePressed: (profileId) {
                           context.push(AppRoutes.profilePath(profileId));
                         },
-                        onPressed: () {
-                          context.push(
-                            AppRoutes.activityDetailPath(activity.id),
-                            extra: activity,
+                        onPressed: () async {
+                          final updatedActivity = await context
+                              .push<HomeActivity>(
+                                AppRoutes.activityDetailPath(activity.id),
+                                extra: activity,
+                              );
+                          if (!context.mounted || updatedActivity == null) {
+                            return;
+                          }
+                          context.read<HomeBloc>().add(
+                            HomeActivityUpdated(updatedActivity),
                           );
                         },
                       ),

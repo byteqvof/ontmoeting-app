@@ -7,6 +7,8 @@ import '../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/home/domain/entities/home_activity.dart';
+import '../../features/home/presentation/pages/activity_agenda_page.dart';
+import '../../features/home/presentation/pages/activity_chat_page.dart';
 import '../../features/home/presentation/pages/activity_detail_page.dart';
 import '../../features/home/presentation/pages/create_activity_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
@@ -26,6 +28,9 @@ class AppRoutes {
   static const home = '/';
   static const createActivity = '/activities/create';
   static const activityDetail = '/activities/:activityId';
+  static const activityChat = '/activities/:activityId/chat';
+  static const activityMessages = '/messages';
+  static const activityAgenda = '/agenda';
   static const profile = '/profile';
   static const profileSetup = '/profile/setup';
   static const profileDetail = '/profile/:profileId';
@@ -35,6 +40,9 @@ class AppRoutes {
 
   static String activityDetailPath(String activityId) =>
       '/activities/$activityId';
+
+  static String activityChatPath(String activityId) =>
+      '/activities/$activityId/chat';
 
   static String profilePath(String profileId) => '/profile/$profileId';
 }
@@ -83,6 +91,32 @@ GoRouter createRouter(AuthBloc authBloc) {
               location: args.location,
               categories: args.categories,
             ),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.activityMessages,
+        builder: (context, state) {
+          return const ProfileCompletionGate(child: ActivityMessagesPage());
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.activityAgenda,
+        builder: (context, state) {
+          return const ProfileCompletionGate(child: ActivityAgendaPage());
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.activityChat,
+        builder: (context, state) {
+          final activity = state.extra;
+          if (activity is! HomeActivity) {
+            return const ProfileCompletionGate(
+              child: MissingActivityChatPage(),
+            );
+          }
+          return ProfileCompletionGate(
+            child: ActivityChatPage(activity: activity),
           );
         },
       ),

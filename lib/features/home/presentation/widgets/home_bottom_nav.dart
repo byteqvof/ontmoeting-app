@@ -59,14 +59,16 @@ class HomeBottomNav extends StatelessWidget {
                     label: 'Ontdek',
                     selected: true,
                   ),
-                  const _HomeNavItem(
+                  _HomeNavItem(
                     icon: Icons.chat_bubble_rounded,
                     label: 'Berichten',
+                    onTap: () => context.push(AppRoutes.activityMessages),
                   ),
                   _HomeCreateButton(location: location, categories: categories),
-                  const _HomeNavItem(
+                  _HomeNavItem(
                     icon: Icons.calendar_month_rounded,
                     label: 'Agenda',
+                    onTap: () => context.push(AppRoutes.activityAgenda),
                   ),
                   _HomeNavItem(
                     icon: Icons.person_rounded,

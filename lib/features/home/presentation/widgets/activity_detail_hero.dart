@@ -5,9 +5,14 @@ import '../../../../app/theme/toch_theme.dart';
 import '../../domain/entities/home_activity.dart';
 
 class ActivityDetailHero extends StatelessWidget {
-  const ActivityDetailHero({required this.activity, super.key});
+  const ActivityDetailHero({
+    required this.activity,
+    this.onBackPressed,
+    super.key,
+  });
 
   final HomeActivity activity;
+  final VoidCallback? onBackPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +37,7 @@ class ActivityDetailHero extends StatelessWidget {
                 children: [
                   _HeroIconButton(
                     icon: Icons.arrow_back_rounded,
-                    onPressed: context.pop,
+                    onPressed: onBackPressed ?? () => context.pop(),
                   ),
                   const Spacer(),
                   _HeroIconButton(

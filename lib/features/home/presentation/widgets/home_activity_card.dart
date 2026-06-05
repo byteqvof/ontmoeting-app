@@ -8,13 +8,17 @@ class HomeActivityCard extends StatelessWidget {
   const HomeActivityCard({
     required this.activity,
     this.onPressed,
+    this.onJoinPressed,
     this.onProfilePressed,
+    this.isJoinPending = false,
     super.key,
   });
 
   final HomeActivity activity;
   final VoidCallback? onPressed;
+  final VoidCallback? onJoinPressed;
   final ValueChanged<String>? onProfilePressed;
+  final bool isJoinPending;
 
   @override
   Widget build(BuildContext context) {
@@ -178,7 +182,11 @@ class HomeActivityCard extends StatelessWidget {
                         ],
                       ),
                     ),
-                    _JoinButton(activity: activity),
+                    _JoinButton(
+                      activity: activity,
+                      isPending: isJoinPending,
+                      onPressed: onJoinPressed,
+                    ),
                   ],
                 ),
               ],
@@ -191,28 +199,45 @@ class HomeActivityCard extends StatelessWidget {
 }
 
 class _JoinButton extends StatelessWidget {
-  const _JoinButton({required this.activity});
+  const _JoinButton({
+    required this.activity,
+    required this.isPending,
+    this.onPressed,
+  });
 
   final HomeActivity activity;
+  final bool isPending;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.toch;
     final isOwnActivity = activity.isOwnedByCurrentUser;
+    final isFull = !activity.isJoined && activity.availableSpots <= 0;
 
     return TextButton.icon(
-      onPressed: isOwnActivity ? null : () {},
+      onPressed: isOwnActivity || isFull || isPending ? null : onPressed,
       style: TextButton.styleFrom(
-        foregroundColor: isOwnActivity
+        foregroundColor: isOwnActivity || isFull
             ? colors.green700.withValues(alpha: .55)
             : colors.green,
-        backgroundColor: isOwnActivity ? colors.cream : colors.green100,
+        backgroundColor: isOwnActivity || isFull
+            ? colors.cream
+            : colors.green100,
         minimumSize: const Size(0, 40),
         padding: const EdgeInsets.symmetric(horizontal: 15),
         shape: const StadiumBorder(),
         textStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14.5),
       ),
-      icon: Icon(_joinIconFor(activity), size: 17),
+      icon: isPending
+          ? SizedBox.square(
+              dimension: 17,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: colors.green,
+              ),
+            )
+          : Icon(_joinIconFor(activity), size: 17),
       label: Text(_joinLabelFor(activity)),
     );
   }
@@ -222,12 +247,18 @@ IconData _joinIconFor(HomeActivity activity) {
   if (activity.isOwnedByCurrentUser) {
     return Icons.event_available_rounded;
   }
+  if (!activity.isJoined && activity.availableSpots <= 0) {
+    return Icons.block_rounded;
+  }
   return activity.isJoined ? Icons.check_rounded : Icons.add_rounded;
 }
 
 String _joinLabelFor(HomeActivity activity) {
   if (activity.isOwnedByCurrentUser) {
     return 'Jouw event';
+  }
+  if (!activity.isJoined && activity.availableSpots <= 0) {
+    return 'Vol';
   }
   return activity.isJoined ? 'Je gaat' : 'Ga mee';
 }

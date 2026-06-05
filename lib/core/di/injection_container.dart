@@ -17,9 +17,13 @@ import '../../features/home/data/datasources/home_remote_data_source.dart';
 import '../../features/home/data/repositories/home_repository_impl.dart';
 import '../../features/home/domain/repositories/home_repository.dart';
 import '../../features/home/domain/usecases/create_activity.dart';
+import '../../features/home/domain/usecases/get_activity_agenda.dart';
+import '../../features/home/domain/usecases/get_activity_chat_messages.dart';
 import '../../features/home/domain/usecases/get_current_city_name.dart';
 import '../../features/home/domain/usecases/get_current_location.dart';
 import '../../features/home/domain/usecases/get_home_feed.dart';
+import '../../features/home/domain/usecases/send_activity_chat_message.dart';
+import '../../features/home/domain/usecases/set_activity_participation.dart';
 import '../../features/home/domain/usecases/watch_current_location.dart';
 import '../../features/home/domain/usecases/watch_current_city_name.dart';
 import '../../features/home/presentation/bloc/home_bloc.dart';
@@ -67,12 +71,16 @@ Future<void> configureDependencies() async {
       () => HomeRepositoryImpl(sl(), sl()),
     )
     ..registerLazySingleton(() => CreateActivity(sl()))
+    ..registerLazySingleton(() => GetActivityAgenda(sl()))
+    ..registerLazySingleton(() => GetActivityChatMessages(sl()))
     ..registerLazySingleton(() => GetHomeFeed(sl()))
     ..registerLazySingleton(() => GetCurrentCityName(sl()))
     ..registerLazySingleton(() => GetCurrentLocation(sl()))
+    ..registerLazySingleton(() => SendActivityChatMessage(sl()))
+    ..registerLazySingleton(() => SetActivityParticipation(sl()))
     ..registerLazySingleton(() => WatchCurrentCityName(sl()))
     ..registerLazySingleton(() => WatchCurrentLocation(sl()))
-    ..registerFactory(() => HomeBloc(sl(), sl(), sl()))
+    ..registerFactory(() => HomeBloc(sl(), sl(), sl(), sl()))
     ..registerLazySingleton<ProfileDataSource>(
       () => ProfileRemoteDataSource(sl()),
     )
