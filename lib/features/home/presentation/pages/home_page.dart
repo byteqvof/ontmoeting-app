@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/app_router.dart';
 import '../../../../app/theme/toch_theme.dart';
 import '../../../../core/di/injection_container.dart';
 import '../bloc/home_bloc.dart';
@@ -142,7 +144,15 @@ class _HomeFeed extends StatelessWidget {
                   ...activities.map(
                     (activity) => Padding(
                       padding: const EdgeInsets.fromLTRB(20, 6, 20, 12),
-                      child: HomeActivityCard(activity: activity),
+                      child: HomeActivityCard(
+                        activity: activity,
+                        onPressed: () {
+                          context.push(
+                            AppRoutes.activityDetailPath(activity.id),
+                            extra: activity,
+                          );
+                        },
+                      ),
                     ),
                   ),
               ],

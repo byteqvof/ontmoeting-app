@@ -11,8 +11,16 @@ class HomeActivity extends Equatable {
     required this.title,
     required this.dateLabel,
     required this.timeLabel,
+    required this.locationName,
+    required this.meetingPoint,
+    required this.description,
     required this.hostName,
+    required this.hostFullName,
+    required this.hostSubtitle,
+    required this.hostScore,
     required this.participantInitials,
+    required this.participantNames,
+    required this.availableSpots,
     required this.spotsLabel,
     this.isJoined = false,
   });
@@ -24,8 +32,16 @@ class HomeActivity extends Equatable {
   final String title;
   final String dateLabel;
   final String timeLabel;
+  final String locationName;
+  final String meetingPoint;
+  final String description;
   final String hostName;
+  final String hostFullName;
+  final String hostSubtitle;
+  final int hostScore;
   final List<String> participantInitials;
+  final List<String> participantNames;
+  final int availableSpots;
   final String spotsLabel;
   final bool isJoined;
 
@@ -38,8 +54,16 @@ class HomeActivity extends Equatable {
     title,
     dateLabel,
     timeLabel,
+    locationName,
+    meetingPoint,
+    description,
     hostName,
+    hostFullName,
+    hostSubtitle,
+    hostScore,
     participantInitials,
+    participantNames,
+    availableSpots,
     spotsLabel,
     isJoined,
   ];
