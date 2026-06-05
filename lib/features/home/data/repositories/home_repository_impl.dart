@@ -1,4 +1,5 @@
 import 'package:dartz/dartz.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/errors/failures.dart';
 import '../../domain/entities/create_activity_draft.dart';
@@ -21,7 +22,7 @@ class HomeRepositoryImpl implements HomeRepository {
     try {
       return right(await _dataSource.createActivity(draft));
     } catch (error) {
-      return left(UnknownFailure(error.toString()));
+      return left(_mapRemoteError(error));
     }
   }
 
@@ -38,7 +39,7 @@ class HomeRepositoryImpl implements HomeRepository {
         ),
       );
     } catch (error) {
-      return left(UnknownFailure(error.toString()));
+      return left(_mapRemoteError(error));
     }
   }
 
@@ -72,6 +73,23 @@ class HomeRepositoryImpl implements HomeRepository {
     if (message.contains('disabled')) {
       return const PermissionFailure(
         'Zet locatievoorzieningen aan om je plaats automatisch te vinden.',
+      );
+    }
+    return UnknownFailure(error.toString());
+  }
+
+  Failure _mapRemoteError(Object error) {
+    if (error is AuthException) {
+      return AuthFailure(error.message);
+    }
+    if (error is FunctionException && error.status == 401) {
+      return const AuthFailure(
+        'Je sessie is verlopen. Log opnieuw in om door te gaan.',
+      );
+    }
+    if (error is FunctionException && error.status >= 500) {
+      return const ServerFailure(
+        'De activiteitenservice is tijdelijk niet beschikbaar.',
       );
     }
     return UnknownFailure(error.toString());

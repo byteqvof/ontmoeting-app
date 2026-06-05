@@ -12,6 +12,11 @@ import '../../features/home/presentation/pages/create_activity_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
 import '../../features/onboarding/presentation/pages/onboarding_page.dart';
 import '../../features/onboarding/presentation/pages/splash_page.dart';
+import '../../features/profile/domain/entities/profile.dart';
+import '../../features/profile/presentation/pages/edit_profile_page.dart';
+import '../../features/profile/presentation/pages/profile_completion_gate.dart';
+import '../../features/profile/presentation/pages/profile_page.dart';
+import '../../features/profile/presentation/pages/profile_setup_page.dart';
 
 class AppRoutes {
   const AppRoutes._();
@@ -21,11 +26,17 @@ class AppRoutes {
   static const home = '/';
   static const createActivity = '/activities/create';
   static const activityDetail = '/activities/:activityId';
+  static const profile = '/profile';
+  static const profileSetup = '/profile/setup';
+  static const profileDetail = '/profile/:profileId';
+  static const editProfile = '/profile/edit';
   static const splash = '/splash';
   static const onboarding = '/onboarding';
 
   static String activityDetailPath(String activityId) =>
       '/activities/$activityId';
+
+  static String profilePath(String profileId) => '/profile/$profileId';
 }
 
 GoRouter createRouter(AuthBloc authBloc) {
@@ -54,18 +65,24 @@ GoRouter createRouter(AuthBloc authBloc) {
     routes: [
       GoRoute(
         path: AppRoutes.home,
-        builder: (context, state) => const HomePage(),
+        builder: (context, state) {
+          return const ProfileCompletionGate(child: HomePage());
+        },
       ),
       GoRoute(
         path: AppRoutes.createActivity,
         builder: (context, state) {
           final args = state.extra;
           if (args is! CreateActivityPageArgs) {
-            return const MissingCreateActivityPage();
+            return const ProfileCompletionGate(
+              child: MissingCreateActivityPage(),
+            );
           }
-          return CreateActivityPage(
-            location: args.location,
-            categories: args.categories,
+          return ProfileCompletionGate(
+            child: CreateActivityPage(
+              location: args.location,
+              categories: args.categories,
+            ),
           );
         },
       ),
@@ -74,9 +91,43 @@ GoRouter createRouter(AuthBloc authBloc) {
         builder: (context, state) {
           final activity = state.extra;
           if (activity is! HomeActivity) {
-            return const MissingActivityDetailPage();
+            return const ProfileCompletionGate(
+              child: MissingActivityDetailPage(),
+            );
           }
-          return ActivityDetailPage(activity: activity);
+          return ProfileCompletionGate(
+            child: ActivityDetailPage(activity: activity),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.profile,
+        builder: (context, state) {
+          return const ProfileCompletionGate(child: ProfilePage());
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.profileSetup,
+        builder: (context, state) => const ProfileSetupPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.editProfile,
+        builder: (context, state) {
+          final profile = state.extra;
+          if (profile is! Profile) {
+            return const ProfileCompletionGate(child: MissingEditProfilePage());
+          }
+          return ProfileCompletionGate(
+            child: EditProfilePage(profile: profile),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.profileDetail,
+        builder: (context, state) {
+          return ProfileCompletionGate(
+            child: ProfilePage(profileId: state.pathParameters['profileId']),
+          );
         },
       ),
       GoRoute(

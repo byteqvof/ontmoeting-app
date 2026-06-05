@@ -5,10 +5,16 @@ import '../../domain/entities/home_activity.dart';
 import 'home_avatar_stack.dart';
 
 class HomeActivityCard extends StatelessWidget {
-  const HomeActivityCard({required this.activity, this.onPressed, super.key});
+  const HomeActivityCard({
+    required this.activity,
+    this.onPressed,
+    this.onProfilePressed,
+    super.key,
+  });
 
   final HomeActivity activity;
   final VoidCallback? onPressed;
+  final ValueChanged<String>? onProfilePressed;
 
   @override
   Widget build(BuildContext context) {
@@ -128,8 +134,9 @@ class HomeActivityCard extends StatelessWidget {
                 Row(
                   children: [
                     HomeAvatarStack(
-                      initials: activity.participantInitials,
+                      participants: activity.participants,
                       maxVisibleAvatars: 3,
+                      onProfilePressed: onProfilePressed,
                     ),
                     const SizedBox(width: 9),
                     Expanded(
@@ -191,24 +198,38 @@ class _JoinButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.toch;
+    final isOwnActivity = activity.isOwnedByCurrentUser;
 
     return TextButton.icon(
-      onPressed: () {},
+      onPressed: isOwnActivity ? null : () {},
       style: TextButton.styleFrom(
-        foregroundColor: colors.green,
-        backgroundColor: colors.green100,
+        foregroundColor: isOwnActivity
+            ? colors.green700.withValues(alpha: .55)
+            : colors.green,
+        backgroundColor: isOwnActivity ? colors.cream : colors.green100,
         minimumSize: const Size(0, 40),
         padding: const EdgeInsets.symmetric(horizontal: 15),
         shape: const StadiumBorder(),
         textStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14.5),
       ),
-      icon: Icon(
-        activity.isJoined ? Icons.check_rounded : Icons.add_rounded,
-        size: 17,
-      ),
-      label: Text(activity.isJoined ? 'Je gaat' : 'Ga mee'),
+      icon: Icon(_joinIconFor(activity), size: 17),
+      label: Text(_joinLabelFor(activity)),
     );
   }
+}
+
+IconData _joinIconFor(HomeActivity activity) {
+  if (activity.isOwnedByCurrentUser) {
+    return Icons.event_available_rounded;
+  }
+  return activity.isJoined ? Icons.check_rounded : Icons.add_rounded;
+}
+
+String _joinLabelFor(HomeActivity activity) {
+  if (activity.isOwnedByCurrentUser) {
+    return 'Jouw event';
+  }
+  return activity.isJoined ? 'Je gaat' : 'Ga mee';
 }
 
 class _CategoryTile extends StatelessWidget {

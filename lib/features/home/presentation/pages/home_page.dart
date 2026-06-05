@@ -146,6 +146,9 @@ class _HomeFeed extends StatelessWidget {
                       padding: const EdgeInsets.fromLTRB(20, 6, 20, 12),
                       child: HomeActivityCard(
                         activity: activity,
+                        onProfilePressed: (profileId) {
+                          context.push(AppRoutes.profilePath(profileId));
+                        },
                         onPressed: () {
                           context.push(
                             AppRoutes.activityDetailPath(activity.id),

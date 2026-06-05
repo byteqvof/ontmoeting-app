@@ -6,6 +6,8 @@ const supabaseAnonKey = 'sb_publishable_q9O8Q1jmRZ-9PVGdj_9dYg_S24tTwwt';
 const supabaseOAuthRedirectUrl = 'meetingsapp://auth-callback';
 const supabaseNearbyActivitiesFunctionName = 'activities-nearby';
 const supabaseCreateActivityFunctionName = 'activities-create';
+const supabaseProfilesFunctionName = 'profiles';
+const supabaseUserActivitiesFunctionName = 'activities-for-user';
 
 class SupabaseConfig {
   const SupabaseConfig._();

@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/app_router.dart';
 import '../../../../app/theme/toch_theme.dart';
 import '../../../../app/widgets/toch_wordmark.dart';
+import '../../../../core/di/injection_container.dart';
+import '../../../../core/utils/app_preferences.dart';
 import '../widgets/onboarding_hero.dart';
 
 class OnboardingPage extends StatefulWidget {
@@ -40,11 +42,18 @@ class _OnboardingPageState extends State<OnboardingPage> {
     ),
   ];
 
-  void _skip() => context.go(AppRoutes.register);
+  Future<void> _finish() async {
+    await sl<AppPreferences>().markInitialFtiSeen();
+    if (mounted) {
+      context.go(AppRoutes.register);
+    }
+  }
+
+  void _skip() => _finish();
 
   void _next() {
     if (_index == _slides.length - 1) {
-      context.go(AppRoutes.register);
+      _finish();
       return;
     }
 

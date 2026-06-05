@@ -7,6 +7,8 @@ import '../../../../app/router/app_router.dart';
 import '../../../../app/theme/toch_theme.dart';
 import '../../../../app/widgets/toch_mark.dart';
 import '../../../../app/widgets/toch_wordmark.dart';
+import '../../../../core/di/injection_container.dart';
+import '../../../../core/utils/app_preferences.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -34,7 +36,10 @@ class _SplashPageState extends State<SplashPage> {
     if (!mounted) {
       return;
     }
-    context.go(AppRoutes.onboarding);
+    final preferences = sl<AppPreferences>();
+    context.go(
+      preferences.hasSeenInitialFti ? AppRoutes.login : AppRoutes.onboarding,
+    );
   }
 
   @override

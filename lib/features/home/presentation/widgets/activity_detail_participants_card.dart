@@ -4,9 +4,14 @@ import '../../../../app/theme/toch_theme.dart';
 import '../../domain/entities/home_activity.dart';
 
 class ActivityDetailParticipantsCard extends StatelessWidget {
-  const ActivityDetailParticipantsCard({required this.activity, super.key});
+  const ActivityDetailParticipantsCard({
+    required this.activity,
+    this.onProfilePressed,
+    super.key,
+  });
 
   final HomeActivity activity;
+  final ValueChanged<String>? onProfilePressed;
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +51,12 @@ class ActivityDetailParticipantsCard extends StatelessWidget {
               spacing: TochSpacing.sm,
               runSpacing: TochSpacing.sm,
               children: participants
-                  .map((participant) => _ParticipantPill(participant))
+                  .map(
+                    (participant) => _ParticipantPill(
+                      participant,
+                      onProfilePressed: onProfilePressed,
+                    ),
+                  )
                   .toList(),
             ),
           ],
@@ -57,9 +67,10 @@ class ActivityDetailParticipantsCard extends StatelessWidget {
 }
 
 class _ParticipantPill extends StatelessWidget {
-  const _ParticipantPill(this.participant);
+  const _ParticipantPill(this.participant, {required this.onProfilePressed});
 
   final _ActivityParticipant participant;
+  final ValueChanged<String>? onProfilePressed;
 
   @override
   Widget build(BuildContext context) {
@@ -71,27 +82,37 @@ class _ParticipantPill extends StatelessWidget {
         ? colors.green100
         : colors.card;
     final borderColor = isFree ? colors.line : colors.green200;
+    final canOpenProfile =
+        participant.profileId.isNotEmpty && onProfilePressed != null;
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(TochRadius.pill),
-        border: Border.all(color: borderColor),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(8, 6, 12, 6),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            DecoratedBox(
-              decoration: BoxDecoration(
-                color: isFree ? Colors.transparent : colors.green,
-                shape: BoxShape.circle,
-                border: isFree ? Border.all(color: colors.line) : null,
-              ),
-              child: SizedBox.square(
-                dimension: 31,
-                child: Center(
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: canOpenProfile
+          ? () => onProfilePressed!(participant.profileId)
+          : null,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(TochRadius.pill),
+          border: Border.all(color: borderColor),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(8, 6, 12, 6),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: isFree ? Colors.transparent : colors.green,
+                  shape: BoxShape.circle,
+                  border: isFree ? Border.all(color: colors.line) : null,
+                ),
+                child: CircleAvatar(
+                  radius: 15.5,
+                  backgroundColor: isFree ? Colors.transparent : colors.green,
+                  foregroundImage: participant.avatarUrl == null
+                      ? null
+                      : NetworkImage(participant.avatarUrl!),
                   child: Text(
                     participant.initials,
                     style: TextStyle(
@@ -104,18 +125,18 @@ class _ParticipantPill extends StatelessWidget {
                   ),
                 ),
               ),
-            ),
-            const SizedBox(width: 7),
-            Text(
-              participant.label,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: isFree
-                    ? colors.green700.withValues(alpha: .65)
-                    : colors.ink,
-                fontWeight: FontWeight.w900,
+              const SizedBox(width: 7),
+              Text(
+                participant.label,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: isFree
+                      ? colors.green700.withValues(alpha: .65)
+                      : colors.ink,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -124,18 +145,22 @@ class _ParticipantPill extends StatelessWidget {
 
 List<_ActivityParticipant> _participantsFor(HomeActivity activity) {
   final participants = <_ActivityParticipant>[
-    for (final name in activity.participantNames)
+    for (final participant in activity.participants)
       _ActivityParticipant(
-        initials: _initialsFor(name),
-        label: name == activity.hostName ? 'host' : name,
+        profileId: participant.id,
+        initials: participant.initials,
+        label: participant.isHost ? 'host' : participant.displayName,
+        avatarUrl: participant.avatarUrl,
       ),
   ];
 
   if (activity.isJoined) {
     participants.add(
       const _ActivityParticipant(
+        profileId: '',
         initials: 'JIJ',
         label: 'jij',
+        avatarUrl: null,
         isCurrentUser: true,
       ),
     );
@@ -145,8 +170,10 @@ List<_ActivityParticipant> _participantsFor(HomeActivity activity) {
     List.generate(
       activity.availableSpots,
       (_) => const _ActivityParticipant(
+        profileId: '',
         initials: '',
         label: 'vrij',
+        avatarUrl: null,
         isAvailableSlot: true,
       ),
     ),
@@ -155,28 +182,20 @@ List<_ActivityParticipant> _participantsFor(HomeActivity activity) {
   return participants;
 }
 
-String _initialsFor(String name) {
-  final parts = name.trim().split(RegExp(r'\s+'));
-  if (parts.isEmpty) {
-    return '';
-  }
-  if (parts.length == 1) {
-    return parts.first.characters.take(2).toString().toUpperCase();
-  }
-  return '${parts.first.characters.first}${parts.last.characters.first}'
-      .toUpperCase();
-}
-
 class _ActivityParticipant {
   const _ActivityParticipant({
+    required this.profileId,
     required this.initials,
     required this.label,
+    required this.avatarUrl,
     this.isCurrentUser = false,
     this.isAvailableSlot = false,
   });
 
+  final String profileId;
   final String initials;
   final String label;
+  final String? avatarUrl;
   final bool isCurrentUser;
   final bool isAvailableSlot;
 }

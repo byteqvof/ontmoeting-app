@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 
 import 'home_category.dart';
+import 'home_participant.dart';
 
 class HomeActivity extends Equatable {
   const HomeActivity({
@@ -14,15 +15,17 @@ class HomeActivity extends Equatable {
     required this.locationName,
     required this.meetingPoint,
     required this.description,
+    required this.hostId,
     required this.hostName,
     required this.hostFullName,
     required this.hostSubtitle,
     required this.hostScore,
-    required this.participantInitials,
-    required this.participantNames,
+    this.hostAvatarUrl,
+    required this.participants,
     required this.availableSpots,
     required this.spotsLabel,
     this.isJoined = false,
+    this.isOwnedByCurrentUser = false,
   });
 
   final String id;
@@ -35,15 +38,43 @@ class HomeActivity extends Equatable {
   final String locationName;
   final String meetingPoint;
   final String description;
+  final String hostId;
   final String hostName;
   final String hostFullName;
   final String hostSubtitle;
   final int hostScore;
-  final List<String> participantInitials;
-  final List<String> participantNames;
+  final String? hostAvatarUrl;
+  final List<HomeParticipant> participants;
   final int availableSpots;
   final String spotsLabel;
   final bool isJoined;
+  final bool isOwnedByCurrentUser;
+
+  HomeActivity copyWith({HomeCategory? category}) {
+    return HomeActivity(
+      id: id,
+      category: category ?? this.category,
+      distanceKm: distanceKm,
+      distanceLabel: distanceLabel,
+      title: title,
+      dateLabel: dateLabel,
+      timeLabel: timeLabel,
+      locationName: locationName,
+      meetingPoint: meetingPoint,
+      description: description,
+      hostId: hostId,
+      hostName: hostName,
+      hostFullName: hostFullName,
+      hostSubtitle: hostSubtitle,
+      hostScore: hostScore,
+      hostAvatarUrl: hostAvatarUrl,
+      participants: participants,
+      availableSpots: availableSpots,
+      spotsLabel: spotsLabel,
+      isJoined: isJoined,
+      isOwnedByCurrentUser: isOwnedByCurrentUser,
+    );
+  }
 
   @override
   List<Object?> get props => [
@@ -57,14 +88,16 @@ class HomeActivity extends Equatable {
     locationName,
     meetingPoint,
     description,
+    hostId,
     hostName,
     hostFullName,
     hostSubtitle,
     hostScore,
-    participantInitials,
-    participantNames,
+    hostAvatarUrl,
+    participants,
     availableSpots,
     spotsLabel,
     isJoined,
+    isOwnedByCurrentUser,
   ];
 }

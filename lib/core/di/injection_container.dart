@@ -1,4 +1,5 @@
 import 'package:get_it/get_it.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../features/auth/data/datasources/auth_remote_data_source.dart';
@@ -22,11 +23,28 @@ import '../../features/home/domain/usecases/get_home_feed.dart';
 import '../../features/home/domain/usecases/watch_current_location.dart';
 import '../../features/home/domain/usecases/watch_current_city_name.dart';
 import '../../features/home/presentation/bloc/home_bloc.dart';
+import '../../features/profile/data/datasources/profile_data_source.dart';
+import '../../features/profile/data/datasources/profile_remote_data_source.dart';
+import '../../features/profile/data/repositories/profile_repository_impl.dart';
+import '../../features/profile/domain/repositories/profile_repository.dart';
+import '../../features/profile/domain/usecases/create_profile.dart';
+import '../../features/profile/domain/usecases/get_available_profile_interests.dart';
+import '../../features/profile/domain/usecases/get_profile.dart';
+import '../../features/profile/domain/usecases/get_profile_activities.dart';
+import '../../features/profile/domain/usecases/is_profile_onboarding_required.dart';
+import '../../features/profile/domain/usecases/update_profile.dart';
+import '../../features/profile/presentation/bloc/profile_bloc.dart';
+import '../../features/profile/presentation/bloc/profile_setup_bloc.dart';
+import '../utils/app_preferences.dart';
 
 final sl = GetIt.instance;
 
 Future<void> configureDependencies() async {
+  final preferences = await SharedPreferences.getInstance();
+
   sl
+    ..registerLazySingleton<SharedPreferences>(() => preferences)
+    ..registerLazySingleton(() => AppPreferences(sl()))
     ..registerLazySingleton<SupabaseClient>(() => Supabase.instance.client)
     ..registerLazySingleton<AuthRemoteDataSource>(
       () => AuthRemoteDataSourceImpl(sl()),
@@ -54,5 +72,19 @@ Future<void> configureDependencies() async {
     ..registerLazySingleton(() => GetCurrentLocation(sl()))
     ..registerLazySingleton(() => WatchCurrentCityName(sl()))
     ..registerLazySingleton(() => WatchCurrentLocation(sl()))
-    ..registerFactory(() => HomeBloc(sl(), sl(), sl()));
+    ..registerFactory(() => HomeBloc(sl(), sl(), sl()))
+    ..registerLazySingleton<ProfileDataSource>(
+      () => ProfileRemoteDataSource(sl()),
+    )
+    ..registerLazySingleton<ProfileRepository>(
+      () => ProfileRepositoryImpl(sl()),
+    )
+    ..registerLazySingleton(() => CreateProfile(sl()))
+    ..registerLazySingleton(() => GetAvailableProfileInterests(sl()))
+    ..registerLazySingleton(() => GetProfile(sl()))
+    ..registerLazySingleton(() => GetProfileActivities(sl()))
+    ..registerLazySingleton(() => IsProfileOnboardingRequired(sl()))
+    ..registerLazySingleton(() => UpdateProfile(sl()))
+    ..registerFactory(() => ProfileBloc(sl(), sl()))
+    ..registerFactory(() => ProfileSetupBloc(sl(), sl()));
 }

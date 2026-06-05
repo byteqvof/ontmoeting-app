@@ -4,9 +4,14 @@ import '../../../../app/theme/toch_theme.dart';
 import '../../domain/entities/home_activity.dart';
 
 class ActivityDetailHostCard extends StatelessWidget {
-  const ActivityDetailHostCard({required this.activity, super.key});
+  const ActivityDetailHostCard({
+    required this.activity,
+    this.onProfilePressed,
+    super.key,
+  });
 
   final HomeActivity activity;
+  final ValueChanged<String>? onProfilePressed;
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +38,12 @@ class ActivityDetailHostCard extends StatelessWidget {
             const SizedBox(height: TochSpacing.sm),
             Row(
               children: [
-                _Avatar(initials: _initialsFor(activity.hostFullName)),
+                _Avatar(
+                  initials: _initialsFor(activity.hostFullName),
+                  avatarUrl: activity.hostAvatarUrl,
+                  profileId: activity.hostId,
+                  onProfilePressed: onProfilePressed,
+                ),
                 const SizedBox(width: TochSpacing.sm),
                 Expanded(
                   child: Column(
@@ -97,26 +107,36 @@ class ActivityDetailHostCard extends StatelessWidget {
 }
 
 class _Avatar extends StatelessWidget {
-  const _Avatar({required this.initials});
+  const _Avatar({
+    required this.initials,
+    required this.avatarUrl,
+    required this.profileId,
+    required this.onProfilePressed,
+  });
 
   final String initials;
+  final String? avatarUrl;
+  final String profileId;
+  final ValueChanged<String>? onProfilePressed;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.toch;
+    final canOpenProfile = profileId.isNotEmpty && onProfilePressed != null;
 
-    return DecoratedBox(
-      decoration: BoxDecoration(color: colors.green, shape: BoxShape.circle),
-      child: SizedBox.square(
-        dimension: 52,
-        child: Center(
-          child: Text(
-            initials,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 17,
-              fontWeight: FontWeight.w900,
-            ),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: canOpenProfile ? () => onProfilePressed!(profileId) : null,
+      child: CircleAvatar(
+        radius: 26,
+        backgroundColor: colors.green,
+        foregroundImage: avatarUrl == null ? null : NetworkImage(avatarUrl!),
+        child: Text(
+          initials,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 17,
+            fontWeight: FontWeight.w900,
           ),
         ),
       ),

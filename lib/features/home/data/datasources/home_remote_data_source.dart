@@ -1,15 +1,18 @@
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/config/supabase_config.dart';
 import '../../../../core/utils/app_logger.dart';
+import '../../../../core/utils/supabase_function_auth.dart';
 import '../../domain/entities/create_activity_draft.dart';
 import '../../domain/entities/home_activity.dart';
 import '../../domain/entities/home_category.dart';
 import '../../domain/entities/home_feed.dart';
 import '../../domain/entities/home_location.dart';
+import '../../domain/entities/home_participant.dart';
 
 abstract interface class HomeRemoteDataSource {
   Future<String> createActivity(CreateActivityDraft draft);
@@ -31,6 +34,7 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
 
     final response = await _client.functions.invoke(
       supabaseCreateActivityFunctionName,
+      headers: authenticatedFunctionHeaders(_client),
       body: {
         'category_id': draft.categoryId,
         'title': draft.title,
@@ -68,6 +72,7 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
 
     final response = await _client.functions.invoke(
       supabaseNearbyActivitiesFunctionName,
+      headers: authenticatedFunctionHeaders(_client),
       body: {
         'latitude': location.latitude,
         'longitude': location.longitude,
@@ -78,10 +83,18 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
 
     final payload = _asMap(response.data);
     final activitiesJson = _asList(payload['activities']);
-    final activities = activitiesJson
-        .map((activity) => _activityFromJson(_asMap(activity)))
+    final currentUserId = _client.auth.currentUser?.id;
+    final mappedActivities = activitiesJson
+        .map(
+          (activity) =>
+              _activityFromJson(_asMap(activity), location, currentUserId),
+        )
         .toList();
-    final categories = await _categoriesFromPayload(payload, activities);
+    final categories = await _categoriesFromPayload(payload, mappedActivities);
+    final activities = _activitiesWithResolvedCategories(
+      mappedActivities,
+      categories,
+    ).where((activity) => !activity.isOwnedByCurrentUser).toList();
 
     return HomeFeed(
       locationName: location.cityName,
@@ -142,18 +155,65 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
     }
   }
 
-  HomeActivity _activityFromJson(Map<String, dynamic> json) {
-    final category = _categoryFromJson(_asMap(json['category']));
+  HomeActivity _activityFromJson(
+    Map<String, dynamic> json,
+    HomeLocation userLocation,
+    String? currentUserId,
+  ) {
+    final categoryJson = _asMap(json['category']);
+    final category = _categoryFromJson(
+      categoryJson.isEmpty ? {'id': json['category_id']} : categoryJson,
+    );
     final host = _asMap(json['host']);
     final participants = _asList(
       json['participantPreview'] ?? json['participant_preview'],
     ).map((participant) => _asMap(participant)).toList();
-    final startAt = _dateTimeOrNull(json['startAt'] ?? json['start_at']);
-    final availableSpots = _intValue(
-      json['availableSpots'] ?? json['available_spots'],
+    final startAt = _dateTimeOrNull(
+      json['startAt'] ?? json['start_at'] ?? json['starts_at'],
     );
+    final participantCount = _optionalIntValue(
+      json['participantCount'] ??
+          json['participant_count'] ??
+          json['participants_count'],
+    );
+    final maxParticipants = _optionalIntValue(
+      json['maxParticipants'] ?? json['max_participants'] ?? json['capacity'],
+    );
+    final availableSpots =
+        _optionalIntValue(json['availableSpots'] ?? json['available_spots']) ??
+        _availableSpotsFrom(maxParticipants, participantCount);
     final isJoined = _boolValue(json['isJoined'] ?? json['is_joined']);
-    final distanceKm = _doubleValue(json['distanceKm'] ?? json['distance_km']);
+    final distanceKm =
+        _optionalDoubleValue(json['distanceKm'] ?? json['distance_km']) ??
+        _distanceKmFrom(
+          userLocation: userLocation,
+          latitude: _optionalDoubleValue(json['latitude'] ?? json['lat']),
+          longitude: _optionalDoubleValue(json['longitude'] ?? json['lng']),
+        );
+    final cityName = _stringValue(
+      json['locationName'] ??
+          json['location_name'] ??
+          json['city_name'] ??
+          json['city'],
+    );
+    final meetingPoint = _stringValue(
+      json['meetingPoint'] ??
+          json['meeting_point'] ??
+          json['address_line'] ??
+          json['address'] ??
+          json['city'],
+    );
+    final hostId = _stringValue(
+      host['id'] ??
+          host['profile_id'] ??
+          host['hostId'] ??
+          json['organizer_id'] ??
+          json['host_id'],
+    );
+    final isOwnedByCurrentUser =
+        currentUserId != null &&
+        currentUserId.isNotEmpty &&
+        hostId == currentUserId;
 
     return HomeActivity(
       id: _stringValue(json['id']),
@@ -172,38 +232,52 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
         json['timeLabel'] ?? json['time_label'],
         fallback: startAt == null ? '' : _formatTimeLabel(startAt),
       ),
-      locationName: _stringValue(
-        json['locationName'] ?? json['location_name'] ?? json['city_name'],
-      ),
-      meetingPoint: _stringValue(json['meetingPoint'] ?? json['meeting_point']),
+      locationName: cityName,
+      meetingPoint: meetingPoint,
       description: _stringValue(json['description']),
+      hostId: hostId,
       hostName: _stringValue(
-        host['shortName'] ?? host['short_name'] ?? host['displayName'],
+        host['shortName'] ??
+            host['short_name'] ??
+            host['displayName'] ??
+            host['display_name'],
+        fallback: 'Organisator',
       ),
-      hostFullName: _stringValue(host['displayName'] ?? host['display_name']),
-      hostSubtitle: _stringValue(host['subtitle']),
+      hostFullName: _stringValue(
+        host['displayName'] ?? host['display_name'],
+        fallback: 'Organisator',
+      ),
+      hostSubtitle: _stringValue(host['subtitle'], fallback: cityName),
       hostScore: _intValue(
         host['attendanceScore'] ?? host['attendance_score'],
         fallback: 100,
       ),
-      participantInitials: participants
-          .map((participant) => _stringValue(participant['initials']))
-          .where((initials) => initials.isNotEmpty)
-          .toList(),
-      participantNames: participants
-          .map(
-            (participant) => _stringValue(
-              participant['displayName'] ?? participant['display_name'],
-            ),
-          )
-          .where((name) => name.isNotEmpty)
-          .toList(),
+      hostAvatarUrl: _nullableString(host['avatarUrl'] ?? host['avatar_url']),
+      participants: participants.map(_participantFromJson).toList(),
       availableSpots: availableSpots,
       spotsLabel: _stringValue(
         json['spotsLabel'] ?? json['spots_label'],
         fallback: isJoined ? 'jij gaat ook' : 'nog $availableSpots plekken',
       ),
       isJoined: isJoined,
+      isOwnedByCurrentUser: isOwnedByCurrentUser,
+    );
+  }
+
+  HomeParticipant _participantFromJson(Map<String, dynamic> json) {
+    final displayName = _stringValue(
+      json['displayName'] ?? json['display_name'],
+    );
+
+    return HomeParticipant(
+      id: _stringValue(json['id'] ?? json['profile_id'] ?? json['user_id']),
+      displayName: displayName,
+      initials: _stringValue(
+        json['initials'],
+        fallback: _initialsFor(displayName),
+      ),
+      isHost: _boolValue(json['isHost'] ?? json['is_host']),
+      avatarUrl: _nullableString(json['avatarUrl'] ?? json['avatar_url']),
     );
   }
 
@@ -247,6 +321,24 @@ List<HomeCategory> _sortedCategories(Iterable<HomeCategory> categories) {
   );
 }
 
+List<HomeActivity> _activitiesWithResolvedCategories(
+  List<HomeActivity> activities,
+  List<HomeCategory> categories,
+) {
+  final categoriesById = {
+    for (final category in categories)
+      if (category.id != 'all') category.id: category,
+  };
+
+  return activities
+      .map(
+        (activity) => activity.copyWith(
+          category: categoriesById[activity.category.id] ?? activity.category,
+        ),
+      )
+      .toList();
+}
+
 Map<String, dynamic> _asMap(Object? value) {
   if (value is String) {
     final decoded = jsonDecode(value);
@@ -280,11 +372,11 @@ String _stringValue(Object? value, {String fallback = ''}) {
   return text.isEmpty ? fallback : text;
 }
 
-double _doubleValue(Object? value, {double fallback = 0}) {
+double? _optionalDoubleValue(Object? value) {
   if (value is num) {
     return value.toDouble();
   }
-  return double.tryParse(value?.toString() ?? '') ?? fallback;
+  return double.tryParse(value?.toString() ?? '');
 }
 
 int _intValue(Object? value, {int fallback = 0}) {
@@ -293,6 +385,48 @@ int _intValue(Object? value, {int fallback = 0}) {
   }
   return int.tryParse(value?.toString() ?? '') ?? fallback;
 }
+
+int? _optionalIntValue(Object? value) {
+  if (value is num) {
+    return value.toInt();
+  }
+  return int.tryParse(value?.toString() ?? '');
+}
+
+int _availableSpotsFrom(int? maxParticipants, int? participantCount) {
+  if (maxParticipants == null || maxParticipants <= 0) {
+    return 0;
+  }
+  final remaining = maxParticipants - (participantCount ?? 0);
+  return remaining < 0 ? 0 : remaining;
+}
+
+double _distanceKmFrom({
+  required HomeLocation userLocation,
+  required double? latitude,
+  required double? longitude,
+}) {
+  if (latitude == null || longitude == null) {
+    return 0;
+  }
+
+  const earthRadiusKm = 6371.0;
+  final userLatitude = _degreesToRadians(userLocation.latitude);
+  final activityLatitude = _degreesToRadians(latitude);
+  final latitudeDelta = _degreesToRadians(latitude - userLocation.latitude);
+  final longitudeDelta = _degreesToRadians(longitude - userLocation.longitude);
+  final haversine =
+      math.sin(latitudeDelta / 2) * math.sin(latitudeDelta / 2) +
+      math.cos(userLatitude) *
+          math.cos(activityLatitude) *
+          math.sin(longitudeDelta / 2) *
+          math.sin(longitudeDelta / 2);
+  final centralAngle =
+      2 * math.atan2(math.sqrt(haversine), math.sqrt(1 - haversine));
+  return earthRadiusKm * centralAngle;
+}
+
+double _degreesToRadians(double degrees) => degrees * math.pi / 180;
 
 bool _boolValue(Object? value, {bool fallback = false}) {
   if (value is bool) {
@@ -312,7 +446,10 @@ DateTime? _dateTimeOrNull(Object? value) {
   if (value == null) {
     return null;
   }
-  return DateTime.tryParse(value.toString())?.toLocal();
+  final text = value.toString();
+  return (DateTime.tryParse(text) ??
+          DateTime.tryParse(text.replaceFirst(' ', 'T')))
+      ?.toLocal();
 }
 
 String _formatDistance(double distanceKm) {
@@ -351,6 +488,24 @@ String _formatTimeLabel(DateTime date) {
   final hour = date.hour.toString().padLeft(2, '0');
   final minute = date.minute.toString().padLeft(2, '0');
   return '$hour:$minute';
+}
+
+String _initialsFor(String name) {
+  final parts = name.trim().split(RegExp(r'\s+'));
+  if (parts.isEmpty || parts.first.isEmpty) {
+    return '';
+  }
+  if (parts.length == 1) {
+    return parts.first
+        .substring(0, parts.first.length.clamp(0, 2))
+        .toUpperCase();
+  }
+  return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
+}
+
+String? _nullableString(Object? value) {
+  final text = _stringValue(value);
+  return text.isEmpty ? null : text;
 }
 
 Color _colorFromHex(String hex, {required Color fallback}) {

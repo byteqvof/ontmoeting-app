@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/app_router.dart';
 import '../../../../app/theme/toch_theme.dart';
 import '../../domain/entities/home_activity.dart';
 import '../widgets/activity_detail_action_bar.dart';
@@ -36,11 +37,21 @@ class ActivityDetailPage extends StatelessWidget {
                       children: [
                         ActivityDetailInfoCard(activity: activity),
                         const SizedBox(height: TochSpacing.md),
-                        ActivityDetailHostCard(activity: activity),
+                        ActivityDetailHostCard(
+                          activity: activity,
+                          onProfilePressed: (profileId) {
+                            context.push(AppRoutes.profilePath(profileId));
+                          },
+                        ),
                         const SizedBox(height: TochSpacing.md),
                         _DescriptionCard(activity: activity),
                         const SizedBox(height: TochSpacing.md),
-                        ActivityDetailParticipantsCard(activity: activity),
+                        ActivityDetailParticipantsCard(
+                          activity: activity,
+                          onProfilePressed: (profileId) {
+                            context.push(AppRoutes.profilePath(profileId));
+                          },
+                        ),
                         const SizedBox(height: TochSpacing.md),
                         const _SafetyCard(),
                       ],
