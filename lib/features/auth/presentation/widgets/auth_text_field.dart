@@ -23,6 +23,7 @@ class AuthTextField extends StatelessWidget {
       keyboardType: keyboardType,
       obscureText: obscureText,
       validator: validator,
+      cursorColor: Theme.of(context).colorScheme.primary,
       decoration: InputDecoration(labelText: label),
     );
   }

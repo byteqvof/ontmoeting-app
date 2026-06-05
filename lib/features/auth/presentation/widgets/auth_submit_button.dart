@@ -19,7 +19,10 @@ class AuthSubmitButton extends StatelessWidget {
       child: isLoading
           ? const SizedBox.square(
               dimension: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
             )
           : Text(label),
     );

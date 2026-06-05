@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_router.dart';
+import '../../../../app/theme/toch_theme.dart';
+import '../../../../app/widgets/toch_wordmark.dart';
 import '../../../../core/utils/input_validators.dart';
 import '../bloc/auth_bloc.dart';
 import '../widgets/auth_submit_button.dart';
@@ -56,49 +58,65 @@ class _LoginPageState extends State<LoginPage> {
         return Scaffold(
           body: SafeArea(
             child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 420),
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text(
-                          'Sign in',
-                          style: Theme.of(context).textTheme.headlineMedium,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(TochSpacing.lg),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 460),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: context.toch.card,
+                      border: Border.all(color: context.toch.line),
+                      borderRadius: BorderRadius.circular(TochRadius.lg),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(TochSpacing.xl),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const TochWordmark(),
+                            const SizedBox(height: TochSpacing.lg),
+                            Text(
+                              'Welkom terug',
+                              style: Theme.of(context).textTheme.headlineMedium,
+                            ),
+                            const SizedBox(height: TochSpacing.sm),
+                            Text(
+                              'Log in en zet de volgende stap naar een ontmoeting in de buurt.',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                            const SizedBox(height: TochSpacing.xl),
+                            AuthTextField(
+                              controller: _emailController,
+                              label: 'Email',
+                              keyboardType: TextInputType.emailAddress,
+                              validator: InputValidators.email,
+                            ),
+                            const SizedBox(height: TochSpacing.md),
+                            AuthTextField(
+                              controller: _passwordController,
+                              label: 'Wachtwoord',
+                              keyboardType: TextInputType.visiblePassword,
+                              obscureText: true,
+                              validator: InputValidators.password,
+                            ),
+                            const SizedBox(height: TochSpacing.lg),
+                            AuthSubmitButton(
+                              label: 'Inloggen',
+                              isLoading: isLoading,
+                              onPressed: _submit,
+                            ),
+                            const SizedBox(height: TochSpacing.sm),
+                            TextButton(
+                              onPressed: isLoading
+                                  ? null
+                                  : () => context.go(AppRoutes.register),
+                              child: const Text('Maak een account aan'),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 24),
-                        AuthTextField(
-                          controller: _emailController,
-                          label: 'Email',
-                          keyboardType: TextInputType.emailAddress,
-                          validator: InputValidators.email,
-                        ),
-                        const SizedBox(height: 16),
-                        AuthTextField(
-                          controller: _passwordController,
-                          label: 'Password',
-                          keyboardType: TextInputType.visiblePassword,
-                          obscureText: true,
-                          validator: InputValidators.password,
-                        ),
-                        const SizedBox(height: 24),
-                        AuthSubmitButton(
-                          label: 'Sign in',
-                          isLoading: isLoading,
-                          onPressed: _submit,
-                        ),
-                        const SizedBox(height: 12),
-                        TextButton(
-                          onPressed: isLoading
-                              ? null
-                              : () => context.go(AppRoutes.register),
-                          child: const Text('Create an account'),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
