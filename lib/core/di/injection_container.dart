@@ -11,10 +11,11 @@ import '../../features/auth/domain/usecases/sign_in_with_oauth.dart';
 import '../../features/auth/domain/usecases/sign_out.dart';
 import '../../features/auth/domain/usecases/sign_up.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
-import '../../features/home/data/datasources/home_dummy_data_source.dart';
 import '../../features/home/data/datasources/home_location_data_source.dart';
+import '../../features/home/data/datasources/home_remote_data_source.dart';
 import '../../features/home/data/repositories/home_repository_impl.dart';
 import '../../features/home/domain/repositories/home_repository.dart';
+import '../../features/home/domain/usecases/create_activity.dart';
 import '../../features/home/domain/usecases/get_current_city_name.dart';
 import '../../features/home/domain/usecases/get_current_location.dart';
 import '../../features/home/domain/usecases/get_home_feed.dart';
@@ -38,8 +39,8 @@ Future<void> configureDependencies() async {
     ..registerLazySingleton(() => GetCurrentUser(sl()))
     ..registerLazySingleton(() => AuthStateChanges(sl()))
     ..registerFactory(() => AuthBloc(sl(), sl(), sl(), sl(), sl(), sl()))
-    ..registerLazySingleton<HomeDummyDataSource>(
-      () => const HomeDummyDataSourceImpl(),
+    ..registerLazySingleton<HomeRemoteDataSource>(
+      () => HomeRemoteDataSourceImpl(sl()),
     )
     ..registerLazySingleton<HomeLocationDataSource>(
       () => const HomeLocationDataSourceImpl(),
@@ -47,6 +48,7 @@ Future<void> configureDependencies() async {
     ..registerLazySingleton<HomeRepository>(
       () => HomeRepositoryImpl(sl(), sl()),
     )
+    ..registerLazySingleton(() => CreateActivity(sl()))
     ..registerLazySingleton(() => GetHomeFeed(sl()))
     ..registerLazySingleton(() => GetCurrentCityName(sl()))
     ..registerLazySingleton(() => GetCurrentLocation(sl()))

@@ -8,6 +8,7 @@ import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/home/domain/entities/home_activity.dart';
 import '../../features/home/presentation/pages/activity_detail_page.dart';
+import '../../features/home/presentation/pages/create_activity_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
 import '../../features/onboarding/presentation/pages/onboarding_page.dart';
 import '../../features/onboarding/presentation/pages/splash_page.dart';
@@ -18,6 +19,7 @@ class AppRoutes {
   static const login = '/login';
   static const register = '/register';
   static const home = '/';
+  static const createActivity = '/activities/create';
   static const activityDetail = '/activities/:activityId';
   static const splash = '/splash';
   static const onboarding = '/onboarding';
@@ -53,6 +55,19 @@ GoRouter createRouter(AuthBloc authBloc) {
       GoRoute(
         path: AppRoutes.home,
         builder: (context, state) => const HomePage(),
+      ),
+      GoRoute(
+        path: AppRoutes.createActivity,
+        builder: (context, state) {
+          final args = state.extra;
+          if (args is! CreateActivityPageArgs) {
+            return const MissingCreateActivityPage();
+          }
+          return CreateActivityPage(
+            location: args.location,
+            categories: args.categories,
+          );
+        },
       ),
       GoRoute(
         path: AppRoutes.activityDetail,

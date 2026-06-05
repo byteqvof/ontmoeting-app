@@ -1,9 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/app_router.dart';
 import '../../../../app/theme/toch_theme.dart';
+import '../../domain/entities/home_category.dart';
+import '../../domain/entities/home_location.dart';
+import '../pages/create_activity_page.dart';
 
 class HomeBottomNav extends StatelessWidget {
-  const HomeBottomNav({super.key});
+  const HomeBottomNav({
+    required this.location,
+    required this.categories,
+    super.key,
+  });
+
+  final HomeLocation location;
+  final List<HomeCategory> categories;
 
   @override
   Widget build(BuildContext context) {
@@ -38,25 +50,28 @@ class HomeBottomNav extends StatelessWidget {
                 ),
               ],
             ),
-            child: const SizedBox(
+            child: SizedBox(
               height: 64,
               child: Row(
                 children: [
-                  _HomeNavItem(
+                  const _HomeNavItem(
                     icon: Icons.explore_rounded,
                     label: 'Ontdek',
                     selected: true,
                   ),
-                  _HomeNavItem(
+                  const _HomeNavItem(
                     icon: Icons.chat_bubble_rounded,
                     label: 'Berichten',
                   ),
-                  _HomeCreateButton(),
-                  _HomeNavItem(
+                  _HomeCreateButton(location: location, categories: categories),
+                  const _HomeNavItem(
                     icon: Icons.calendar_month_rounded,
                     label: 'Agenda',
                   ),
-                  _HomeNavItem(icon: Icons.person_rounded, label: 'Profiel'),
+                  const _HomeNavItem(
+                    icon: Icons.person_rounded,
+                    label: 'Profiel',
+                  ),
                 ],
               ),
             ),
@@ -113,7 +128,10 @@ class _HomeNavItem extends StatelessWidget {
 }
 
 class _HomeCreateButton extends StatelessWidget {
-  const _HomeCreateButton();
+  const _HomeCreateButton({required this.location, required this.categories});
+
+  final HomeLocation location;
+  final List<HomeCategory> categories;
 
   @override
   Widget build(BuildContext context) {
@@ -121,22 +139,37 @@ class _HomeCreateButton extends StatelessWidget {
 
     return Expanded(
       child: Center(
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: colors.green,
-            borderRadius: BorderRadius.circular(TochRadius.md),
-            boxShadow: [
-              BoxShadow(
-                color: colors.green.withValues(alpha: .28),
-                blurRadius: 16,
-                offset: const Offset(0, 8),
+        child: Material(
+          color: colors.green,
+          borderRadius: BorderRadius.circular(TochRadius.md),
+          child: InkWell(
+            onTap: () => context.push(
+              AppRoutes.createActivity,
+              extra: CreateActivityPageArgs(
+                location: location,
+                categories: categories,
               ),
-            ],
-          ),
-          child: const SizedBox(
-            width: 52,
-            height: 40,
-            child: Icon(Icons.add_rounded, color: Colors.white, size: 28),
+            ),
+            borderRadius: BorderRadius.circular(TochRadius.md),
+            child: Ink(
+              width: 52,
+              height: 40,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(TochRadius.md),
+                boxShadow: [
+                  BoxShadow(
+                    color: colors.green.withValues(alpha: .28),
+                    blurRadius: 16,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.add_rounded,
+                color: Colors.white,
+                size: 28,
+              ),
+            ),
           ),
         ),
       ),

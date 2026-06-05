@@ -1,17 +1,29 @@
 import 'package:dartz/dartz.dart';
 
 import '../../../../core/errors/failures.dart';
+import '../../domain/entities/create_activity_draft.dart';
 import '../../domain/entities/home_feed.dart';
 import '../../domain/entities/home_location.dart';
 import '../../domain/repositories/home_repository.dart';
-import '../datasources/home_dummy_data_source.dart';
 import '../datasources/home_location_data_source.dart';
+import '../datasources/home_remote_data_source.dart';
 
 class HomeRepositoryImpl implements HomeRepository {
   const HomeRepositoryImpl(this._dataSource, this._locationDataSource);
 
-  final HomeDummyDataSource _dataSource;
+  final HomeRemoteDataSource _dataSource;
   final HomeLocationDataSource _locationDataSource;
+
+  @override
+  Future<Either<Failure, String>> createActivity(
+    CreateActivityDraft draft,
+  ) async {
+    try {
+      return right(await _dataSource.createActivity(draft));
+    } catch (error) {
+      return left(UnknownFailure(error.toString()));
+    }
+  }
 
   @override
   Future<Either<Failure, HomeFeed>> getHomeFeed({
