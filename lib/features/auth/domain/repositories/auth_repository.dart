@@ -1,6 +1,7 @@
 import 'package:dartz/dartz.dart';
 
 import '../../../../core/errors/failures.dart';
+import '../entities/auth_oauth_provider.dart';
 import '../entities/auth_user.dart';
 
 abstract interface class AuthRepository {
@@ -13,6 +14,8 @@ abstract interface class AuthRepository {
     required String email,
     required String password,
   });
+
+  Future<Either<Failure, void>> signInWithOAuth(AuthOAuthProvider provider);
 
   Future<Either<Failure, void>> signOut();
 

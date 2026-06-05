@@ -128,7 +128,7 @@ class AppTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: TochColors.green,
           foregroundColor: TochColors.cream,
-          minimumSize: const Size.fromHeight(48),
+          minimumSize: const Size(0, 48),
           padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 15),
           shape: const StadiumBorder(),
           elevation: 0,

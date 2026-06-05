@@ -21,6 +21,15 @@ final class AuthSignInRequested extends AuthEvent {
   List<Object?> get props => [email, password];
 }
 
+final class AuthOAuthSignInRequested extends AuthEvent {
+  const AuthOAuthSignInRequested(this.provider);
+
+  final AuthOAuthProvider provider;
+
+  @override
+  List<Object?> get props => [provider];
+}
+
 final class AuthSignUpRequested extends AuthEvent {
   const AuthSignUpRequested({required this.email, required this.password});
 

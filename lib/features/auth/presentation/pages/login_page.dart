@@ -4,11 +4,14 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_router.dart';
 import '../../../../app/theme/toch_theme.dart';
-import '../../../../app/widgets/toch_wordmark.dart';
+import '../../../../app/widgets/toch_mark.dart';
 import '../../../../core/utils/input_validators.dart';
+import '../../domain/entities/auth_oauth_provider.dart';
 import '../bloc/auth_bloc.dart';
 import '../widgets/auth_submit_button.dart';
 import '../widgets/auth_text_field.dart';
+import '../widgets/email_auth_divider.dart';
+import '../widgets/social_auth_button.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -75,21 +78,46 @@ class _LoginPageState extends State<LoginPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            const TochWordmark(),
+                            const TochMark(size: 56),
                             const SizedBox(height: TochSpacing.lg),
                             Text(
-                              'Welkom terug',
-                              style: Theme.of(context).textTheme.headlineMedium,
+                              'Welkom\nterug',
+                              style: Theme.of(context).textTheme.displayLarge
+                                  ?.copyWith(fontSize: 42, height: 1.04),
                             ),
                             const SizedBox(height: TochSpacing.sm),
                             Text(
-                              'Log in en zet de volgende stap naar een ontmoeting in de buurt.',
+                              'Log in en sluit aan bij wat er vandaag speelt.',
                               style: Theme.of(context).textTheme.bodyMedium,
                             ),
-                            const SizedBox(height: TochSpacing.xl),
+                            const SizedBox(height: TochSpacing.lg),
+                            SocialAuthButton(
+                              icon: Icons.apple,
+                              label: 'Doorgaan met Apple',
+                              onPressed: isLoading
+                                  ? null
+                                  : () => context.read<AuthBloc>().add(
+                                      const AuthOAuthSignInRequested(
+                                        AuthOAuthProvider.apple,
+                                      ),
+                                    ),
+                            ),
+                            const SizedBox(height: TochSpacing.sm),
+                            SocialAuthButton(
+                              icon: Icons.g_mobiledata,
+                              label: 'Doorgaan met Google',
+                              onPressed: isLoading
+                                  ? null
+                                  : () => context.read<AuthBloc>().add(
+                                      const AuthOAuthSignInRequested(
+                                        AuthOAuthProvider.google,
+                                      ),
+                                    ),
+                            ),
+                            const EmailAuthDivider(),
                             AuthTextField(
                               controller: _emailController,
-                              label: 'Email',
+                              label: 'E-mailadres',
                               keyboardType: TextInputType.emailAddress,
                               validator: InputValidators.email,
                             ),
@@ -112,7 +140,9 @@ class _LoginPageState extends State<LoginPage> {
                               onPressed: isLoading
                                   ? null
                                   : () => context.go(AppRoutes.register),
-                              child: const Text('Maak een account aan'),
+                              child: const Text(
+                                'Nog geen account? Registreren',
+                              ),
                             ),
                           ],
                         ),

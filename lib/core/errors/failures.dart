@@ -17,6 +17,10 @@ final class AuthFailure extends Failure {
   const AuthFailure(super.message);
 }
 
+final class PermissionFailure extends Failure {
+  const PermissionFailure(super.message);
+}
+
 final class ServerFailure extends Failure {
   const ServerFailure(super.message);
 }
