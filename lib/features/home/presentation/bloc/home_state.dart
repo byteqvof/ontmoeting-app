@@ -1,5 +1,7 @@
 part of 'home_bloc.dart';
 
+const _unsetParticipationError = Object();
+
 sealed class HomeState extends Equatable {
   const HomeState();
 
@@ -55,6 +57,8 @@ final class HomeLoaded extends HomeState {
     required this.selectedTimeFilter,
     required this.selectedCategoryId,
     this.isRefreshing = false,
+    this.pendingActivityIds = const [],
+    this.participationError,
   });
 
   final HomeFeed feed;
@@ -63,6 +67,12 @@ final class HomeLoaded extends HomeState {
   final String selectedTimeFilter;
   final String selectedCategoryId;
   final bool isRefreshing;
+  final List<String> pendingActivityIds;
+  final String? participationError;
+
+  bool isParticipationPending(String activityId) {
+    return pendingActivityIds.contains(activityId);
+  }
 
   List<HomeActivity> get visibleActivities {
     final categoryFiltered = selectedCategoryId == 'all'
@@ -98,6 +108,8 @@ final class HomeLoaded extends HomeState {
     String? selectedTimeFilter,
     String? selectedCategoryId,
     bool? isRefreshing,
+    List<String>? pendingActivityIds,
+    Object? participationError = _unsetParticipationError,
   }) {
     return HomeLoaded(
       feed: feed ?? this.feed,
@@ -106,6 +118,11 @@ final class HomeLoaded extends HomeState {
       selectedTimeFilter: selectedTimeFilter ?? this.selectedTimeFilter,
       selectedCategoryId: selectedCategoryId ?? this.selectedCategoryId,
       isRefreshing: isRefreshing ?? this.isRefreshing,
+      pendingActivityIds: pendingActivityIds ?? this.pendingActivityIds,
+      participationError:
+          identical(participationError, _unsetParticipationError)
+          ? this.participationError
+          : participationError as String?,
     );
   }
 
@@ -117,5 +134,7 @@ final class HomeLoaded extends HomeState {
     selectedTimeFilter,
     selectedCategoryId,
     isRefreshing,
+    pendingActivityIds,
+    participationError,
   ];
 }

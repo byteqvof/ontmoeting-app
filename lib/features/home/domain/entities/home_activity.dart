@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 
+import 'activity_participation_update.dart';
 import 'home_category.dart';
 import 'home_participant.dart';
 
@@ -50,7 +51,14 @@ class HomeActivity extends Equatable {
   final bool isJoined;
   final bool isOwnedByCurrentUser;
 
-  HomeActivity copyWith({HomeCategory? category}) {
+  HomeActivity copyWith({
+    HomeCategory? category,
+    List<HomeParticipant>? participants,
+    int? availableSpots,
+    String? spotsLabel,
+    bool? isJoined,
+    bool? isOwnedByCurrentUser,
+  }) {
     return HomeActivity(
       id: id,
       category: category ?? this.category,
@@ -68,11 +76,24 @@ class HomeActivity extends Equatable {
       hostSubtitle: hostSubtitle,
       hostScore: hostScore,
       hostAvatarUrl: hostAvatarUrl,
-      participants: participants,
-      availableSpots: availableSpots,
-      spotsLabel: spotsLabel,
-      isJoined: isJoined,
-      isOwnedByCurrentUser: isOwnedByCurrentUser,
+      participants: participants ?? this.participants,
+      availableSpots: availableSpots ?? this.availableSpots,
+      spotsLabel: spotsLabel ?? this.spotsLabel,
+      isJoined: isJoined ?? this.isJoined,
+      isOwnedByCurrentUser: isOwnedByCurrentUser ?? this.isOwnedByCurrentUser,
+    );
+  }
+
+  HomeActivity applyParticipationUpdate(ActivityParticipationUpdate update) {
+    if (update.activityId != id) {
+      return this;
+    }
+
+    return copyWith(
+      participants: update.participants,
+      availableSpots: update.availableSpots,
+      spotsLabel: update.spotsLabel,
+      isJoined: update.isJoined,
     );
   }
 

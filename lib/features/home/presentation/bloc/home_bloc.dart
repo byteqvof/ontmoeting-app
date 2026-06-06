@@ -11,14 +11,19 @@ import '../../domain/entities/home_feed.dart';
 import '../../domain/entities/home_location.dart';
 import '../../domain/usecases/get_current_location.dart';
 import '../../domain/usecases/get_home_feed.dart';
+import '../../domain/usecases/set_activity_participation.dart';
 import '../../domain/usecases/watch_current_location.dart';
 
 part 'home_event.dart';
 part 'home_state.dart';
 
 class HomeBloc extends Bloc<HomeEvent, HomeState> {
-  HomeBloc(this._getHomeFeed, this._getCurrentLocation, this._watchLocation)
-    : super(const HomeInitial()) {
+  HomeBloc(
+    this._getHomeFeed,
+    this._getCurrentLocation,
+    this._setActivityParticipation,
+    this._watchLocation,
+  ) : super(const HomeInitial()) {
     on<HomeStarted>(_onStarted);
     on<HomeLocationRequested>(_onLocationRequested);
     on<HomeLocationChanged>(_onLocationChanged);
@@ -27,12 +32,15 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     on<HomeRefreshRequested>(_onRefreshRequested);
     on<HomeTimeFilterSelected>(_onTimeFilterSelected);
     on<HomeCategorySelected>(_onCategorySelected);
+    on<HomeActivityParticipationToggled>(_onActivityParticipationToggled);
+    on<HomeActivityUpdated>(_onActivityUpdated);
   }
 
   static const _defaultDistanceKm = 10;
 
   final GetHomeFeed _getHomeFeed;
   final GetCurrentLocation _getCurrentLocation;
+  final SetActivityParticipation _setActivityParticipation;
   final WatchCurrentLocation _watchLocation;
 
   StreamSubscription? _locationSubscription;
@@ -163,6 +171,91 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     emit(current.copyWith(selectedCategoryId: event.categoryId));
   }
 
+  Future<void> _onActivityParticipationToggled(
+    HomeActivityParticipationToggled event,
+    Emitter<HomeState> emit,
+  ) async {
+    final current = state;
+    if (current is! HomeLoaded ||
+        current.isParticipationPending(event.activityId)) {
+      return;
+    }
+
+    final activity = _activityById(current.feed.activities, event.activityId);
+    if (activity == null || activity.isOwnedByCurrentUser) {
+      return;
+    }
+
+    if (!activity.isJoined && activity.availableSpots <= 0) {
+      emit(current.copyWith(participationError: 'Deze activiteit zit vol.'));
+      return;
+    }
+
+    emit(
+      current.copyWith(
+        pendingActivityIds: [...current.pendingActivityIds, activity.id],
+        participationError: null,
+      ),
+    );
+
+    final result = await _setActivityParticipation(
+      SetActivityParticipationParams(
+        activityId: activity.id,
+        join: !activity.isJoined,
+      ),
+    );
+
+    final latest = state;
+    if (latest is! HomeLoaded) {
+      return;
+    }
+
+    final pendingActivityIds = latest.pendingActivityIds
+        .where((activityId) => activityId != activity.id)
+        .toList();
+
+    result.fold(
+      (failure) {
+        AppLogger.debug(
+          'HomeBloc participation update failed: ${failure.message}',
+        );
+        emit(
+          latest.copyWith(
+            pendingActivityIds: pendingActivityIds,
+            participationError: failure.message,
+          ),
+        );
+      },
+      (update) {
+        final activities = latest.feed.activities
+            .map((activity) => activity.applyParticipationUpdate(update))
+            .toList();
+        emit(
+          latest.copyWith(
+            feed: latest.feed.copyWith(activities: activities),
+            pendingActivityIds: pendingActivityIds,
+            participationError: null,
+          ),
+        );
+      },
+    );
+  }
+
+  void _onActivityUpdated(HomeActivityUpdated event, Emitter<HomeState> emit) {
+    final current = state;
+    if (current is! HomeLoaded) {
+      return;
+    }
+
+    final activities = current.feed.activities
+        .map(
+          (activity) =>
+              activity.id == event.activity.id ? event.activity : activity,
+        )
+        .toList();
+    emit(current.copyWith(feed: current.feed.copyWith(activities: activities)));
+  }
+
   Future<void> _loadFeed(
     Emitter<HomeState> emit, {
     required HomeLocation location,
@@ -208,4 +301,14 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     _locationSubscription?.cancel();
     return super.close();
   }
+}
+
+HomeActivity? _activityById(List<HomeActivity> activities, String activityId) {
+  for (final activity in activities) {
+    if (activity.id == activityId) {
+      return activity;
+    }
+  }
+
+  return null;
 }

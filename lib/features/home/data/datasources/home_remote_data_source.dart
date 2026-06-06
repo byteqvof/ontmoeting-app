@@ -7,12 +7,16 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/config/supabase_config.dart';
 import '../../../../core/utils/app_logger.dart';
 import '../../../../core/utils/supabase_function_auth.dart';
+import '../../domain/entities/activity_agenda.dart';
+import '../../domain/entities/activity_chat_message.dart';
+import '../../domain/entities/activity_participation_update.dart';
 import '../../domain/entities/create_activity_draft.dart';
 import '../../domain/entities/home_activity.dart';
 import '../../domain/entities/home_category.dart';
 import '../../domain/entities/home_feed.dart';
 import '../../domain/entities/home_location.dart';
 import '../../domain/entities/home_participant.dart';
+import '../models/activity_chat_message_model.dart';
 
 abstract interface class HomeRemoteDataSource {
   Future<String> createActivity(CreateActivityDraft draft);
@@ -20,6 +24,22 @@ abstract interface class HomeRemoteDataSource {
   Future<HomeFeed> getHomeFeed({
     required HomeLocation location,
     required int distanceKm,
+  });
+
+  Future<ActivityParticipationUpdate> setActivityParticipation({
+    required String activityId,
+    required bool join,
+  });
+
+  Future<ActivityAgenda> getActivityAgenda();
+
+  Future<List<ActivityChatMessage>> getActivityChatMessages({
+    required String activityId,
+  });
+
+  Future<ActivityChatMessage> sendActivityChatMessage({
+    required String activityId,
+    required String body,
   });
 }
 
@@ -107,6 +127,134 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
     );
   }
 
+  @override
+  Future<ActivityParticipationUpdate> setActivityParticipation({
+    required String activityId,
+    required bool join,
+  }) async {
+    AppLogger.debug('${join ? 'Joining' : 'Leaving'} activity $activityId');
+
+    final response = await _client.functions.invoke(
+      supabaseActivityParticipationFunctionName,
+      headers: authenticatedFunctionHeaders(_client),
+      body: {'activity_id': activityId, 'action': join ? 'join' : 'leave'},
+    );
+
+    final payload = _asMap(response.data);
+    final participation = _participationUpdateFromJson(
+      _asMap(payload['participation']),
+    );
+
+    if (participation.activityId.isEmpty) {
+      throw StateError('Participation update completed without activity id.');
+    }
+
+    AppLogger.debug(
+      'Participation updated for ${participation.activityId}: '
+      'isJoined=${participation.isJoined}',
+    );
+    return participation;
+  }
+
+  @override
+  Future<ActivityAgenda> getActivityAgenda() async {
+    AppLogger.debug('Fetching activity agenda');
+
+    final response = await _client.functions.invoke(
+      supabaseActivityAgendaFunctionName,
+      method: HttpMethod.get,
+      headers: authenticatedFunctionHeaders(_client),
+      queryParameters: {'limit': '100'},
+    );
+
+    final payload = _asMap(response.data);
+    final currentUserId = _client.auth.currentUser?.id;
+    final hosted = _asList(payload['hosted'])
+        .map((activity) => _asMap(activity))
+        .map(
+          (activity) => _activityFromJson(
+            activity,
+            _locationForActivityJson(activity),
+            currentUserId,
+            distanceLabelFallback: _locationLabelForActivityJson(activity),
+            isOwnedByCurrentUserOverride: true,
+          ),
+        )
+        .where((activity) => activity.id.isNotEmpty)
+        .toList();
+    final joined = _asList(payload['joined'])
+        .map((activity) => _asMap(activity))
+        .map(
+          (activity) => _activityFromJson(
+            activity,
+            _locationForActivityJson(activity),
+            currentUserId,
+            distanceLabelFallback: _locationLabelForActivityJson(activity),
+            isJoinedOverride: true,
+            isOwnedByCurrentUserOverride: false,
+          ),
+        )
+        .where((activity) => activity.id.isNotEmpty)
+        .toList();
+
+    AppLogger.debug(
+      'Fetched activity agenda hosted=${hosted.length}, joined=${joined.length}',
+    );
+    return ActivityAgenda(hostedActivities: hosted, joinedActivities: joined);
+  }
+
+  @override
+  Future<List<ActivityChatMessage>> getActivityChatMessages({
+    required String activityId,
+  }) async {
+    AppLogger.debug('Fetching chat messages for activity $activityId');
+
+    final response = await _client.functions.invoke(
+      supabaseActivityChatFunctionName,
+      method: HttpMethod.get,
+      headers: authenticatedFunctionHeaders(_client),
+      queryParameters: {'activity_id': activityId, 'limit': '50'},
+    );
+
+    final payload = _asMap(response.data);
+    final currentUserId = _client.auth.currentUser?.id;
+    return _asList(payload['messages'])
+        .map(
+          (message) => ActivityChatMessageModel.fromJson(
+            _asMap(message),
+            currentUserId: currentUserId,
+          ),
+        )
+        .where((message) => message.id.isNotEmpty)
+        .toList();
+  }
+
+  @override
+  Future<ActivityChatMessage> sendActivityChatMessage({
+    required String activityId,
+    required String body,
+  }) async {
+    AppLogger.debug('Sending chat message for activity $activityId');
+
+    final response = await _client.functions.invoke(
+      supabaseActivityChatFunctionName,
+      headers: authenticatedFunctionHeaders(_client),
+      body: {'activity_id': activityId, 'body': body},
+    );
+
+    final payload = _asMap(response.data);
+    final message = ActivityChatMessageModel.fromJson(
+      _asMap(payload['message']),
+      currentUserId: _client.auth.currentUser?.id,
+    );
+
+    if (message.id.isEmpty) {
+      throw StateError('Send chat message completed without a message id.');
+    }
+
+    return message;
+  }
+
   Future<List<HomeCategory>> _categoriesFromPayload(
     Map<String, dynamic> payload,
     List<HomeActivity> activities,
@@ -158,15 +306,20 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
   HomeActivity _activityFromJson(
     Map<String, dynamic> json,
     HomeLocation userLocation,
-    String? currentUserId,
-  ) {
+    String? currentUserId, {
+    String? distanceLabelFallback,
+    bool? isJoinedOverride,
+    bool? isOwnedByCurrentUserOverride,
+  }) {
     final categoryJson = _asMap(json['category']);
     final category = _categoryFromJson(
       categoryJson.isEmpty ? {'id': json['category_id']} : categoryJson,
     );
     final host = _asMap(json['host']);
     final participants = _asList(
-      json['participantPreview'] ?? json['participant_preview'],
+      json['participants'] ??
+          json['participantPreview'] ??
+          json['participant_preview'],
     ).map((participant) => _asMap(participant)).toList();
     final startAt = _dateTimeOrNull(
       json['startAt'] ?? json['start_at'] ?? json['starts_at'],
@@ -183,6 +336,12 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
         _optionalIntValue(json['availableSpots'] ?? json['available_spots']) ??
         _availableSpotsFrom(maxParticipants, participantCount);
     final isJoined = _boolValue(json['isJoined'] ?? json['is_joined']);
+    final cityName = _stringValue(
+      json['locationName'] ??
+          json['location_name'] ??
+          json['city_name'] ??
+          json['city'],
+    );
     final distanceKm =
         _optionalDoubleValue(json['distanceKm'] ?? json['distance_km']) ??
         _distanceKmFrom(
@@ -190,12 +349,6 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
           latitude: _optionalDoubleValue(json['latitude'] ?? json['lat']),
           longitude: _optionalDoubleValue(json['longitude'] ?? json['lng']),
         );
-    final cityName = _stringValue(
-      json['locationName'] ??
-          json['location_name'] ??
-          json['city_name'] ??
-          json['city'],
-    );
     final meetingPoint = _stringValue(
       json['meetingPoint'] ??
           json['meeting_point'] ??
@@ -211,9 +364,10 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
           json['host_id'],
     );
     final isOwnedByCurrentUser =
-        currentUserId != null &&
-        currentUserId.isNotEmpty &&
-        hostId == currentUserId;
+        isOwnedByCurrentUserOverride ??
+        (currentUserId != null &&
+            currentUserId.isNotEmpty &&
+            hostId == currentUserId);
 
     return HomeActivity(
       id: _stringValue(json['id']),
@@ -221,7 +375,7 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
       distanceKm: distanceKm,
       distanceLabel: _stringValue(
         json['distanceLabel'] ?? json['distance_label'],
-        fallback: _formatDistance(distanceKm),
+        fallback: distanceLabelFallback ?? _formatDistance(distanceKm),
       ),
       title: _stringValue(json['title']),
       dateLabel: _stringValue(
@@ -259,7 +413,7 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
         json['spotsLabel'] ?? json['spots_label'],
         fallback: isJoined ? 'jij gaat ook' : 'nog $availableSpots plekken',
       ),
-      isJoined: isJoined,
+      isJoined: isJoinedOverride ?? isJoined,
       isOwnedByCurrentUser: isOwnedByCurrentUser,
     );
   }
@@ -278,6 +432,24 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
       ),
       isHost: _boolValue(json['isHost'] ?? json['is_host']),
       avatarUrl: _nullableString(json['avatarUrl'] ?? json['avatar_url']),
+    );
+  }
+
+  ActivityParticipationUpdate _participationUpdateFromJson(
+    Map<String, dynamic> json,
+  ) {
+    return ActivityParticipationUpdate(
+      activityId: _stringValue(json['activity_id'] ?? json['activityId']),
+      isJoined: _boolValue(json['is_joined'] ?? json['isJoined']),
+      participants: _asList(json['participants'])
+          .map((participant) => _participantFromJson(_asMap(participant)))
+          .toList(),
+      participantsCount: _intValue(
+        json['participants_count'] ?? json['participantsCount'],
+      ),
+      availableSpots: _intValue(
+        json['available_spots'] ?? json['availableSpots'],
+      ),
     );
   }
 
@@ -337,6 +509,25 @@ List<HomeActivity> _activitiesWithResolvedCategories(
         ),
       )
       .toList();
+}
+
+HomeLocation _locationForActivityJson(Map<String, dynamic> json) {
+  return HomeLocation(
+    latitude: _optionalDoubleValue(json['latitude'] ?? json['lat']) ?? 0,
+    longitude: _optionalDoubleValue(json['longitude'] ?? json['lng']) ?? 0,
+    cityName: _locationLabelForActivityJson(json),
+  );
+}
+
+String _locationLabelForActivityJson(Map<String, dynamic> json) {
+  return _stringValue(
+    json['locationName'] ??
+        json['location_name'] ??
+        json['city_name'] ??
+        json['city'] ??
+        json['address_line'],
+    fallback: 'Activiteit',
+  );
 }
 
 Map<String, dynamic> _asMap(Object? value) {

@@ -4,14 +4,24 @@ import '../../../../app/theme/toch_theme.dart';
 import '../../domain/entities/home_activity.dart';
 
 class ActivityDetailActionBar extends StatelessWidget {
-  const ActivityDetailActionBar({required this.activity, super.key});
+  const ActivityDetailActionBar({
+    required this.activity,
+    this.onParticipationPressed,
+    this.onChatPressed,
+    this.isParticipationPending = false,
+    super.key,
+  });
 
   final HomeActivity activity;
+  final VoidCallback? onParticipationPressed;
+  final VoidCallback? onChatPressed;
+  final bool isParticipationPending;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.toch;
     final isOwnActivity = activity.isOwnedByCurrentUser;
+    final isFull = !activity.isJoined && activity.availableSpots <= 0;
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -26,11 +36,21 @@ class ActivityDetailActionBar extends StatelessWidget {
             children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: isOwnActivity ? null : () {},
-                  icon: Icon(_joinIconFor(activity)),
+                  onPressed: isOwnActivity || isFull || isParticipationPending
+                      ? null
+                      : onParticipationPressed,
+                  icon: isParticipationPending
+                      ? SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: colors.green,
+                          ),
+                        )
+                      : Icon(_joinIconFor(activity)),
                   label: Text(_joinLabelFor(activity)),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: isOwnActivity
+                    foregroundColor: isOwnActivity || isFull
                         ? colors.green700.withValues(alpha: .55)
                         : colors.green,
                     side: BorderSide(
@@ -49,7 +69,7 @@ class ActivityDetailActionBar extends StatelessWidget {
               const SizedBox(width: TochSpacing.sm),
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: () {},
+                  onPressed: onChatPressed,
                   icon: const Icon(Icons.chat_bubble_rounded),
                   label: const Text('Open de chat'),
                   style: ElevatedButton.styleFrom(
@@ -74,12 +94,18 @@ IconData _joinIconFor(HomeActivity activity) {
   if (activity.isOwnedByCurrentUser) {
     return Icons.event_available_rounded;
   }
+  if (!activity.isJoined && activity.availableSpots <= 0) {
+    return Icons.block_rounded;
+  }
   return activity.isJoined ? Icons.close_rounded : Icons.add_rounded;
 }
 
 String _joinLabelFor(HomeActivity activity) {
   if (activity.isOwnedByCurrentUser) {
     return 'Jouw activiteit';
+  }
+  if (!activity.isJoined && activity.availableSpots <= 0) {
+    return 'Vol';
   }
   return activity.isJoined ? 'Afmelden' : 'Ga mee';
 }

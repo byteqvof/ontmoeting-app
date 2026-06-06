@@ -63,3 +63,21 @@ final class HomeCategorySelected extends HomeEvent {
   @override
   List<Object?> get props => [categoryId];
 }
+
+final class HomeActivityParticipationToggled extends HomeEvent {
+  const HomeActivityParticipationToggled(this.activityId);
+
+  final String activityId;
+
+  @override
+  List<Object?> get props => [activityId];
+}
+
+final class HomeActivityUpdated extends HomeEvent {
+  const HomeActivityUpdated(this.activity);
+
+  final HomeActivity activity;
+
+  @override
+  List<Object?> get props => [activity];
+}
