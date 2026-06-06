@@ -37,6 +37,7 @@ void main() {
       SupabaseClient('https://example.supabase.co', 'anon-key'),
       preferences,
       fakePhoneVerification: true,
+      fakePhoneBackendSync: _fakePhoneBackendSync,
     );
     await accountTrustService.requestPhoneCode('+31625215170');
     await accountTrustService.verifyPhoneCode(
@@ -67,6 +68,7 @@ void main() {
         SupabaseClient('https://example.supabase.co', 'anon-key'),
         preferences,
         fakePhoneVerification: true,
+        fakePhoneBackendSync: _fakePhoneBackendSync,
       );
       await accountTrustService.requestPhoneCode('+31625215170');
       await accountTrustService.verifyPhoneCode(
@@ -86,6 +88,22 @@ void main() {
         expect(profile.trust.reputationScore, 37);
       });
     },
+  );
+}
+
+Future<ProfileTrust> _fakePhoneBackendSync({
+  required String phoneNumber,
+  required DateTime verifiedAt,
+}) async {
+  return ProfileTrust(
+    phoneVerified: true,
+    phoneVerifiedAt: verifiedAt,
+    identityStatus: 'unverified',
+    identityMethod: null,
+    identityCompletedAt: null,
+    ageVerified: false,
+    reputationLevel: 'new_member',
+    reputationScore: 0,
   );
 }
 

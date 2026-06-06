@@ -7,16 +7,24 @@ import '../config/supabase_config.dart';
 import '../utils/app_logger.dart';
 import '../utils/supabase_function_auth.dart';
 
+typedef FakePhoneBackendSync =
+    Future<ProfileTrust> Function({
+      required String phoneNumber,
+      required DateTime verifiedAt,
+    });
+
 class AccountTrustService {
   const AccountTrustService(
     this._client,
     this._preferences, {
     this.fakePhoneVerification = tochFakePhoneVerificationEnabled,
+    this.fakePhoneBackendSync,
   });
 
   final SupabaseClient _client;
   final SharedPreferences _preferences;
   final bool fakePhoneVerification;
+  final FakePhoneBackendSync? fakePhoneBackendSync;
 
   ProfileTrust? get localFakeTrust {
     if (!fakePhoneVerification) {
@@ -27,7 +35,29 @@ class AccountTrustService {
 
   Future<ProfileTrust> syncTrust() async {
     if (fakePhoneVerification) {
-      return localFakeTrust ?? _localAuthTrust();
+      final localTrust = localFakeTrust;
+      final phoneNumber = _preferences.getString(
+        _fakePreferenceKey(_verifiedPhoneKey),
+      );
+      if (localTrust == null ||
+          !localTrust.phoneVerified ||
+          phoneNumber == null) {
+        return _localAuthTrust();
+      }
+
+      try {
+        return await _syncFakePhoneTrustToBackend(
+          phoneNumber: phoneNumber,
+          verifiedAt: localTrust.phoneVerifiedAt ?? DateTime.now().toUtc(),
+        );
+      } catch (error, stackTrace) {
+        AppLogger.debug(
+          'Fake phone trust backend sync failed',
+          error: error,
+          stackTrace: stackTrace,
+        );
+        return _localAuthTrust();
+      }
     }
 
     try {
@@ -111,6 +141,17 @@ class AccountTrustService {
     }
 
     final verifiedAt = DateTime.now().toUtc();
+    final syncedTrust = await _syncFakePhoneTrustToBackend(
+      phoneNumber: phoneNumber,
+      verifiedAt: verifiedAt,
+    );
+
+    if (!syncedTrust.phoneVerified) {
+      throw const AccountTrustException(
+        'Ontwikkelverificatie kon niet op de server worden bevestigd.',
+      );
+    }
+
     await _preferences.setBool(_fakePreferenceKey(_verifiedKey), true);
     await _preferences.setString(
       _fakePreferenceKey(_verifiedPhoneKey),
@@ -123,7 +164,41 @@ class AccountTrustService {
     await _preferences.remove(_fakePreferenceKey(_pendingPhoneKey));
 
     AppLogger.debug('Fake phone verification completed for $phoneNumber');
-    return _fakeVerifiedTrust(verifiedAt: verifiedAt)!;
+    return syncedTrust;
+  }
+
+  Future<ProfileTrust> _syncFakePhoneTrustToBackend({
+    required String phoneNumber,
+    required DateTime verifiedAt,
+  }) async {
+    final customSync = fakePhoneBackendSync;
+    if (customSync != null) {
+      return customSync(phoneNumber: phoneNumber, verifiedAt: verifiedAt);
+    }
+
+    try {
+      final response = await _client.functions
+          .invoke(
+            supabaseAccountTrustFunctionName,
+            headers: authenticatedFunctionHeaders(_client),
+            body: {
+              'action': 'dev_verify_phone',
+              'verified_at': verifiedAt.toIso8601String(),
+            },
+          )
+          .timeout(_accountTrustTimeout);
+
+      return ProfileTrustModel.fromJson(_asMap(_asMap(response.data)['trust']));
+    } catch (error, stackTrace) {
+      AppLogger.debug(
+        'Backend fake phone verification failed',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      throw const AccountTrustException(
+        'Ontwikkelverificatie is niet ingeschakeld op de backend.',
+      );
+    }
   }
 
   ProfileTrust? _fakeVerifiedTrust({DateTime? verifiedAt}) {

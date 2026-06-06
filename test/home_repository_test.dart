@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:meetings_app/core/errors/failures.dart';
+import 'package:meetings_app/core/services/account_trust_service.dart';
 import 'package:meetings_app/features/home/data/datasources/home_location_data_source.dart';
 import 'package:meetings_app/features/home/data/datasources/home_remote_data_source.dart';
 import 'package:meetings_app/features/home/data/repositories/home_repository_impl.dart';
@@ -17,6 +18,8 @@ import 'package:meetings_app/features/home/domain/entities/home_feed.dart';
 import 'package:meetings_app/features/home/domain/entities/home_feed_filters.dart';
 import 'package:meetings_app/features/home/domain/entities/home_location.dart';
 import 'package:meetings_app/features/home/domain/entities/home_category.dart';
+import 'package:meetings_app/features/profile/domain/entities/profile_trust.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() {
@@ -181,6 +184,26 @@ void main() {
       expect(failure, isA<PermissionFailure>());
       expect(failure.message, 'Meld je eerst aan om de chat te openen.');
     }, (_) => fail('Expected chat permission failure.'));
+  });
+
+  test('syncs account trust before joining an activity', () async {
+    SharedPreferences.setMockInitialValues({});
+    final preferences = await SharedPreferences.getInstance();
+    final accountTrustService = _CountingAccountTrustService(preferences);
+    final remoteDataSource = _HomeRemoteDataSourceStub(feed: _feed());
+    final repository = HomeRepositoryImpl(
+      remoteDataSource,
+      const _FakeLocationDataSource(),
+      accountTrustService: accountTrustService,
+    );
+
+    final result = await repository.setActivityParticipation(
+      activityId: 'activity-1',
+      join: true,
+    );
+
+    expect(result.isRight(), isTrue);
+    expect(accountTrustService.syncTrustCalls, 1);
   });
 }
 
@@ -354,7 +377,14 @@ class _HomeRemoteDataSourceStub implements HomeRemoteDataSource {
     required String activityId,
     required bool join,
   }) async {
-    throw UnimplementedError();
+    return ActivityParticipationUpdate(
+      activityId: activityId,
+      isJoined: join,
+      participants: const [],
+      participantsCount: join ? 1 : 0,
+      availableSpots: 4,
+      participationStatus: join ? 'joined' : 'cancelled',
+    );
   }
 
   @override
@@ -395,6 +425,31 @@ class _HomeRemoteDataSourceStub implements HomeRemoteDataSource {
     required String comment,
   }) async {
     throw UnimplementedError();
+  }
+}
+
+class _CountingAccountTrustService extends AccountTrustService {
+  _CountingAccountTrustService(SharedPreferences preferences)
+    : super(
+        SupabaseClient('https://example.supabase.co', 'anon-key'),
+        preferences,
+      );
+
+  int syncTrustCalls = 0;
+
+  @override
+  Future<ProfileTrust> syncTrust() async {
+    syncTrustCalls++;
+    return ProfileTrust(
+      phoneVerified: true,
+      phoneVerifiedAt: DateTime.utc(2026, 6, 6),
+      identityStatus: 'unverified',
+      identityMethod: null,
+      identityCompletedAt: null,
+      ageVerified: false,
+      reputationLevel: 'new_member',
+      reputationScore: 0,
+    );
   }
 }
 

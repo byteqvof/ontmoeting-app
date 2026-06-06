@@ -81,7 +81,7 @@ Future<void> configureDependencies() async {
       () => const HomeLocationDataSourceImpl(),
     )
     ..registerLazySingleton<HomeRepository>(
-      () => HomeRepositoryImpl(sl(), sl()),
+      () => HomeRepositoryImpl(sl(), sl(), accountTrustService: sl()),
     )
     ..registerLazySingleton(() => ActivityChatRealtimeController(sl()))
     ..registerLazySingleton(() => ActivityChatNoticeController(sl(), sl()))

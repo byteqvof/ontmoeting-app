@@ -4,6 +4,8 @@ import 'package:dartz/dartz.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/errors/failures.dart';
+import '../../../../core/services/account_trust_service.dart';
+import '../../../../core/utils/app_logger.dart';
 import '../../domain/entities/activity_agenda.dart';
 import '../../domain/entities/activity_chat_message.dart';
 import '../../domain/entities/activity_completion_update.dart';
@@ -22,12 +24,14 @@ class HomeRepositoryImpl implements HomeRepository {
   HomeRepositoryImpl(
     this._dataSource,
     this._locationDataSource, {
+    this.accountTrustService,
     this.locationLookupTimeout = const Duration(seconds: 6),
     this.feedCacheTtl = const Duration(seconds: 20),
   });
 
   final HomeRemoteDataSource _dataSource;
   final HomeLocationDataSource _locationDataSource;
+  final AccountTrustService? accountTrustService;
   final Duration locationLookupTimeout;
   final Duration feedCacheTtl;
 
@@ -90,6 +94,9 @@ class HomeRepositoryImpl implements HomeRepository {
     required bool join,
   }) async {
     try {
+      if (join) {
+        await _syncAccountTrustBeforeJoin();
+      }
       final update = await _dataSource.setActivityParticipation(
         activityId: activityId,
         join: join,
@@ -98,6 +105,23 @@ class HomeRepositoryImpl implements HomeRepository {
       return right(update);
     } catch (error) {
       return left(_mapParticipationError(error, join: join));
+    }
+  }
+
+  Future<void> _syncAccountTrustBeforeJoin() async {
+    final service = accountTrustService;
+    if (service == null) {
+      return;
+    }
+
+    try {
+      await service.syncTrust();
+    } catch (error, stackTrace) {
+      AppLogger.debug(
+        'Account trust pre-join sync failed',
+        error: error,
+        stackTrace: stackTrace,
+      );
     }
   }
 
