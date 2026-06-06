@@ -25,6 +25,24 @@ final class EditProfileCityChanged extends EditProfileEvent {
   List<Object?> get props => [cityName];
 }
 
+final class EditProfileAgeBandSelected extends EditProfileEvent {
+  const EditProfileAgeBandSelected(this.ageBand);
+
+  final String ageBand;
+
+  @override
+  List<Object?> get props => [ageBand];
+}
+
+final class EditProfileGenderSelected extends EditProfileEvent {
+  const EditProfileGenderSelected(this.gender);
+
+  final String gender;
+
+  @override
+  List<Object?> get props => [gender];
+}
+
 final class EditProfileAvatarPicked extends EditProfileEvent {
   const EditProfileAvatarPicked(this.avatarFile);
 

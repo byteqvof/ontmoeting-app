@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/app_router.dart';
 import '../../../../app/theme/toch_theme.dart';
 import '../../../../core/di/injection_container.dart';
+import '../../../../core/errors/failures.dart';
 import '../../../../core/usecases/usecase.dart';
 import '../../domain/usecases/is_profile_onboarding_required.dart';
 
@@ -22,7 +23,9 @@ class _ProfileCompletionGateState extends State<ProfileCompletionGate> {
   Future<_ProfileGateResult> _isProfileRequired() async {
     final result = await sl<IsProfileOnboardingRequired>()(const NoParams());
     return result.fold(
-      (failure) => _ProfileGateResult.error(failure.message),
+      (failure) => failure is NetworkFailure
+          ? const _ProfileGateResult.complete()
+          : _ProfileGateResult.error(failure.message),
       (required) => required
           ? const _ProfileGateResult.required()
           : const _ProfileGateResult.complete(),

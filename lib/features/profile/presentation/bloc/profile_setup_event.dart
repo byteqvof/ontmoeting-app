@@ -38,6 +38,24 @@ final class ProfileSetupCityChanged extends ProfileSetupEvent {
   List<Object?> get props => [cityName];
 }
 
+final class ProfileSetupAgeBandSelected extends ProfileSetupEvent {
+  const ProfileSetupAgeBandSelected(this.ageBand);
+
+  final String ageBand;
+
+  @override
+  List<Object?> get props => [ageBand];
+}
+
+final class ProfileSetupGenderSelected extends ProfileSetupEvent {
+  const ProfileSetupGenderSelected(this.gender);
+
+  final String gender;
+
+  @override
+  List<Object?> get props => [gender];
+}
+
 final class ProfileSetupInterestToggled extends ProfileSetupEvent {
   const ProfileSetupInterestToggled(this.interestId);
 

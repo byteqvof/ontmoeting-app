@@ -64,6 +64,15 @@ final class HomeCategorySelected extends HomeEvent {
   List<Object?> get props => [categoryId];
 }
 
+final class HomeFiltersApplied extends HomeEvent {
+  const HomeFiltersApplied(this.filters);
+
+  final HomeFeedFilters filters;
+
+  @override
+  List<Object?> get props => [filters];
+}
+
 final class HomeActivityParticipationToggled extends HomeEvent {
   const HomeActivityParticipationToggled(this.activityId);
 
@@ -80,4 +89,8 @@ final class HomeActivityUpdated extends HomeEvent {
 
   @override
   List<Object?> get props => [activity];
+}
+
+final class HomeParticipationConfirmationConsumed extends HomeEvent {
+  const HomeParticipationConfirmationConsumed();
 }

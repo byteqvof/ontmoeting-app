@@ -9,6 +9,7 @@ import '../../../../app/router/app_router.dart';
 import '../../../../app/theme/toch_theme.dart';
 import '../../../../app/widgets/toch_wordmark.dart';
 import '../../../../core/di/injection_container.dart';
+import '../../../home/domain/entities/home_feed_filters.dart';
 import '../../domain/entities/profile_avatar_file.dart';
 import '../../domain/entities/profile_interest.dart';
 import '../bloc/profile_setup_bloc.dart';
@@ -118,6 +119,7 @@ class _ProfileSetupViewState extends State<_ProfileSetupView> {
                                     children: const [
                                       _NameStep(),
                                       _CityStep(),
+                                      _DemographicsStep(),
                                       _InterestsStep(),
                                       _AvatarStep(),
                                     ],
@@ -144,7 +146,7 @@ class _ProfileSetupViewState extends State<_ProfileSetupView> {
                                       );
                                       return;
                                     }
-                                    if (state.stepIndex == 3) {
+                                    if (state.stepIndex == 4) {
                                       context.read<ProfileSetupBloc>().add(
                                         const ProfileSetupSubmitted(),
                                       );
@@ -152,7 +154,7 @@ class _ProfileSetupViewState extends State<_ProfileSetupView> {
                                     }
                                     _goToStep(state.stepIndex + 1);
                                   },
-                                  nextLabel: state.stepIndex == 3
+                                  nextLabel: state.stepIndex == 4
                                       ? 'Profiel opslaan'
                                       : 'Verder',
                                 ),
@@ -174,7 +176,8 @@ bool _canContinueCurrentStep(ProfileSetupState state) {
   return switch (state.stepIndex) {
     0 => state.hasValidName,
     1 => state.hasValidCity,
-    2 => state.hasSelectedInterests,
+    2 => state.hasSelectedDemographics,
+    3 => state.hasSelectedInterests,
     _ => state.canSubmit,
   };
 }
@@ -183,7 +186,8 @@ String _validationMessageFor(int stepIndex) {
   return switch (stepIndex) {
     0 => 'Vul je naam in.',
     1 => 'Vul je plaats in.',
-    2 => 'Kies minimaal een interesse.',
+    2 => 'Kies je leeftijdsband en doelgroepweergave.',
+    3 => 'Kies minimaal een interesse.',
     _ => 'Vul alle verplichte velden in.',
   };
 }
@@ -227,13 +231,13 @@ class _ProgressDots extends StatelessWidget {
     final colors = context.toch;
 
     return Row(
-      children: List.generate(4, (index) {
+      children: List.generate(5, (index) {
         final selected = index == stepIndex;
         return Expanded(
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 220),
             height: 6,
-            margin: EdgeInsets.only(right: index == 3 ? 0 : 8),
+            margin: EdgeInsets.only(right: index == 4 ? 0 : 8),
             decoration: BoxDecoration(
               color: selected ? colors.green : colors.line,
               borderRadius: BorderRadius.circular(TochRadius.pill),
@@ -253,7 +257,7 @@ class _NameStep extends StatelessWidget {
     return _StepSurface(
       icon: Icons.badge_rounded,
       title: 'Hoe heet je?',
-      body: 'Gebruik je echte naam. Dat houdt TOCH persoonlijk en vertrouwd.',
+      body: 'Gebruik je echte naam. Zo weten mensen wie er meedoet.',
       child: BlocBuilder<ProfileSetupBloc, ProfileSetupState>(
         buildWhen: (previous, current) =>
             previous.displayName != current.displayName,
@@ -295,6 +299,81 @@ class _CityStep extends StatelessWidget {
                 ProfileSetupCityChanged(value),
               );
             },
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _DemographicsStep extends StatelessWidget {
+  const _DemographicsStep();
+
+  @override
+  Widget build(BuildContext context) {
+    return _StepSurface(
+      icon: Icons.tune_rounded,
+      title: 'Voor wie zijn activiteiten bedoeld?',
+      body:
+          'We gebruiken dit voor event-doelgroepen en filters. Je exacte geboortedatum wordt niet gevraagd.',
+      child: BlocBuilder<ProfileSetupBloc, ProfileSetupState>(
+        buildWhen: (previous, current) =>
+            previous.ageBand != current.ageBand ||
+            previous.gender != current.gender,
+        builder: (context, state) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Leeftijdsband',
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: context.toch.green700.withValues(alpha: .68),
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: TochSpacing.xs),
+              Wrap(
+                spacing: TochSpacing.xs,
+                runSpacing: TochSpacing.xs,
+                children: [
+                  for (final ageBand in tochAgeBands)
+                    _SetupChoiceChip(
+                      label: ageBandLabel(ageBand),
+                      selected: state.ageBand == ageBand,
+                      onSelected: () {
+                        context.read<ProfileSetupBloc>().add(
+                          ProfileSetupAgeBandSelected(ageBand),
+                        );
+                      },
+                    ),
+                ],
+              ),
+              const SizedBox(height: TochSpacing.lg),
+              Text(
+                'Gender',
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: context.toch.green700.withValues(alpha: .68),
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: TochSpacing.xs),
+              Wrap(
+                spacing: TochSpacing.xs,
+                runSpacing: TochSpacing.xs,
+                children: [
+                  for (final gender in tochGenderValues)
+                    _SetupChoiceChip(
+                      label: genderLabel(gender),
+                      selected: state.gender == gender,
+                      onSelected: () {
+                        context.read<ProfileSetupBloc>().add(
+                          ProfileSetupGenderSelected(gender),
+                        );
+                      },
+                    ),
+                ],
+              ),
+            ],
           );
         },
       ),
@@ -478,6 +557,37 @@ class _InterestChip extends StatelessWidget {
           ProfileSetupInterestToggled(interest.id),
         );
       },
+    );
+  }
+}
+
+class _SetupChoiceChip extends StatelessWidget {
+  const _SetupChoiceChip({
+    required this.label,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.toch;
+
+    return ChoiceChip(
+      label: Text(label),
+      selected: selected,
+      showCheckmark: false,
+      selectedColor: colors.green,
+      backgroundColor: colors.card,
+      side: BorderSide(color: selected ? colors.green : colors.line),
+      labelStyle: TextStyle(
+        color: selected ? colors.cream : colors.ink,
+        fontWeight: FontWeight.w900,
+      ),
+      onSelected: (_) => onSelected(),
     );
   }
 }

@@ -10,6 +10,7 @@ class ActivityChatMessageModel extends ActivityChatMessage {
     required super.body,
     required super.createdAt,
     required super.isMine,
+    super.clientMessageId,
     super.senderAvatarUrl,
   });
 
@@ -39,6 +40,9 @@ class ActivityChatMessageModel extends ActivityChatMessage {
         sender['avatar_url'] ?? sender['avatarUrl'],
       ),
       body: _stringValue(json['body']),
+      clientMessageId: _nullableString(
+        json['client_message_id'] ?? json['clientMessageId'],
+      ),
       createdAt:
           _dateTimeOrNull(json['created_at'] ?? json['createdAt']) ??
           DateTime.fromMillisecondsSinceEpoch(0),

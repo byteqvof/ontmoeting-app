@@ -34,22 +34,32 @@ final class CreateActivityLocationChanged extends CreateActivityEvent {
   List<Object?> get props => [location];
 }
 
-final class CreateActivityDaySelected extends CreateActivityEvent {
-  const CreateActivityDaySelected(this.day);
+final class CreateActivityDateShortcutSelected extends CreateActivityEvent {
+  const CreateActivityDateShortcutSelected(this.shortcut);
 
-  final String day;
+  final String shortcut;
 
   @override
-  List<Object?> get props => [day];
+  List<Object?> get props => [shortcut];
+}
+
+final class CreateActivityDateSelected extends CreateActivityEvent {
+  const CreateActivityDateSelected(this.date);
+
+  final DateTime date;
+
+  @override
+  List<Object?> get props => [date];
 }
 
 final class CreateActivityTimeSelected extends CreateActivityEvent {
-  const CreateActivityTimeSelected(this.time);
+  const CreateActivityTimeSelected({required this.hour, required this.minute});
 
-  final String time;
+  final int hour;
+  final int minute;
 
   @override
-  List<Object?> get props => [time];
+  List<Object?> get props => [hour, minute];
 }
 
 final class CreateActivityCapacityDecremented extends CreateActivityEvent {
@@ -58,6 +68,51 @@ final class CreateActivityCapacityDecremented extends CreateActivityEvent {
 
 final class CreateActivityCapacityIncremented extends CreateActivityEvent {
   const CreateActivityCapacityIncremented();
+}
+
+final class CreateActivityGroupTypeSelected extends CreateActivityEvent {
+  const CreateActivityGroupTypeSelected(this.groupType);
+
+  final String groupType;
+
+  @override
+  List<Object?> get props => [groupType];
+}
+
+final class CreateActivityMinReputationSelected extends CreateActivityEvent {
+  const CreateActivityMinReputationSelected(this.reputationLevel);
+
+  final String reputationLevel;
+
+  @override
+  List<Object?> get props => [reputationLevel];
+}
+
+final class CreateActivityPrivateLocationToggled extends CreateActivityEvent {
+  const CreateActivityPrivateLocationToggled(this.isPrivateLocation);
+
+  final bool isPrivateLocation;
+
+  @override
+  List<Object?> get props => [isPrivateLocation];
+}
+
+final class CreateActivityTargetAgeBandToggled extends CreateActivityEvent {
+  const CreateActivityTargetAgeBandToggled(this.ageBand);
+
+  final String ageBand;
+
+  @override
+  List<Object?> get props => [ageBand];
+}
+
+final class CreateActivityTargetGenderToggled extends CreateActivityEvent {
+  const CreateActivityTargetGenderToggled(this.gender);
+
+  final String gender;
+
+  @override
+  List<Object?> get props => [gender];
 }
 
 final class CreateActivityNotesChanged extends CreateActivityEvent {

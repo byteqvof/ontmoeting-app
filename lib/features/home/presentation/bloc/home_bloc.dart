@@ -4,10 +4,12 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/errors/failures.dart';
+import '../../../../core/services/analytics_service.dart';
 import '../../../../core/usecases/usecase.dart';
 import '../../../../core/utils/app_logger.dart';
 import '../../domain/entities/home_activity.dart';
 import '../../domain/entities/home_feed.dart';
+import '../../domain/entities/home_feed_filters.dart';
 import '../../domain/entities/home_location.dart';
 import '../../domain/usecases/get_current_location.dart';
 import '../../domain/usecases/get_home_feed.dart';
@@ -32,11 +34,15 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     on<HomeRefreshRequested>(_onRefreshRequested);
     on<HomeTimeFilterSelected>(_onTimeFilterSelected);
     on<HomeCategorySelected>(_onCategorySelected);
+    on<HomeFiltersApplied>(_onFiltersApplied);
     on<HomeActivityParticipationToggled>(_onActivityParticipationToggled);
     on<HomeActivityUpdated>(_onActivityUpdated);
+    on<HomeParticipationConfirmationConsumed>(
+      _onParticipationConfirmationConsumed,
+    );
   }
 
-  static const _defaultDistanceKm = 10;
+  static const _defaultFilters = HomeFeedFilters();
 
   final GetHomeFeed _getHomeFeed;
   final GetCurrentLocation _getCurrentLocation;
@@ -58,11 +64,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     await result.fold(
       (failure) async => emit(HomeLocationBlocked(failure.message)),
       (location) async {
-        await _loadFeed(
-          emit,
-          location: location,
-          distanceKm: _defaultDistanceKm,
-        );
+        await _loadFeed(emit, location: location, filters: _defaultFilters);
         await _startLocationWatcher(restart: true);
       },
     );
@@ -82,13 +84,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     }
 
     AppLogger.debug('HomeBloc location changed to ${event.location.cityName}');
-    await _loadFeed(
-      emit,
-      location: event.location,
-      distanceKm: current.selectedDistanceKm,
-      selectedTimeFilter: current.selectedTimeFilter,
-      selectedCategoryId: current.selectedCategoryId,
-    );
+    await _loadFeed(emit, location: event.location, filters: current.filters);
   }
 
   void _onLocationFailureReceived(
@@ -110,9 +106,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     await _loadFeed(
       emit,
       location: current.location,
-      distanceKm: event.distanceKm,
-      selectedTimeFilter: current.selectedTimeFilter,
-      selectedCategoryId: current.selectedCategoryId,
+      filters: current.filters.copyWith(distanceKm: event.distanceKm),
     );
   }
 
@@ -127,48 +121,82 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
     emit(current.copyWith(isRefreshing: true));
     final result = await _getHomeFeed(
-      GetHomeFeedParams(
-        location: current.location,
-        distanceKm: current.selectedDistanceKm,
-      ),
+      GetHomeFeedParams(location: current.location, filters: current.filters),
     );
 
     result.fold(
       (failure) {
         AppLogger.debug('HomeBloc refresh failed: ${failure.message}');
+        AnalyticsService.instance.track(
+          'feed_load_failed',
+          properties: {'source': 'refresh'},
+        );
         emit(current.copyWith(isRefreshing: false));
       },
-      (feed) => emit(
-        current.copyWith(
-          feed: feed,
-          isRefreshing: false,
-          selectedTimeFilter: current.selectedTimeFilter,
-          selectedCategoryId: current.selectedCategoryId,
-        ),
+      (feed) {
+        AnalyticsService.instance.track(
+          'feed_loaded',
+          properties: {
+            'source': 'refresh',
+            'activity_count': feed.activities.length,
+            'distance_km': current.filters.distanceKm,
+          },
+        );
+        emit(current.copyWith(feed: feed, isRefreshing: false));
+      },
+    );
+  }
+
+  Future<void> _onTimeFilterSelected(
+    HomeTimeFilterSelected event,
+    Emitter<HomeState> emit,
+  ) async {
+    final current = state;
+    if (current is! HomeLoaded) {
+      return;
+    }
+    await _loadFeed(
+      emit,
+      location: current.location,
+      filters: _filtersForTimeLabel(current.filters, event.filter),
+    );
+  }
+
+  Future<void> _onCategorySelected(
+    HomeCategorySelected event,
+    Emitter<HomeState> emit,
+  ) async {
+    final current = state;
+    if (current is! HomeLoaded) {
+      return;
+    }
+    await _loadFeed(
+      emit,
+      location: current.location,
+      filters: current.filters.copyWith(
+        categoryIds: event.categoryId == 'all' ? const [] : [event.categoryId],
       ),
     );
   }
 
-  void _onTimeFilterSelected(
-    HomeTimeFilterSelected event,
+  Future<void> _onFiltersApplied(
+    HomeFiltersApplied event,
     Emitter<HomeState> emit,
-  ) {
+  ) async {
     final current = state;
     if (current is! HomeLoaded) {
       return;
     }
-    emit(current.copyWith(selectedTimeFilter: event.filter));
-  }
-
-  void _onCategorySelected(
-    HomeCategorySelected event,
-    Emitter<HomeState> emit,
-  ) {
-    final current = state;
-    if (current is! HomeLoaded) {
-      return;
-    }
-    emit(current.copyWith(selectedCategoryId: event.categoryId));
+    await _loadFeed(
+      emit,
+      location: current.location,
+      filters: event.filters,
+      analyticsSource: 'filters',
+    );
+    AnalyticsService.instance.track(
+      'filter_applied',
+      properties: _filterAnalyticsProperties(event.filters),
+    );
   }
 
   Future<void> _onActivityParticipationToggled(
@@ -219,6 +247,10 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         AppLogger.debug(
           'HomeBloc participation update failed: ${failure.message}',
         );
+        AnalyticsService.instance.track(
+          'join_failed',
+          properties: {'joining': !activity.isJoined},
+        );
         emit(
           latest.copyWith(
             pendingActivityIds: pendingActivityIds,
@@ -230,11 +262,22 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         final activities = latest.feed.activities
             .map((activity) => activity.applyParticipationUpdate(update))
             .toList();
+        final joinedActivity = !activity.isJoined && update.isJoined
+            ? _activityById(activities, activity.id)
+            : null;
+        AnalyticsService.instance.track(
+          update.isJoined ? 'join_success' : 'leave_success',
+          properties: {
+            'participant_count': update.participantsCount,
+            'available_spots': update.availableSpots,
+          },
+        );
         emit(
           latest.copyWith(
             feed: latest.feed.copyWith(activities: activities),
             pendingActivityIds: pendingActivityIds,
             participationError: null,
+            joinedActivityConfirmation: joinedActivity,
           ),
         );
       },
@@ -256,28 +299,46 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     emit(current.copyWith(feed: current.feed.copyWith(activities: activities)));
   }
 
+  void _onParticipationConfirmationConsumed(
+    HomeParticipationConfirmationConsumed event,
+    Emitter<HomeState> emit,
+  ) {
+    final current = state;
+    if (current is HomeLoaded) {
+      emit(current.copyWith(joinedActivityConfirmation: null));
+    }
+  }
+
   Future<void> _loadFeed(
     Emitter<HomeState> emit, {
     required HomeLocation location,
-    required int distanceKm,
-    String? selectedTimeFilter,
-    String? selectedCategoryId,
+    required HomeFeedFilters filters,
+    String analyticsSource = 'initial',
   }) async {
-    emit(HomeLoadingFeed(location: location, distanceKm: distanceKm));
+    emit(HomeLoadingFeed(location: location, distanceKm: filters.distanceKm));
     final result = await _getHomeFeed(
-      GetHomeFeedParams(location: location, distanceKm: distanceKm),
+      GetHomeFeedParams(location: location, filters: filters),
     );
     result.fold(
-      (failure) => emit(HomeError(failure.message)),
-      (feed) => emit(
-        HomeLoaded(
-          feed: feed,
-          location: location,
-          selectedDistanceKm: distanceKm,
-          selectedTimeFilter: selectedTimeFilter ?? feed.selectedTimeFilter,
-          selectedCategoryId: selectedCategoryId ?? feed.categories.first.id,
-        ),
-      ),
+      (failure) {
+        AnalyticsService.instance.track(
+          'feed_load_failed',
+          properties: {'source': analyticsSource},
+        );
+        emit(HomeError(failure.message));
+      },
+      (feed) {
+        AnalyticsService.instance.track(
+          'feed_loaded',
+          properties: {
+            'source': analyticsSource,
+            'activity_count': feed.activities.length,
+            'distance_km': filters.distanceKm,
+            'has_advanced_filters': filters.hasAdvancedFilters,
+          },
+        );
+        emit(HomeLoaded(feed: feed, location: location, filters: filters));
+      },
     );
   }
 
@@ -311,4 +372,48 @@ HomeActivity? _activityById(List<HomeActivity> activities, String activityId) {
   }
 
   return null;
+}
+
+HomeFeedFilters _filtersForTimeLabel(HomeFeedFilters current, String label) {
+  final today = _startOfDay(DateTime.now());
+
+  if (label == 'Vandaag') {
+    return current.copyWith(
+      dateFilter: homeDateFilterToday,
+      dateFrom: today,
+      dateTo: today.add(const Duration(days: 1)),
+    );
+  }
+
+  if (label == 'Dit weekend') {
+    final daysUntilSaturday =
+        (DateTime.saturday - today.weekday) % DateTime.daysPerWeek;
+    final saturday = today.add(Duration(days: daysUntilSaturday));
+    return current.copyWith(
+      dateFilter: homeDateFilterWeekend,
+      dateFrom: saturday,
+      dateTo: saturday.add(const Duration(days: 2)),
+    );
+  }
+
+  return current.copyWith(dateFilter: homeDateFilterAll, clearDateRange: true);
+}
+
+DateTime _startOfDay(DateTime value) {
+  return DateTime(value.year, value.month, value.day);
+}
+
+Map<String, Object> _filterAnalyticsProperties(HomeFeedFilters filters) {
+  return {
+    'distance_km': filters.distanceKm,
+    'date_filter': filters.dateFilter,
+    'category_count': filters.categoryIds.length,
+    'age_band_count': filters.targetAgeBands.length,
+    'gender_count': filters.targetGenders.length,
+    'requires_identity_verified': filters.requiresIdentityVerified,
+    'available_only': filters.availableOnly,
+    'has_min_participants': filters.minParticipants != null,
+    'has_max_participants': filters.maxParticipants != null,
+    'sort': filters.sort,
+  };
 }

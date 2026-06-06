@@ -9,6 +9,7 @@ class ActivityParticipationUpdate extends Equatable {
     required this.participants,
     required this.participantsCount,
     required this.availableSpots,
+    this.participationStatus,
   });
 
   final String activityId;
@@ -16,8 +17,12 @@ class ActivityParticipationUpdate extends Equatable {
   final List<HomeParticipant> participants;
   final int participantsCount;
   final int availableSpots;
+  final String? participationStatus;
 
   String get spotsLabel {
+    if (participationStatus == 'pending') {
+      return 'wacht op akkoord';
+    }
     if (isJoined) {
       return 'jij gaat ook';
     }
@@ -31,5 +36,6 @@ class ActivityParticipationUpdate extends Equatable {
     participants,
     participantsCount,
     availableSpots,
+    participationStatus,
   ];
 }

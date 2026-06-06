@@ -23,6 +23,9 @@ dependencies:
   http_parser: ^4.1.2
   image_picker: ^1.2.1
   shared_preferences: ^2.5.3
+  maplibre_gl: ^0.26.1
+  posthog_flutter: ^5.26.0
+  sentry_flutter: ^9.21.0
 
 dev_dependencies:
   flutter_test:

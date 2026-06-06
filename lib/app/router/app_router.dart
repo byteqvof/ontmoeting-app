@@ -10,12 +10,17 @@ import '../../features/home/domain/entities/home_activity.dart';
 import '../../features/home/presentation/pages/activity_agenda_page.dart';
 import '../../features/home/presentation/pages/activity_chat_page.dart';
 import '../../features/home/presentation/pages/activity_detail_page.dart';
+import '../../features/home/presentation/pages/activity_join_confirmation_page.dart';
+import '../../features/home/presentation/pages/activity_map_page.dart';
+import '../../features/home/presentation/pages/activity_route_loader_page.dart';
 import '../../features/home/presentation/pages/create_activity_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
 import '../../features/onboarding/presentation/pages/onboarding_page.dart';
 import '../../features/onboarding/presentation/pages/splash_page.dart';
 import '../../features/profile/domain/entities/profile.dart';
+import '../../features/profile/presentation/pages/account_verification_page.dart';
 import '../../features/profile/presentation/pages/edit_profile_page.dart';
+import '../../features/profile/presentation/pages/account_gate.dart';
 import '../../features/profile/presentation/pages/profile_completion_gate.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/profile/presentation/pages/profile_setup_page.dart';
@@ -28,10 +33,13 @@ class AppRoutes {
   static const home = '/';
   static const createActivity = '/activities/create';
   static const activityDetail = '/activities/:activityId';
+  static const activityJoinConfirmation = '/activities/:activityId/joined';
   static const activityChat = '/activities/:activityId/chat';
   static const activityMessages = '/messages';
   static const activityAgenda = '/agenda';
+  static const activityMap = '/map';
   static const profile = '/profile';
+  static const accountVerification = '/account/verification';
   static const profileSetup = '/profile/setup';
   static const profileDetail = '/profile/:profileId';
   static const editProfile = '/profile/edit';
@@ -41,10 +49,21 @@ class AppRoutes {
   static String activityDetailPath(String activityId) =>
       '/activities/$activityId';
 
+  static String activityJoinConfirmationPath(String activityId) =>
+      '/activities/$activityId/joined';
+
   static String activityChatPath(String activityId) =>
       '/activities/$activityId/chat';
 
   static String profilePath(String profileId) => '/profile/$profileId';
+}
+
+Widget _protected(Widget child) {
+  return AccountGate(child: ProfileCompletionGate(child: child));
+}
+
+Widget _phoneProtected(Widget child) {
+  return AccountGate(child: child);
 }
 
 GoRouter createRouter(AuthBloc authBloc) {
@@ -74,7 +93,7 @@ GoRouter createRouter(AuthBloc authBloc) {
       GoRoute(
         path: AppRoutes.home,
         builder: (context, state) {
-          return const ProfileCompletionGate(child: HomePage());
+          return _protected(const HomePage());
         },
       ),
       GoRoute(
@@ -82,12 +101,10 @@ GoRouter createRouter(AuthBloc authBloc) {
         builder: (context, state) {
           final args = state.extra;
           if (args is! CreateActivityPageArgs) {
-            return const ProfileCompletionGate(
-              child: MissingCreateActivityPage(),
-            );
+            return _protected(const MissingCreateActivityPage());
           }
-          return ProfileCompletionGate(
-            child: CreateActivityPage(
+          return _protected(
+            CreateActivityPage(
               location: args.location,
               categories: args.categories,
             ),
@@ -97,70 +114,96 @@ GoRouter createRouter(AuthBloc authBloc) {
       GoRoute(
         path: AppRoutes.activityMessages,
         builder: (context, state) {
-          return const ProfileCompletionGate(child: ActivityMessagesPage());
+          return _protected(const ActivityMessagesPage());
         },
       ),
       GoRoute(
         path: AppRoutes.activityAgenda,
         builder: (context, state) {
-          return const ProfileCompletionGate(child: ActivityAgendaPage());
+          return _protected(const ActivityAgendaPage());
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.activityMap,
+        builder: (context, state) {
+          final args = state.extra;
+          if (args is! ActivityMapPageArgs) {
+            return _protected(const MissingActivityMapPage());
+          }
+          return _protected(ActivityMapPage(args: args));
         },
       ),
       GoRoute(
         path: AppRoutes.activityChat,
         builder: (context, state) {
           final activity = state.extra;
-          if (activity is! HomeActivity) {
-            return const ProfileCompletionGate(
-              child: MissingActivityChatPage(),
-            );
+          if (activity is HomeActivity) {
+            return _protected(ActivityChatPage(activity: activity));
           }
-          return ProfileCompletionGate(
-            child: ActivityChatPage(activity: activity),
+          return _protected(
+            ActivityRouteLoaderPage(
+              activityId: state.pathParameters['activityId'] ?? '',
+              target: ActivityRouteTarget.chat,
+            ),
           );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.activityJoinConfirmation,
+        builder: (context, state) {
+          final activity = state.extra;
+          if (activity is! HomeActivity) {
+            return _protected(const MissingActivityDetailPage());
+          }
+          return _protected(ActivityJoinConfirmationPage(activity: activity));
         },
       ),
       GoRoute(
         path: AppRoutes.activityDetail,
         builder: (context, state) {
           final activity = state.extra;
-          if (activity is! HomeActivity) {
-            return const ProfileCompletionGate(
-              child: MissingActivityDetailPage(),
-            );
+          if (activity is HomeActivity) {
+            return _protected(ActivityDetailPage(activity: activity));
           }
-          return ProfileCompletionGate(
-            child: ActivityDetailPage(activity: activity),
+          return _protected(
+            ActivityRouteLoaderPage(
+              activityId: state.pathParameters['activityId'] ?? '',
+              target: ActivityRouteTarget.detail,
+            ),
           );
         },
       ),
       GoRoute(
         path: AppRoutes.profile,
         builder: (context, state) {
-          return const ProfileCompletionGate(child: ProfilePage());
+          return _protected(const ProfilePage());
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.accountVerification,
+        builder: (context, state) {
+          return _phoneProtected(const AccountVerificationPage());
         },
       ),
       GoRoute(
         path: AppRoutes.profileSetup,
-        builder: (context, state) => const ProfileSetupPage(),
+        builder: (context, state) => _phoneProtected(const ProfileSetupPage()),
       ),
       GoRoute(
         path: AppRoutes.editProfile,
         builder: (context, state) {
           final profile = state.extra;
           if (profile is! Profile) {
-            return const ProfileCompletionGate(child: MissingEditProfilePage());
+            return _protected(const MissingEditProfilePage());
           }
-          return ProfileCompletionGate(
-            child: EditProfilePage(profile: profile),
-          );
+          return _protected(EditProfilePage(profile: profile));
         },
       ),
       GoRoute(
         path: AppRoutes.profileDetail,
         builder: (context, state) {
-          return ProfileCompletionGate(
-            child: ProfilePage(profileId: state.pathParameters['profileId']),
+          return _protected(
+            ProfilePage(profileId: state.pathParameters['profileId']),
           );
         },
       ),

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 
@@ -9,22 +10,28 @@ import '../../../../core/utils/app_logger.dart';
 import '../../../../core/utils/supabase_function_auth.dart';
 import '../../domain/entities/activity_agenda.dart';
 import '../../domain/entities/activity_chat_message.dart';
+import '../../domain/entities/activity_completion_update.dart';
+import '../../domain/entities/activity_feedback.dart';
 import '../../domain/entities/activity_participation_update.dart';
 import '../../domain/entities/create_activity_draft.dart';
 import '../../domain/entities/home_activity.dart';
 import '../../domain/entities/home_category.dart';
 import '../../domain/entities/home_feed.dart';
+import '../../domain/entities/home_feed_filters.dart';
 import '../../domain/entities/home_location.dart';
 import '../../domain/entities/home_participant.dart';
 import '../models/activity_chat_message_model.dart';
+import '../models/activity_feedback_model.dart';
 
 abstract interface class HomeRemoteDataSource {
   Future<String> createActivity(CreateActivityDraft draft);
 
   Future<HomeFeed> getHomeFeed({
     required HomeLocation location,
-    required int distanceKm,
+    required HomeFeedFilters filters,
   });
+
+  Future<HomeActivity> getActivityById(String activityId);
 
   Future<ActivityParticipationUpdate> setActivityParticipation({
     required String activityId,
@@ -35,11 +42,25 @@ abstract interface class HomeRemoteDataSource {
 
   Future<List<ActivityChatMessage>> getActivityChatMessages({
     required String activityId,
+    DateTime? afterCreatedAt,
+    String? afterId,
   });
 
   Future<ActivityChatMessage> sendActivityChatMessage({
     required String activityId,
     required String body,
+    required String clientMessageId,
+  });
+
+  Future<ActivityCompletionUpdate> completeActivity({
+    required String activityId,
+  });
+
+  Future<ActivityFeedback> submitActivityFeedback({
+    required String activityId,
+    required String targetProfileId,
+    required int rating,
+    required String comment,
   });
 }
 
@@ -52,22 +73,30 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
   Future<String> createActivity(CreateActivityDraft draft) async {
     AppLogger.debug('Creating activity "${draft.title}"');
 
-    final response = await _client.functions.invoke(
-      supabaseCreateActivityFunctionName,
-      headers: authenticatedFunctionHeaders(_client),
-      body: {
-        'category_id': draft.categoryId,
-        'title': draft.title,
-        'description': draft.description,
-        'latitude': draft.latitude,
-        'longitude': draft.longitude,
-        'address_line': draft.addressLine,
-        'city': draft.city,
-        'country_code': draft.countryCode,
-        'starts_at': draft.startsAt.toUtc().toIso8601String(),
-        'max_participants': draft.maxParticipants,
-      },
-    );
+    final response = await _client.functions
+        .invoke(
+          supabaseCreateActivityFunctionName,
+          headers: authenticatedFunctionHeaders(_client),
+          body: {
+            'category_id': draft.categoryId,
+            'title': draft.title,
+            'description': draft.description,
+            'latitude': draft.latitude,
+            'longitude': draft.longitude,
+            'address_line': draft.addressLine,
+            'city': draft.city,
+            'country_code': draft.countryCode,
+            'starts_at': draft.startsAt.toUtc().toIso8601String(),
+            'max_participants': draft.maxParticipants,
+            'group_type': draft.groupType,
+            'min_reputation_level': draft.minReputationLevel,
+            'requires_identity_verified': draft.requiresIdentityVerified,
+            'is_private_location': draft.isPrivateLocation,
+            'target_age_bands': draft.targetAgeBands,
+            'target_genders': draft.targetGenders,
+          },
+        )
+        .timeout(_functionTimeout);
 
     final payload = _asMap(response.data);
     final activity = _asMap(payload['activity']);
@@ -83,23 +112,42 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
   @override
   Future<HomeFeed> getHomeFeed({
     required HomeLocation location,
-    required int distanceKm,
+    required HomeFeedFilters filters,
   }) async {
     AppLogger.debug(
       'Fetching nearby activities for ${location.latitude}, '
-      '${location.longitude} in ${distanceKm}km',
+      '${location.longitude} in ${filters.distanceKm}km',
     );
 
-    final response = await _client.functions.invoke(
-      supabaseNearbyActivitiesFunctionName,
-      headers: authenticatedFunctionHeaders(_client),
-      body: {
-        'latitude': location.latitude,
-        'longitude': location.longitude,
-        'radius_km': distanceKm,
-        'limit': 50,
-      },
-    );
+    final response = await _client.functions
+        .invoke(
+          supabaseNearbyActivitiesFunctionName,
+          headers: authenticatedFunctionHeaders(_client),
+          body: {
+            'latitude': location.latitude,
+            'longitude': location.longitude,
+            'radius_km': filters.distanceKm,
+            if (filters.dateFrom != null)
+              'date_from': filters.dateFrom!.toUtc().toIso8601String(),
+            if (filters.dateTo != null)
+              'date_to': filters.dateTo!.toUtc().toIso8601String(),
+            if (filters.categoryIds.isNotEmpty)
+              'category_ids': filters.categoryIds,
+            if (filters.targetAgeBands.isNotEmpty)
+              'target_age_bands': filters.targetAgeBands,
+            if (filters.targetGenders.isNotEmpty)
+              'target_genders': filters.targetGenders,
+            'requires_identity_verified': filters.requiresIdentityVerified,
+            'available_only': filters.availableOnly,
+            if (filters.minParticipants != null)
+              'min_participants': filters.minParticipants,
+            if (filters.maxParticipants != null)
+              'max_participants': filters.maxParticipants,
+            'sort': filters.sort,
+            'limit': 50,
+          },
+        )
+        .timeout(_startupFunctionTimeout);
 
     final payload = _asMap(response.data);
     final activitiesJson = _asList(payload['activities']);
@@ -118,13 +166,42 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
 
     return HomeFeed(
       locationName: location.cityName,
-      selectedTimeFilter: 'Alles',
-      selectedDistanceKm: distanceKm,
+      selectedTimeFilter: filters.selectedTimeFilter,
+      selectedDistanceKm: filters.distanceKm,
       timeFilters: const ['Alles', 'Vandaag', 'Dit weekend'],
       distanceFilters: const [5, 10, 25, 50],
       categories: categories,
       activities: activities,
     );
+  }
+
+  @override
+  Future<HomeActivity> getActivityById(String activityId) async {
+    AppLogger.debug('Fetching activity detail for $activityId');
+
+    final response = await _client.functions
+        .invoke(
+          supabaseActivityDetailFunctionName,
+          method: HttpMethod.get,
+          headers: authenticatedFunctionHeaders(_client),
+          queryParameters: {'activity_id': activityId},
+        )
+        .timeout(_functionTimeout);
+
+    final payload = _asMap(response.data);
+    final activityJson = _asMap(payload['activity']);
+    final currentUserId = _client.auth.currentUser?.id;
+    final activity = _activityFromJson(
+      activityJson,
+      _locationForActivityJson(activityJson),
+      currentUserId,
+      distanceLabelFallback: _locationLabelForActivityJson(activityJson),
+    );
+    if (activity.id.isEmpty) {
+      throw StateError('Activity detail completed without an activity id.');
+    }
+
+    return activity;
   }
 
   @override
@@ -134,11 +211,13 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
   }) async {
     AppLogger.debug('${join ? 'Joining' : 'Leaving'} activity $activityId');
 
-    final response = await _client.functions.invoke(
-      supabaseActivityParticipationFunctionName,
-      headers: authenticatedFunctionHeaders(_client),
-      body: {'activity_id': activityId, 'action': join ? 'join' : 'leave'},
-    );
+    final response = await _client.functions
+        .invoke(
+          supabaseActivityParticipationFunctionName,
+          headers: authenticatedFunctionHeaders(_client),
+          body: {'activity_id': activityId, 'action': join ? 'join' : 'leave'},
+        )
+        .timeout(_functionTimeout);
 
     final payload = _asMap(response.data);
     final participation = _participationUpdateFromJson(
@@ -160,12 +239,14 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
   Future<ActivityAgenda> getActivityAgenda() async {
     AppLogger.debug('Fetching activity agenda');
 
-    final response = await _client.functions.invoke(
-      supabaseActivityAgendaFunctionName,
-      method: HttpMethod.get,
-      headers: authenticatedFunctionHeaders(_client),
-      queryParameters: {'limit': '100'},
-    );
+    final response = await _client.functions
+        .invoke(
+          supabaseActivityAgendaFunctionName,
+          method: HttpMethod.get,
+          headers: authenticatedFunctionHeaders(_client),
+          queryParameters: {'limit': '100'},
+        )
+        .timeout(_functionTimeout);
 
     final payload = _asMap(response.data);
     final currentUserId = _client.auth.currentUser?.id;
@@ -196,25 +277,53 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
         )
         .where((activity) => activity.id.isNotEmpty)
         .toList();
+    final completed = _asList(payload['completed'])
+        .map((activity) => _asMap(activity))
+        .map(
+          (activity) => _activityFromJson(
+            activity,
+            _locationForActivityJson(activity),
+            currentUserId,
+            distanceLabelFallback: _locationLabelForActivityJson(activity),
+          ),
+        )
+        .where((activity) => activity.id.isNotEmpty)
+        .toList();
 
     AppLogger.debug(
-      'Fetched activity agenda hosted=${hosted.length}, joined=${joined.length}',
+      'Fetched activity agenda hosted=${hosted.length}, '
+      'joined=${joined.length}, completed=${completed.length}',
     );
-    return ActivityAgenda(hostedActivities: hosted, joinedActivities: joined);
+    return ActivityAgenda(
+      hostedActivities: hosted,
+      joinedActivities: joined,
+      completedActivities: completed,
+    );
   }
 
   @override
   Future<List<ActivityChatMessage>> getActivityChatMessages({
     required String activityId,
+    DateTime? afterCreatedAt,
+    String? afterId,
   }) async {
     AppLogger.debug('Fetching chat messages for activity $activityId');
+    final queryParameters = <String, String>{
+      'activity_id': activityId,
+      'limit': '50',
+      if (afterCreatedAt != null)
+        'after_created_at': afterCreatedAt.toUtc().toIso8601String(),
+      if (afterId != null && afterId.isNotEmpty) 'after_id': afterId,
+    };
 
-    final response = await _client.functions.invoke(
-      supabaseActivityChatFunctionName,
-      method: HttpMethod.get,
-      headers: authenticatedFunctionHeaders(_client),
-      queryParameters: {'activity_id': activityId, 'limit': '50'},
-    );
+    final response = await _client.functions
+        .invoke(
+          supabaseActivityChatFunctionName,
+          method: HttpMethod.get,
+          headers: authenticatedFunctionHeaders(_client),
+          queryParameters: queryParameters,
+        )
+        .timeout(_chatFunctionTimeout);
 
     final payload = _asMap(response.data);
     final currentUserId = _client.auth.currentUser?.id;
@@ -233,14 +342,21 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
   Future<ActivityChatMessage> sendActivityChatMessage({
     required String activityId,
     required String body,
+    required String clientMessageId,
   }) async {
     AppLogger.debug('Sending chat message for activity $activityId');
 
-    final response = await _client.functions.invoke(
-      supabaseActivityChatFunctionName,
-      headers: authenticatedFunctionHeaders(_client),
-      body: {'activity_id': activityId, 'body': body},
-    );
+    final response = await _client.functions
+        .invoke(
+          supabaseActivityChatFunctionName,
+          headers: authenticatedFunctionHeaders(_client),
+          body: {
+            'activity_id': activityId,
+            'body': body,
+            'client_message_id': clientMessageId,
+          },
+        )
+        .timeout(_functionTimeout);
 
     final payload = _asMap(response.data);
     final message = ActivityChatMessageModel.fromJson(
@@ -253,6 +369,60 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
     }
 
     return message;
+  }
+
+  @override
+  Future<ActivityCompletionUpdate> completeActivity({
+    required String activityId,
+  }) async {
+    AppLogger.debug('Completing activity $activityId');
+
+    final response = await _client.functions
+        .invoke(
+          supabaseActivityCompleteFunctionName,
+          headers: authenticatedFunctionHeaders(_client),
+          body: {'activity_id': activityId},
+        )
+        .timeout(_functionTimeout);
+
+    final payload = _asMap(response.data);
+    final completion = _completionUpdateFromJson(_asMap(payload['completion']));
+    if (completion.activityId.isEmpty) {
+      throw StateError('Complete activity completed without activity id.');
+    }
+    return completion;
+  }
+
+  @override
+  Future<ActivityFeedback> submitActivityFeedback({
+    required String activityId,
+    required String targetProfileId,
+    required int rating,
+    required String comment,
+  }) async {
+    AppLogger.debug('Submitting feedback for activity $activityId');
+
+    final response = await _client.functions
+        .invoke(
+          supabaseActivityFeedbackFunctionName,
+          headers: authenticatedFunctionHeaders(_client),
+          body: {
+            'activity_id': activityId,
+            'target_profile_id': targetProfileId,
+            'rating': rating,
+            'comment': comment,
+          },
+        )
+        .timeout(_functionTimeout);
+
+    final payload = _asMap(response.data);
+    final feedback = ActivityFeedbackModel.fromJson(
+      _asMap(payload['feedback']),
+    );
+    if (feedback.id.isEmpty) {
+      throw StateError('Submit feedback completed without feedback id.');
+    }
+    return feedback;
   }
 
   Future<List<HomeCategory>> _categoriesFromPayload(
@@ -288,7 +458,10 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
 
   Future<List<HomeCategory>> _fetchActivityCategories() async {
     try {
-      final data = await _client.from('activity_categories').select();
+      final data = await _client
+          .from('activity_categories')
+          .select()
+          .timeout(_startupFunctionTimeout);
 
       final categories = _asList(data)
           .map((category) => _categoryFromJson(_asMap(category)))
@@ -316,6 +489,7 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
       categoryJson.isEmpty ? {'id': json['category_id']} : categoryJson,
     );
     final host = _asMap(json['host']);
+    final hostTrust = _asMap(host['trust']);
     final participants = _asList(
       json['participants'] ??
           json['participantPreview'] ??
@@ -335,6 +509,9 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
     final availableSpots =
         _optionalIntValue(json['availableSpots'] ?? json['available_spots']) ??
         _availableSpotsFrom(maxParticipants, participantCount);
+    final participationStatus = _nullableString(
+      json['participation_status'] ?? json['participationStatus'],
+    );
     final isJoined = _boolValue(json['isJoined'] ?? json['is_joined']);
     final cityName = _stringValue(
       json['locationName'] ??
@@ -349,6 +526,9 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
           latitude: _optionalDoubleValue(json['latitude'] ?? json['lat']),
           longitude: _optionalDoubleValue(json['longitude'] ?? json['lng']),
         );
+    final latitude = _optionalDoubleValue(json['latitude'] ?? json['lat']) ?? 0;
+    final longitude =
+        _optionalDoubleValue(json['longitude'] ?? json['lng']) ?? 0;
     final meetingPoint = _stringValue(
       json['meetingPoint'] ??
           json['meeting_point'] ??
@@ -386,6 +566,8 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
         json['timeLabel'] ?? json['time_label'],
         fallback: startAt == null ? '' : _formatTimeLabel(startAt),
       ),
+      latitude: latitude,
+      longitude: longitude,
       locationName: cityName,
       meetingPoint: meetingPoint,
       description: _stringValue(json['description']),
@@ -403,17 +585,43 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
       ),
       hostSubtitle: _stringValue(host['subtitle'], fallback: cityName),
       hostScore: _intValue(
-        host['attendanceScore'] ?? host['attendance_score'],
+        hostTrust['reputation_score'] ??
+            host['reputationScore'] ??
+            host['reputation_score'] ??
+            host['attendanceScore'] ??
+            host['attendance_score'],
         fallback: 100,
+      ),
+      hostIdentityVerified:
+          _stringValue(hostTrust['identity_status']) == 'verified' ||
+          _boolValue(host['identity_verified'] ?? host['is_verified']),
+      hostReputationLevel: _stringValue(
+        hostTrust['reputation_level'] ?? host['reputation_level'],
+        fallback: 'new_member',
       ),
       hostAvatarUrl: _nullableString(host['avatarUrl'] ?? host['avatar_url']),
       participants: participants.map(_participantFromJson).toList(),
       availableSpots: availableSpots,
       spotsLabel: _stringValue(
         json['spotsLabel'] ?? json['spots_label'],
-        fallback: isJoined ? 'jij gaat ook' : 'nog $availableSpots plekken',
+        fallback: _spotsLabelFor(
+          status: _stringValue(json['status'], fallback: 'published'),
+          isJoined: isJoined,
+          availableSpots: availableSpots,
+        ),
       ),
+      status: _stringValue(json['status'], fallback: 'published'),
+      groupType: _stringValue(json['group_type'], fallback: 'open'),
+      minReputationLevel: _stringValue(
+        json['min_reputation_level'],
+        fallback: 'new_member',
+      ),
+      requiresIdentityVerified: _boolValue(json['requires_identity_verified']),
+      isPrivateLocation: _boolValue(json['is_private_location']),
+      targetAgeBands: _stringListValue(json['target_age_bands']),
+      targetGenders: _stringListValue(json['target_genders']),
       isJoined: isJoinedOverride ?? isJoined,
+      participationStatus: participationStatus,
       isOwnedByCurrentUser: isOwnedByCurrentUser,
     );
   }
@@ -450,6 +658,18 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
       availableSpots: _intValue(
         json['available_spots'] ?? json['availableSpots'],
       ),
+      participationStatus: _nullableString(
+        json['participation_status'] ?? json['participationStatus'],
+      ),
+    );
+  }
+
+  ActivityCompletionUpdate _completionUpdateFromJson(
+    Map<String, dynamic> json,
+  ) {
+    return ActivityCompletionUpdate(
+      activityId: _stringValue(json['activity_id'] ?? json['activityId']),
+      status: _stringValue(json['status'], fallback: 'completed'),
     );
   }
 
@@ -477,6 +697,10 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
     );
   }
 }
+
+const _startupFunctionTimeout = Duration(seconds: 5);
+const _chatFunctionTimeout = Duration(seconds: 5);
+const _functionTimeout = Duration(seconds: 8);
 
 const _allCategory = HomeCategory(
   id: 'all',
@@ -553,6 +777,13 @@ List<Object?> _asList(Object? value) {
     return value;
   }
   return const [];
+}
+
+List<String> _stringListValue(Object? value) {
+  return _asList(value)
+      .map((item) => item?.toString() ?? '')
+      .where((item) => item.isNotEmpty)
+      .toList();
 }
 
 String _stringValue(Object? value, {String fallback = ''}) {
@@ -679,6 +910,20 @@ String _formatTimeLabel(DateTime date) {
   final hour = date.hour.toString().padLeft(2, '0');
   final minute = date.minute.toString().padLeft(2, '0');
   return '$hour:$minute';
+}
+
+String _spotsLabelFor({
+  required String status,
+  required bool isJoined,
+  required int availableSpots,
+}) {
+  if (status == 'completed') {
+    return 'afgerond';
+  }
+  if (isJoined) {
+    return 'jij gaat ook';
+  }
+  return 'nog $availableSpots plekken';
 }
 
 String _initialsFor(String name) {

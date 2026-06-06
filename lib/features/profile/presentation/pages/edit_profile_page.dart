@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../../app/theme/toch_theme.dart';
 import '../../../../core/di/injection_container.dart';
+import '../../../home/domain/entities/home_feed_filters.dart';
 import '../../domain/entities/profile.dart';
 import '../../domain/entities/profile_avatar_file.dart';
 import '../../domain/usecases/update_profile.dart';
@@ -74,7 +75,9 @@ class _EditProfileView extends StatelessWidget {
       listener: (context, state) {
         if (state.status == EditProfileStatus.invalid) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Vul een naam en plaats in.')),
+            const SnackBar(
+              content: Text('Vul je naam, plaats, leeftijdsband en gender in.'),
+            ),
           );
         }
         if (state.status == EditProfileStatus.failure) {
@@ -316,6 +319,8 @@ class _EditProfileForm extends StatelessWidget {
           },
         ),
         const SizedBox(height: TochSpacing.md),
+        const _EditDemographicsSection(),
+        const SizedBox(height: TochSpacing.md),
         _ProfileField(
           label: 'Plaats',
           initialValue: state.cityName,
@@ -325,6 +330,118 @@ class _EditProfileForm extends StatelessWidget {
           },
         ),
       ],
+    );
+  }
+}
+
+class _EditDemographicsSection extends StatelessWidget {
+  const _EditDemographicsSection();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.toch;
+
+    return BlocBuilder<EditProfileBloc, EditProfileState>(
+      buildWhen: (previous, current) =>
+          previous.ageBand != current.ageBand ||
+          previous.gender != current.gender,
+      builder: (context, state) {
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            color: colors.card,
+            borderRadius: BorderRadius.circular(TochRadius.lg),
+            border: Border.all(color: colors.line),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(TochSpacing.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Doelgroep',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: colors.ink,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: TochSpacing.xs),
+                Text(
+                  'We gebruiken dit alleen om te controleren of je past binnen activiteiten die expliciet een doelgroep kiezen.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: colors.green700.withValues(alpha: .74),
+                    height: 1.3,
+                  ),
+                ),
+                const SizedBox(height: TochSpacing.md),
+                Text(
+                  'Leeftijdsband',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: TochSpacing.xs),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final ageBand in tochAgeBands)
+                      _EditChoiceChip(
+                        label: ageBandLabel(ageBand),
+                        selected: state.ageBand == ageBand,
+                        onSelected: () => context.read<EditProfileBloc>().add(
+                          EditProfileAgeBandSelected(ageBand),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: TochSpacing.md),
+                Text(
+                  'Gender',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: TochSpacing.xs),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final gender in tochGenderValues)
+                      _EditChoiceChip(
+                        label: genderLabel(gender),
+                        selected: state.gender == gender,
+                        onSelected: () => context.read<EditProfileBloc>().add(
+                          EditProfileGenderSelected(gender),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _EditChoiceChip extends StatelessWidget {
+  const _EditChoiceChip({
+    required this.label,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return ChoiceChip(
+      label: Text(label),
+      selected: selected,
+      onSelected: (_) => onSelected(),
     );
   }
 }

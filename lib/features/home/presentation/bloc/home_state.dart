@@ -1,6 +1,7 @@
 part of 'home_bloc.dart';
 
 const _unsetParticipationError = Object();
+const _unsetJoinedActivityConfirmation = Object();
 
 sealed class HomeState extends Equatable {
   const HomeState();
@@ -53,76 +54,59 @@ final class HomeLoaded extends HomeState {
   const HomeLoaded({
     required this.feed,
     required this.location,
-    required this.selectedDistanceKm,
-    required this.selectedTimeFilter,
-    required this.selectedCategoryId,
+    required this.filters,
     this.isRefreshing = false,
     this.pendingActivityIds = const [],
     this.participationError,
+    this.joinedActivityConfirmation,
   });
 
   final HomeFeed feed;
   final HomeLocation location;
-  final int selectedDistanceKm;
-  final String selectedTimeFilter;
-  final String selectedCategoryId;
+  final HomeFeedFilters filters;
   final bool isRefreshing;
   final List<String> pendingActivityIds;
   final String? participationError;
+  final HomeActivity? joinedActivityConfirmation;
+
+  int get selectedDistanceKm => filters.distanceKm;
+
+  String get selectedTimeFilter => filters.selectedTimeFilter;
+
+  String get selectedCategoryId => filters.selectedCategoryId;
 
   bool isParticipationPending(String activityId) {
     return pendingActivityIds.contains(activityId);
   }
 
-  List<HomeActivity> get visibleActivities {
-    final categoryFiltered = selectedCategoryId == 'all'
-        ? feed.activities
-        : feed.activities
-              .where((activity) => activity.category.id == selectedCategoryId)
-              .toList();
-
-    if (selectedTimeFilter == 'Alles') {
-      return categoryFiltered;
-    }
-
-    if (selectedTimeFilter == 'Vandaag') {
-      return categoryFiltered
-          .where((activity) => activity.dateLabel == 'donderdag 5 jun')
-          .toList();
-    }
-
-    return categoryFiltered
-        .where(
-          (activity) =>
-              activity.dateLabel == 'vrijdag 6 jun' ||
-              activity.dateLabel == 'zaterdag 7 jun' ||
-              activity.dateLabel == 'zondag 8 jun',
-        )
-        .toList();
-  }
+  List<HomeActivity> get visibleActivities => feed.activities;
 
   HomeLoaded copyWith({
     HomeFeed? feed,
     HomeLocation? location,
-    int? selectedDistanceKm,
-    String? selectedTimeFilter,
-    String? selectedCategoryId,
+    HomeFeedFilters? filters,
     bool? isRefreshing,
     List<String>? pendingActivityIds,
     Object? participationError = _unsetParticipationError,
+    Object? joinedActivityConfirmation = _unsetJoinedActivityConfirmation,
   }) {
     return HomeLoaded(
       feed: feed ?? this.feed,
       location: location ?? this.location,
-      selectedDistanceKm: selectedDistanceKm ?? this.selectedDistanceKm,
-      selectedTimeFilter: selectedTimeFilter ?? this.selectedTimeFilter,
-      selectedCategoryId: selectedCategoryId ?? this.selectedCategoryId,
+      filters: filters ?? this.filters,
       isRefreshing: isRefreshing ?? this.isRefreshing,
       pendingActivityIds: pendingActivityIds ?? this.pendingActivityIds,
       participationError:
           identical(participationError, _unsetParticipationError)
           ? this.participationError
           : participationError as String?,
+      joinedActivityConfirmation:
+          identical(
+            joinedActivityConfirmation,
+            _unsetJoinedActivityConfirmation,
+          )
+          ? this.joinedActivityConfirmation
+          : joinedActivityConfirmation as HomeActivity?,
     );
   }
 
@@ -130,11 +114,10 @@ final class HomeLoaded extends HomeState {
   List<Object?> get props => [
     feed,
     location,
-    selectedDistanceKm,
-    selectedTimeFilter,
-    selectedCategoryId,
+    filters,
     isRefreshing,
     pendingActivityIds,
     participationError,
+    joinedActivityConfirmation,
   ];
 }

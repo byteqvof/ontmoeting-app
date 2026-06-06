@@ -31,7 +31,7 @@ class ProfileScoreCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Opkomstscore',
+                  'Reputatie',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     color: colors.ink,
                     fontWeight: FontWeight.w900,
@@ -39,7 +39,7 @@ class ProfileScoreCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  'Kom je opdagen, dan stijgt-ie',
+                  profile.trust.reputationLabel,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: colors.green700.withValues(alpha: .68),
                     fontWeight: FontWeight.w700,
@@ -49,7 +49,7 @@ class ProfileScoreCard extends StatelessWidget {
             ),
           ),
           Text(
-            '${profile.attendanceScore}',
+            '${profile.trust.reputationScore}',
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               color: colors.green,
               fontWeight: FontWeight.w900,

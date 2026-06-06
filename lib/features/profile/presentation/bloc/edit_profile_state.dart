@@ -7,6 +7,8 @@ class EditProfileState extends Equatable {
     required this.id,
     required this.displayName,
     required this.cityName,
+    required this.ageBand,
+    required this.gender,
     required this.avatarUrl,
     this.avatarFile,
     this.removeAvatar = false,
@@ -20,6 +22,8 @@ class EditProfileState extends Equatable {
       id: profile.id,
       displayName: profile.displayName,
       cityName: profile.cityName,
+      ageBand: profile.ageBand ?? '',
+      gender: profile.gender ?? '',
       avatarUrl: profile.avatarUrl ?? '',
       profile: profile,
     );
@@ -28,6 +32,8 @@ class EditProfileState extends Equatable {
   final String id;
   final String displayName;
   final String cityName;
+  final String ageBand;
+  final String gender;
   final String avatarUrl;
   final ProfileAvatarFile? avatarFile;
   final bool removeAvatar;
@@ -36,12 +42,17 @@ class EditProfileState extends Equatable {
   final String? errorMessage;
 
   bool get isValid {
-    return displayName.trim().length >= 2 && cityName.trim().length >= 2;
+    return displayName.trim().length >= 2 &&
+        cityName.trim().length >= 2 &&
+        ageBand.isNotEmpty &&
+        gender.isNotEmpty;
   }
 
   EditProfileState copyWith({
     String? displayName,
     String? cityName,
+    String? ageBand,
+    String? gender,
     String? avatarUrl,
     ProfileAvatarFile? avatarFile,
     bool clearAvatarFile = false,
@@ -54,6 +65,8 @@ class EditProfileState extends Equatable {
       id: id,
       displayName: displayName ?? this.displayName,
       cityName: cityName ?? this.cityName,
+      ageBand: ageBand ?? this.ageBand,
+      gender: gender ?? this.gender,
       avatarUrl: avatarUrl ?? this.avatarUrl,
       avatarFile: clearAvatarFile ? null : avatarFile ?? this.avatarFile,
       removeAvatar: removeAvatar ?? this.removeAvatar,
@@ -68,6 +81,8 @@ class EditProfileState extends Equatable {
     id,
     displayName,
     cityName,
+    ageBand,
+    gender,
     avatarUrl,
     avatarFile,
     removeAvatar,

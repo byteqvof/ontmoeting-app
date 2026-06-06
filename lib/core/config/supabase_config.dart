@@ -1,15 +1,39 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-const supabaseUrl = 'https://pmnymluxikcmqehlbxlt.supabase.co';
-const supabaseAnonKey = 'sb_publishable_q9O8Q1jmRZ-9PVGdj_9dYg_S24tTwwt';
+const appEnvironment = String.fromEnvironment('TOCH_ENV', defaultValue: 'dev');
+const posthogApiKey = String.fromEnvironment('POSTHOG_API_KEY');
+const posthogHost = String.fromEnvironment(
+  'POSTHOG_HOST',
+  defaultValue: 'https://eu.i.posthog.com',
+);
+const sentryDsn = String.fromEnvironment('SENTRY_DSN');
+const tochFakePhoneVerificationRequested = bool.fromEnvironment(
+  'TOCH_FAKE_PHONE_VERIFICATION',
+);
+const tochFakePhoneVerificationEnabled =
+    tochFakePhoneVerificationRequested && appEnvironment == 'dev';
+const supabaseUrl = String.fromEnvironment(
+  'SUPABASE_URL',
+  defaultValue: 'https://pmnymluxikcmqehlbxlt.supabase.co',
+);
+const supabaseAnonKey = String.fromEnvironment(
+  'SUPABASE_ANON_KEY',
+  defaultValue: 'sb_publishable_q9O8Q1jmRZ-9PVGdj_9dYg_S24tTwwt',
+);
 const supabaseOAuthRedirectUrl = 'meetingsapp://auth-callback';
 const supabaseNearbyActivitiesFunctionName = 'activities-nearby';
+const supabaseActivityDetailFunctionName = 'activities-detail';
 const supabaseCreateActivityFunctionName = 'activities-create';
 const supabaseActivityParticipationFunctionName = 'activities-participation';
 const supabaseActivityAgendaFunctionName = 'activities-agenda';
 const supabaseActivityChatFunctionName = 'activity-chat';
+const supabaseActivityCompleteFunctionName = 'activities-complete';
+const supabaseActivityFeedbackFunctionName = 'activity-feedback';
+const supabaseActivityAttendanceFunctionName = 'activity-attendance';
 const supabaseProfilesFunctionName = 'profiles';
+const supabaseSafetyActionsFunctionName = 'safety-actions';
+const supabaseAccountTrustFunctionName = 'account-trust';
 const supabaseUserActivitiesFunctionName = 'activities-for-user';
 
 class SupabaseConfig {
@@ -31,4 +55,11 @@ class SupabaseConfig {
       ),
     );
   }
+}
+
+bool isFakePhoneVerificationAllowed({
+  required String environment,
+  required bool requested,
+}) {
+  return requested && environment.trim().toLowerCase() == 'dev';
 }

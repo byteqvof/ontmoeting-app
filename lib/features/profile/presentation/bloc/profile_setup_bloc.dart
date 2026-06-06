@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/services/analytics_service.dart';
 import '../../../../core/usecases/usecase.dart';
 import '../../domain/entities/create_profile_draft.dart';
 import '../../domain/entities/profile.dart';
@@ -19,6 +20,8 @@ class ProfileSetupBloc extends Bloc<ProfileSetupEvent, ProfileSetupState> {
     on<ProfileSetupStepChanged>(_onStepChanged);
     on<ProfileSetupDisplayNameChanged>(_onDisplayNameChanged);
     on<ProfileSetupCityChanged>(_onCityChanged);
+    on<ProfileSetupAgeBandSelected>(_onAgeBandSelected);
+    on<ProfileSetupGenderSelected>(_onGenderSelected);
     on<ProfileSetupInterestToggled>(_onInterestToggled);
     on<ProfileSetupAvatarPicked>(_onAvatarPicked);
     on<ProfileSetupAvatarRemoved>(_onAvatarRemoved);
@@ -78,6 +81,22 @@ class ProfileSetupBloc extends Bloc<ProfileSetupEvent, ProfileSetupState> {
     );
   }
 
+  void _onAgeBandSelected(
+    ProfileSetupAgeBandSelected event,
+    Emitter<ProfileSetupState> emit,
+  ) {
+    emit(
+      state.copyWith(ageBand: event.ageBand, status: ProfileSetupStatus.idle),
+    );
+  }
+
+  void _onGenderSelected(
+    ProfileSetupGenderSelected event,
+    Emitter<ProfileSetupState> emit,
+  ) {
+    emit(state.copyWith(gender: event.gender, status: ProfileSetupStatus.idle));
+  }
+
   void _onInterestToggled(
     ProfileSetupInterestToggled event,
     Emitter<ProfileSetupState> emit,
@@ -130,20 +149,39 @@ class ProfileSetupBloc extends Bloc<ProfileSetupEvent, ProfileSetupState> {
         displayName: state.displayName.trim(),
         initials: _initialsFor(state.displayName),
         cityName: state.cityName.trim(),
+        ageBand: state.ageBand,
+        gender: state.gender,
         categoryIds: state.selectedInterestIds.toList(),
         avatarFile: state.avatarFile,
       ),
     );
     result.fold(
-      (failure) => emit(
-        state.copyWith(
-          status: ProfileSetupStatus.failure,
-          errorMessage: failure.message,
-        ),
-      ),
-      (profile) => emit(
-        state.copyWith(status: ProfileSetupStatus.success, profile: profile),
-      ),
+      (failure) {
+        AnalyticsService.instance.track(
+          'profile_completion_failed',
+          properties: {'step': 'submit'},
+        );
+        emit(
+          state.copyWith(
+            status: ProfileSetupStatus.failure,
+            errorMessage: failure.message,
+          ),
+        );
+      },
+      (profile) {
+        AnalyticsService.instance.track(
+          'profile_completion_completed',
+          properties: {
+            'interest_count': state.selectedInterestIds.length,
+            'has_age_band': state.ageBand.isNotEmpty,
+            'has_gender': state.gender.isNotEmpty,
+            'has_avatar': state.avatarFile != null,
+          },
+        );
+        emit(
+          state.copyWith(status: ProfileSetupStatus.success, profile: profile),
+        );
+      },
     );
   }
 }

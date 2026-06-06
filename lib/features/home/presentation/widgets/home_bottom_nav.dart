@@ -3,23 +3,28 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_router.dart';
 import '../../../../app/theme/toch_theme.dart';
+import '../../../../core/di/injection_container.dart';
 import '../../domain/entities/home_category.dart';
 import '../../domain/entities/home_location.dart';
+import '../controllers/activity_chat_notice_controller.dart';
 import '../pages/create_activity_page.dart';
 
 class HomeBottomNav extends StatelessWidget {
   const HomeBottomNav({
-    required this.location,
-    required this.categories,
+    this.location,
+    this.categories = const [],
+    this.selected = HomeNavDestination.discover,
     super.key,
   });
 
-  final HomeLocation location;
+  final HomeLocation? location;
   final List<HomeCategory> categories;
+  final HomeNavDestination selected;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.toch;
+    final chatNotices = sl<ActivityChatNoticeController>();
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -54,26 +59,49 @@ class HomeBottomNav extends StatelessWidget {
               height: 64,
               child: Row(
                 children: [
-                  const _HomeNavItem(
+                  _HomeNavItem(
                     icon: Icons.explore_rounded,
                     label: 'Ontdek',
-                    selected: true,
+                    selected: selected == HomeNavDestination.discover,
+                    onTap: selected == HomeNavDestination.discover
+                        ? null
+                        : () => context.go(AppRoutes.home),
                   ),
-                  _HomeNavItem(
-                    icon: Icons.chat_bubble_rounded,
-                    label: 'Berichten',
-                    onTap: () => context.push(AppRoutes.activityMessages),
+                  ValueListenableBuilder<int>(
+                    valueListenable: chatNotices.unreadCountListenable,
+                    builder: (context, unreadCount, _) {
+                      return _HomeNavItem(
+                        icon: Icons.chat_bubble_rounded,
+                        label: 'Berichten',
+                        selected: selected == HomeNavDestination.messages,
+                        badgeCount: selected == HomeNavDestination.messages
+                            ? 0
+                            : unreadCount,
+                        onTap: selected == HomeNavDestination.messages
+                            ? null
+                            : () {
+                                chatNotices.clearUnread();
+                                context.go(AppRoutes.activityMessages);
+                              },
+                      );
+                    },
                   ),
                   _HomeCreateButton(location: location, categories: categories),
                   _HomeNavItem(
                     icon: Icons.calendar_month_rounded,
                     label: 'Agenda',
-                    onTap: () => context.push(AppRoutes.activityAgenda),
+                    selected: selected == HomeNavDestination.agenda,
+                    onTap: selected == HomeNavDestination.agenda
+                        ? null
+                        : () => context.go(AppRoutes.activityAgenda),
                   ),
                   _HomeNavItem(
                     icon: Icons.person_rounded,
                     label: 'Profiel',
-                    onTap: () => context.push(AppRoutes.profile),
+                    selected: selected == HomeNavDestination.profile,
+                    onTap: selected == HomeNavDestination.profile
+                        ? null
+                        : () => context.go(AppRoutes.profile),
                   ),
                 ],
               ),
@@ -85,17 +113,21 @@ class HomeBottomNav extends StatelessWidget {
   }
 }
 
+enum HomeNavDestination { discover, messages, agenda, profile }
+
 class _HomeNavItem extends StatelessWidget {
   const _HomeNavItem({
     required this.icon,
     required this.label,
     this.selected = false,
+    this.badgeCount = 0,
     this.onTap,
   });
 
   final IconData icon;
   final String label;
   final bool selected;
+  final int badgeCount;
   final VoidCallback? onTap;
 
   @override
@@ -109,12 +141,23 @@ class _HomeNavItem extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              icon,
-              size: 23,
-              color: selected
-                  ? colors.green
-                  : colors.green700.withValues(alpha: .45),
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(
+                  icon,
+                  size: 23,
+                  color: selected
+                      ? colors.green
+                      : colors.green700.withValues(alpha: .45),
+                ),
+                if (badgeCount > 0)
+                  Positioned(
+                    right: -10,
+                    top: -8,
+                    child: _UnreadBadge(count: badgeCount),
+                  ),
+              ],
             ),
             const SizedBox(height: 3),
             Text(
@@ -136,10 +179,47 @@ class _HomeNavItem extends StatelessWidget {
   }
 }
 
+class _UnreadBadge extends StatelessWidget {
+  const _UnreadBadge({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.toch;
+    final label = count > 9 ? '9+' : count.toString();
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.orange,
+        borderRadius: BorderRadius.circular(TochRadius.pill),
+        border: Border.all(color: colors.card, width: 1.5),
+      ),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 5),
+          child: Center(
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.w900,
+                height: 1,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _HomeCreateButton extends StatelessWidget {
   const _HomeCreateButton({required this.location, required this.categories});
 
-  final HomeLocation location;
+  final HomeLocation? location;
   final List<HomeCategory> categories;
 
   @override
@@ -152,13 +232,20 @@ class _HomeCreateButton extends StatelessWidget {
           color: colors.green,
           borderRadius: BorderRadius.circular(TochRadius.md),
           child: InkWell(
-            onTap: () => context.push(
-              AppRoutes.createActivity,
-              extra: CreateActivityPageArgs(
-                location: location,
-                categories: categories,
-              ),
-            ),
+            onTap: () {
+              final currentLocation = location;
+              if (currentLocation == null || categories.isEmpty) {
+                context.go(AppRoutes.home);
+                return;
+              }
+              context.push(
+                AppRoutes.createActivity,
+                extra: CreateActivityPageArgs(
+                  location: currentLocation,
+                  categories: categories,
+                ),
+              );
+            },
             borderRadius: BorderRadius.circular(TochRadius.md),
             child: Ink(
               width: 52,

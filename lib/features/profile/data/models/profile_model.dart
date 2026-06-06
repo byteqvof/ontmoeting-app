@@ -1,5 +1,6 @@
 import '../../domain/entities/profile.dart';
 import '../../domain/entities/profile_interest.dart';
+import 'profile_trust_model.dart';
 
 class ProfileModel extends Profile {
   const ProfileModel({
@@ -7,6 +8,8 @@ class ProfileModel extends Profile {
     required super.displayName,
     required super.initials,
     required super.cityName,
+    super.ageBand,
+    super.gender,
     required super.memberSince,
     required super.avatarUrl,
     required super.attendanceScore,
@@ -15,15 +18,20 @@ class ProfileModel extends Profile {
     required super.rating,
     required super.isVerified,
     required super.isPremium,
+    required super.trust,
     required super.interests,
   });
 
   factory ProfileModel.fromJson(Map<String, dynamic> json) {
+    final trust = ProfileTrustModel.fromJson(_mapValue(json['trust']));
+
     return ProfileModel(
       id: _stringValue(json['id']),
       displayName: _stringValue(json['display_name']),
       initials: _stringValue(json['initials']),
       cityName: _stringValue(json['city_name']),
+      ageBand: _nullableString(json['age_band']),
+      gender: _nullableString(json['gender']),
       memberSince:
           DateTime.tryParse(_stringValue(json['member_since'])) ??
           DateTime.now(),
@@ -32,8 +40,9 @@ class ProfileModel extends Profile {
       activitiesJoinedCount: _intValue(json['activities_joined_count']),
       activitiesHostedCount: _intValue(json['activities_hosted_count']),
       rating: _doubleValue(json['rating']),
-      isVerified: _boolValue(json['is_verified']),
+      isVerified: trust.identityVerified,
       isPremium: _boolValue(json['is_premium']),
+      trust: trust,
       interests: _listValue(json['interests'])
           .map((interest) => ProfileInterestModel.fromJson(_mapValue(interest)))
           .toList(),
@@ -46,6 +55,8 @@ class ProfileModel extends Profile {
       'display_name': displayName,
       'initials': initials,
       'city_name': cityName,
+      'age_band': ageBand,
+      'gender': gender,
       'member_since': memberSince.toIso8601String(),
       'avatar_url': avatarUrl,
       'attendance_score': attendanceScore,
@@ -54,6 +65,7 @@ class ProfileModel extends Profile {
       'rating': rating,
       'is_verified': isVerified,
       'is_premium': isPremium,
+      'trust': ProfileTrustModel.fromEntity(trust).toJson(),
       'interests': interests
           .map((interest) => ProfileInterestModel.fromEntity(interest).toJson())
           .toList(),

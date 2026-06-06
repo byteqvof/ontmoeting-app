@@ -14,42 +14,40 @@ abstract interface class HomeLocationDataSource {
 }
 
 class HomeLocationDataSourceImpl implements HomeLocationDataSource {
-  const HomeLocationDataSourceImpl();
+  const HomeLocationDataSourceImpl({
+    this.useDeviceLocation = false,
+    this.currentPositionTimeout = const Duration(seconds: 2),
+    this.geocodingTimeout = const Duration(seconds: 2),
+  });
+
+  final bool useDeviceLocation;
+  final Duration currentPositionTimeout;
+  final Duration geocodingTimeout;
 
   @override
   Future<HomeLocation> getCurrentLocation() async {
+    if (!useDeviceLocation) {
+      AppLogger.debug('Using default Ter Apel location');
+      return defaultHomeLocation;
+    }
+
     await _ensureLocationAccess();
 
-    final position = await _getBestAvailablePosition();
+    final position = await _getQuickPosition();
+    if (position == null) {
+      AppLogger.debug('No quick location fix; using Ter Apel fallback');
+      return defaultHomeLocation;
+    }
+
     return _locationFromPosition(position);
   }
 
   @override
   Stream<HomeLocation> watchCurrentLocation() async* {
-    await _ensureLocationAccess();
-
-    try {
-      yield await _locationFromPosition(await _getBestAvailablePosition());
-    } catch (error, stackTrace) {
-      AppLogger.debug(
-        'Initial location lookup failed; keeping watcher alive',
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    await for (final position in Geolocator.getPositionStream(
-      locationSettings: _locationSettings(forceAndroidLocationManager: true),
-    )) {
-      AppLogger.debug(
-        'Location stream position received: '
-        '${position.latitude}, ${position.longitude}',
-      );
-      yield await _locationFromPosition(position);
-    }
+    yield await getCurrentLocation();
   }
 
-  Future<Position> _getBestAvailablePosition() async {
+  Future<Position?> _getQuickPosition() async {
     AppLogger.debug('Checking last known location');
     final lastKnownPosition = await Geolocator.getLastKnownPosition();
     if (lastKnownPosition != null) {
@@ -75,61 +73,27 @@ class HomeLocationDataSourceImpl implements HomeLocationDataSource {
       }
     }
 
+    return _requestCurrentPosition();
+  }
+
+  Future<Position?> _requestCurrentPosition() async {
+    AppLogger.debug('Requesting current location briefly');
     try {
-      return await _requestCurrentPosition(forceAndroidLocationManager: false);
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: _locationSettings(
+          forceAndroidLocationManager: false,
+          timeLimit: currentPositionTimeout,
+        ),
+      ).timeout(currentPositionTimeout + const Duration(milliseconds: 300));
+
+      AppLogger.debug(
+        'Current location received: ${position.latitude}, ${position.longitude}',
+      );
+      return position;
     } on TimeoutException catch (error) {
-      AppLogger.debug('Current location timed out', error: error);
+      AppLogger.debug('Current location quick lookup timed out', error: error);
+      return null;
     }
-
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      try {
-        return await _requestCurrentPosition(forceAndroidLocationManager: true);
-      } on TimeoutException catch (error) {
-        AppLogger.debug(
-          'Android LocationManager current location timed out',
-          error: error,
-        );
-      }
-    }
-
-    return _firstStreamPosition();
-  }
-
-  Future<Position> _requestCurrentPosition({
-    required bool forceAndroidLocationManager,
-  }) async {
-    AppLogger.debug(
-      forceAndroidLocationManager
-          ? 'Requesting current location via Android LocationManager'
-          : 'Requesting current location',
-    );
-    final position = await Geolocator.getCurrentPosition(
-      locationSettings: _locationSettings(
-        forceAndroidLocationManager: forceAndroidLocationManager,
-        timeLimit: const Duration(seconds: 12),
-      ),
-    ).timeout(const Duration(seconds: 14));
-
-    AppLogger.debug(
-      'Current location received: ${position.latitude}, ${position.longitude}',
-    );
-    return position;
-  }
-
-  Future<Position> _firstStreamPosition() async {
-    AppLogger.debug('Waiting for first location stream position');
-    final position = await Geolocator.getPositionStream(
-      locationSettings: _locationSettings(
-        forceAndroidLocationManager: true,
-        distanceFilter: 0,
-      ),
-    ).first.timeout(const Duration(seconds: 14));
-
-    AppLogger.debug(
-      'First location stream position received: '
-      '${position.latitude}, ${position.longitude}',
-    );
-    return position;
   }
 
   Future<void> _ensureLocationAccess() async {
@@ -163,32 +127,40 @@ class HomeLocationDataSourceImpl implements HomeLocationDataSource {
       '${position.latitude}, ${position.longitude}',
     );
 
-    final placemarks = await placemarkFromCoordinates(
-      position.latitude,
-      position.longitude,
-    ).timeout(const Duration(seconds: 12));
-
-    if (placemarks.isEmpty) {
-      throw StateError('Could not resolve city from current location.');
-    }
-
-    final placemark = placemarks.first;
-    final city = _firstNotBlank([
-      placemark.locality,
-      placemark.subAdministrativeArea,
-      placemark.administrativeArea,
-    ]);
-
-    if (city == null) {
-      throw StateError('Current location did not include a city name.');
-    }
-
-    AppLogger.debug('Resolved city from coordinates: $city');
+    final city = await _resolveCityName(position);
     return HomeLocation(
       cityName: city,
       latitude: position.latitude,
       longitude: position.longitude,
     );
+  }
+
+  Future<String> _resolveCityName(Position position) async {
+    try {
+      final placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      ).timeout(geocodingTimeout);
+
+      final placemark = placemarks.isEmpty ? null : placemarks.first;
+      final city = _firstNotBlank([
+        placemark?.locality,
+        placemark?.subAdministrativeArea,
+        placemark?.administrativeArea,
+      ]);
+
+      if (city != null) {
+        AppLogger.debug('Resolved city from coordinates: $city');
+        return city;
+      }
+    } catch (error) {
+      AppLogger.debug(
+        'City lookup timed out; using Ter Apel label',
+        error: error,
+      );
+    }
+
+    return defaultHomeLocation.cityName;
   }
 
   String? _firstNotBlank(List<String?> values) {
