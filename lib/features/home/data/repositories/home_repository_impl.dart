@@ -55,13 +55,33 @@ class HomeRepositoryImpl implements HomeRepository {
   }
 
   @override
+  Future<Either<Failure, HomeActivity>> updateActivity({
+    required String activityId,
+    required CreateActivityDraft draft,
+  }) async {
+    try {
+      final activity = await _dataSource.updateActivity(
+        activityId: activityId,
+        draft: draft,
+      );
+      _clearFeedCache();
+      return right(activity);
+    } catch (error) {
+      return left(_mapRemoteError(error));
+    }
+  }
+
+  @override
   Future<Either<Failure, HomeFeed>> getHomeFeed({
     required HomeLocation location,
     required HomeFeedFilters filters,
+    bool forceRefresh = false,
   }) async {
-    final cachedFeed = _freshCachedFeed(location: location, filters: filters);
-    if (cachedFeed != null) {
-      return right(cachedFeed);
+    if (!forceRefresh) {
+      final cachedFeed = _freshCachedFeed(location: location, filters: filters);
+      if (cachedFeed != null) {
+        return right(cachedFeed);
+      }
     }
 
     try {
@@ -173,6 +193,23 @@ class HomeRepositoryImpl implements HomeRepository {
   }
 
   @override
+  Future<Either<Failure, void>> markActivityChatRead({
+    required String activityId,
+    String? messageId,
+  }) async {
+    try {
+      await _dataSource.markActivityChatRead(
+        activityId: activityId,
+        messageId: messageId,
+      );
+      _clearFeedCache();
+      return right(null);
+    } catch (error) {
+      return left(_mapChatError(error));
+    }
+  }
+
+  @override
   Future<Either<Failure, ActivityCompletionUpdate>> completeActivity({
     required String activityId,
   }) async {
@@ -207,21 +244,22 @@ class HomeRepositoryImpl implements HomeRepository {
   }
 
   @override
-  Future<Either<Failure, HomeLocation>> getCurrentLocation() async {
+  Future<Either<Failure, HomeLocation>> getCurrentLocation({
+    bool forceRefresh = false,
+  }) async {
     final cachedLocation = _cachedLocation;
-    if (cachedLocation != null) {
+    if (!forceRefresh && cachedLocation != null) {
       return right(cachedLocation);
     }
 
     try {
-      final location = await _locationDataSource.getCurrentLocation().timeout(
-        locationLookupTimeout,
-      );
+      final location = await _locationDataSource
+          .getCurrentLocation(forceRefresh: forceRefresh)
+          .timeout(locationLookupTimeout);
       _cachedLocation = location;
       return right(location);
     } catch (error) {
       if (_shouldUseFallbackLocation(error)) {
-        _cachedLocation = defaultHomeLocation;
         return right(defaultHomeLocation);
       }
       return left(_mapLocationError(error));
@@ -233,18 +271,18 @@ class HomeRepositoryImpl implements HomeRepository {
     final cachedLocation = _cachedLocation;
     if (cachedLocation != null) {
       yield right(cachedLocation);
-      return;
     }
 
     try {
-      final location = await _locationDataSource.getCurrentLocation().timeout(
-        locationLookupTimeout,
-      );
-      _cachedLocation = location;
-      yield right(location);
+      await for (final location in _locationDataSource.watchCurrentLocation()) {
+        if (_cachedLocation == location) {
+          continue;
+        }
+        _cachedLocation = location;
+        yield right(location);
+      }
     } catch (error) {
       if (_shouldUseFallbackLocation(error)) {
-        _cachedLocation = defaultHomeLocation;
         yield right(defaultHomeLocation);
         return;
       }

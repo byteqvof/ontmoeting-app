@@ -56,7 +56,7 @@ class AccountTrustService {
           error: error,
           stackTrace: stackTrace,
         );
-        return _localAuthTrust();
+        return localTrust;
       }
     }
 
@@ -141,17 +141,6 @@ class AccountTrustService {
     }
 
     final verifiedAt = DateTime.now().toUtc();
-    final syncedTrust = await _syncFakePhoneTrustToBackend(
-      phoneNumber: phoneNumber,
-      verifiedAt: verifiedAt,
-    );
-
-    if (!syncedTrust.phoneVerified) {
-      throw const AccountTrustException(
-        'Ontwikkelverificatie kon niet op de server worden bevestigd.',
-      );
-    }
-
     await _preferences.setBool(_fakePreferenceKey(_verifiedKey), true);
     await _preferences.setString(
       _fakePreferenceKey(_verifiedPhoneKey),
@@ -164,7 +153,24 @@ class AccountTrustService {
     await _preferences.remove(_fakePreferenceKey(_pendingPhoneKey));
 
     AppLogger.debug('Fake phone verification completed for $phoneNumber');
-    return syncedTrust;
+    final localTrust = _fakeVerifiedTrust(verifiedAt: verifiedAt);
+    try {
+      final syncedTrust = await _syncFakePhoneTrustToBackend(
+        phoneNumber: phoneNumber,
+        verifiedAt: verifiedAt,
+      );
+      if (syncedTrust.phoneVerified) {
+        return syncedTrust;
+      }
+    } catch (error, stackTrace) {
+      AppLogger.debug(
+        'Fake phone verification is local-only because backend sync failed',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return localTrust ?? _localAuthTrust();
   }
 
   Future<ProfileTrust> _syncFakePhoneTrustToBackend({

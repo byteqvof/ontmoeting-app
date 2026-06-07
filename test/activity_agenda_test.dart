@@ -18,11 +18,73 @@ void main() {
     );
 
     expect(agenda.chatActivities, [hosted, joined, completed]);
-    expect(agenda.totalCount, 4);
+    expect(agenda.totalCount, 3);
+  });
+
+  test('agenda sections keep completed activities out of active lists', () {
+    final hostedActive = _activity(
+      'activity-1',
+      title: 'Koffie',
+      status: 'published',
+    );
+    final hostedCompleted = _activity(
+      'activity-2',
+      title: 'Wandelen',
+      status: 'completed',
+    );
+    final completedDuplicate = _activity(
+      'activity-2',
+      title: 'Wandelen',
+      status: 'completed',
+    );
+
+    final agenda = ActivityAgenda(
+      hostedActivities: [hostedActive, hostedCompleted],
+      joinedActivities: [hostedCompleted],
+      completedActivities: [completedDuplicate],
+    );
+
+    expect(agenda.activeHostedActivities, [hostedActive]);
+    expect(agenda.activeJoinedActivities, isEmpty);
+    expect(agenda.uniqueCompletedActivities, [completedDuplicate]);
+  });
+
+  test('chat activities prioritizes unread and recent conversations', () {
+    final quiet = _activity(
+      'activity-1',
+      title: 'Vissen',
+      chatUnreadCount: 0,
+      chatLastMessageAt: DateTime(2026, 6, 6, 18),
+    );
+    final unread = _activity(
+      'activity-2',
+      title: 'Koffie',
+      chatUnreadCount: 2,
+      chatLastMessageAt: DateTime(2026, 6, 6, 17),
+    );
+    final recent = _activity(
+      'activity-3',
+      title: 'Wandelen',
+      chatUnreadCount: 0,
+      chatLastMessageAt: DateTime(2026, 6, 6, 19),
+    );
+
+    final agenda = ActivityAgenda(
+      hostedActivities: [quiet],
+      joinedActivities: [unread, recent],
+    );
+
+    expect(agenda.chatActivities, [unread, recent, quiet]);
   });
 }
 
-HomeActivity _activity(String id, {required String title}) {
+HomeActivity _activity(
+  String id, {
+  required String title,
+  String status = 'published',
+  int chatUnreadCount = 0,
+  DateTime? chatLastMessageAt,
+}) {
   return HomeActivity(
     id: id,
     category: const HomeCategory(
@@ -48,5 +110,8 @@ HomeActivity _activity(String id, {required String title}) {
     participants: const [],
     availableSpots: 4,
     spotsLabel: 'nog 4 plekken',
+    status: status,
+    chatUnreadCount: chatUnreadCount,
+    chatLastMessageAt: chatLastMessageAt,
   );
 }

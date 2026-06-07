@@ -103,7 +103,10 @@ class ActivityJoinConfirmationPage extends StatelessWidget {
   }
 
   void _openChat(BuildContext context) {
-    context.push(AppRoutes.activityChatPath(activity.id), extra: activity);
+    context.go(
+      AppRoutes.activityChatPath(activity.id, from: 'joined'),
+      extra: activity,
+    );
   }
 }
 

@@ -12,7 +12,12 @@ final class HomeStarted extends HomeEvent {
 }
 
 final class HomeLocationRequested extends HomeEvent {
-  const HomeLocationRequested();
+  const HomeLocationRequested({this.forceRefresh = false});
+
+  final bool forceRefresh;
+
+  @override
+  List<Object?> get props => [forceRefresh];
 }
 
 final class HomeLocationChanged extends HomeEvent {

@@ -1,18 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/app_router.dart';
 import '../../../../app/theme/toch_theme.dart';
 import '../../domain/entities/home_activity.dart';
+import '../../domain/entities/home_feed_filters.dart';
+import '../../domain/entities/home_location.dart';
+import '../pages/activity_map_page.dart';
+import 'activity_map_canvas.dart';
 
 class ActivityDetailHero extends StatelessWidget {
   const ActivityDetailHero({
     required this.activity,
     this.onBackPressed,
+    this.onEditPressed,
     super.key,
   });
 
   final HomeActivity activity;
   final VoidCallback? onBackPressed;
+  final VoidCallback? onEditPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -45,6 +52,13 @@ class ActivityDetailHero extends StatelessWidget {
                     onPressed: () {},
                   ),
                   const SizedBox(width: TochSpacing.xs),
+                  if (onEditPressed != null) ...[
+                    _HeroIconButton(
+                      icon: Icons.edit_rounded,
+                      onPressed: onEditPressed!,
+                    ),
+                    const SizedBox(width: TochSpacing.xs),
+                  ],
                   _HeroIconButton(
                     icon: Icons.bookmark_border_rounded,
                     onPressed: () {},
@@ -89,7 +103,7 @@ class ActivityDetailHero extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: TochSpacing.lg),
-              _MapPlaceholder(activity: activity),
+              _MapPreview(activity: activity),
             ],
           ),
         ),
@@ -120,158 +134,106 @@ class _HeroIconButton extends StatelessWidget {
   }
 }
 
-class _MapPlaceholder extends StatelessWidget {
-  const _MapPlaceholder({required this.activity});
+class _MapPreview extends StatelessWidget {
+  const _MapPreview({required this.activity});
 
   final HomeActivity activity;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.toch;
+    final hasCoordinates = activity.latitude != 0 || activity.longitude != 0;
+    final location = HomeLocation(
+      cityName: activity.locationName,
+      latitude: activity.latitude,
+      longitude: activity.longitude,
+    );
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(TochRadius.lg),
-      child: SizedBox(
-        height: 152,
-        width: double.infinity,
-        child: DecoratedBox(
-          decoration: const BoxDecoration(color: Color(0xFFE7EBE0)),
-          child: Stack(
-            children: [
-              Positioned(
-                left: -30,
-                right: -20,
-                top: 72,
-                child: Container(
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFCFE0E6),
-                    borderRadius: BorderRadius.circular(TochRadius.pill),
+      child: Material(
+        color: const Color(0xFFE7EBE0),
+        child: InkWell(
+          onTap: hasCoordinates
+              ? () => context.push(
+                  AppRoutes.activityMap,
+                  extra: ActivityMapPageArgs(
+                    location: location,
+                    activities: [activity],
+                    filters: const HomeFeedFilters(),
                   ),
-                ),
-              ),
-              Positioned(
-                left: 24,
-                top: -10,
-                child: _MapRoad(angle: -.26, height: 210),
-              ),
-              Positioned(
-                left: 164,
-                top: -18,
-                child: _MapRoad(angle: -.12, height: 220),
-              ),
-              Positioned(
-                right: -18,
-                top: 22,
-                child: _MapRoad(angle: 1.42, height: 260),
-              ),
-              Positioned(
-                left: 24,
-                top: 18,
-                child: _MapBlock(color: const Color(0xFFDBE6CC)),
-              ),
-              Positioned(
-                right: 24,
-                bottom: 16,
-                child: _MapBlock(color: const Color(0xFFDBE6CC)),
-              ),
-              Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: colors.green,
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(22),
-                          topRight: Radius.circular(22),
-                          bottomRight: Radius.circular(22),
-                          bottomLeft: Radius.circular(4),
+                )
+              : null,
+          child: SizedBox(
+            height: 152,
+            width: double.infinity,
+            child: Stack(
+              children: [
+                if (hasCoordinates)
+                  Positioned.fill(
+                    child: ActivityMapCanvas(
+                      location: location,
+                      activities: [activity],
+                      interactive: false,
+                    ),
+                  )
+                else
+                  const Positioned.fill(
+                    child: ColoredBox(color: Color(0xFFE7EBE0)),
+                  ),
+                Center(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: colors.card.withValues(alpha: .94),
+                      borderRadius: BorderRadius.circular(TochRadius.pill),
+                      boxShadow: [
+                        BoxShadow(
+                          color: colors.ink.withValues(alpha: .10),
+                          blurRadius: 14,
+                          offset: const Offset(0, 7),
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: colors.green.withValues(alpha: .24),
-                            blurRadius: 18,
-                            offset: const Offset(0, 8),
+                      ],
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            hasCoordinates
+                                ? Icons.map_rounded
+                                : Icons.location_off_rounded,
+                            color: colors.green,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 6),
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 250),
+                            child: Text(
+                              hasCoordinates
+                                  ? activity.meetingPoint
+                                  : 'Locatie nog niet exact',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.labelSmall
+                                  ?.copyWith(
+                                    color: colors.ink,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                            ),
                           ),
                         ],
                       ),
-                      child: SizedBox.square(
-                        dimension: 42,
-                        child: Icon(
-                          activity.category.icon,
-                          color: Colors.white,
-                          size: 22,
-                        ),
-                      ),
                     ),
-                    const SizedBox(height: 7),
-                    DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: .92),
-                        borderRadius: BorderRadius.circular(TochRadius.pill),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 7,
-                        ),
-                        child: Text(
-                          activity.locationName,
-                          style: Theme.of(context).textTheme.labelSmall
-                              ?.copyWith(
-                                color: colors.ink,
-                                fontWeight: FontWeight.w900,
-                              ),
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _MapRoad extends StatelessWidget {
-  const _MapRoad({required this.angle, required this.height});
-
-  final double angle;
-  final double height;
-
-  @override
-  Widget build(BuildContext context) {
-    return Transform.rotate(
-      angle: angle,
-      child: Container(
-        width: 7,
-        height: height,
-        decoration: BoxDecoration(
-          color: const Color(0xFFD8DACE),
-          borderRadius: BorderRadius.circular(TochRadius.pill),
-        ),
-      ),
-    );
-  }
-}
-
-class _MapBlock extends StatelessWidget {
-  const _MapBlock({required this.color});
-
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 86,
-      height: 58,
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(TochRadius.sm),
       ),
     );
   }

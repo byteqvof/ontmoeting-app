@@ -9,6 +9,8 @@ class EditProfileState extends Equatable {
     required this.cityName,
     required this.ageBand,
     required this.gender,
+    required this.availableInterests,
+    required this.selectedInterestIds,
     required this.avatarUrl,
     this.avatarFile,
     this.removeAvatar = false,
@@ -24,6 +26,10 @@ class EditProfileState extends Equatable {
       cityName: profile.cityName,
       ageBand: profile.ageBand ?? '',
       gender: profile.gender ?? '',
+      availableInterests: profile.interests,
+      selectedInterestIds: profile.interests
+          .map((interest) => interest.id)
+          .toList(),
       avatarUrl: profile.avatarUrl ?? '',
       profile: profile,
     );
@@ -34,6 +40,8 @@ class EditProfileState extends Equatable {
   final String cityName;
   final String ageBand;
   final String gender;
+  final List<ProfileInterest> availableInterests;
+  final List<String> selectedInterestIds;
   final String avatarUrl;
   final ProfileAvatarFile? avatarFile;
   final bool removeAvatar;
@@ -45,7 +53,8 @@ class EditProfileState extends Equatable {
     return displayName.trim().length >= 2 &&
         cityName.trim().length >= 2 &&
         ageBand.isNotEmpty &&
-        gender.isNotEmpty;
+        gender.isNotEmpty &&
+        selectedInterestIds.isNotEmpty;
   }
 
   EditProfileState copyWith({
@@ -53,6 +62,8 @@ class EditProfileState extends Equatable {
     String? cityName,
     String? ageBand,
     String? gender,
+    List<ProfileInterest>? availableInterests,
+    List<String>? selectedInterestIds,
     String? avatarUrl,
     ProfileAvatarFile? avatarFile,
     bool clearAvatarFile = false,
@@ -67,6 +78,8 @@ class EditProfileState extends Equatable {
       cityName: cityName ?? this.cityName,
       ageBand: ageBand ?? this.ageBand,
       gender: gender ?? this.gender,
+      availableInterests: availableInterests ?? this.availableInterests,
+      selectedInterestIds: selectedInterestIds ?? this.selectedInterestIds,
       avatarUrl: avatarUrl ?? this.avatarUrl,
       avatarFile: clearAvatarFile ? null : avatarFile ?? this.avatarFile,
       removeAvatar: removeAvatar ?? this.removeAvatar,
@@ -83,6 +96,8 @@ class EditProfileState extends Equatable {
     cityName,
     ageBand,
     gender,
+    availableInterests,
+    selectedInterestIds,
     avatarUrl,
     avatarFile,
     removeAvatar,

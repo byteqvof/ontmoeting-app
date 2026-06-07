@@ -8,17 +8,24 @@ import '../../../../app/router/app_router.dart';
 import '../../../../app/theme/toch_theme.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../../../core/services/analytics_service.dart';
+import '../../../../core/utils/app_logger.dart';
 import '../../domain/entities/activity_chat_message.dart';
 import '../../domain/entities/home_activity.dart';
 import '../../domain/usecases/get_activity_chat_messages.dart';
+import '../../domain/usecases/mark_activity_chat_read.dart';
 import '../../domain/usecases/send_activity_chat_message.dart';
 import '../controllers/activity_chat_notice_controller.dart';
 import '../controllers/activity_chat_realtime_controller.dart';
 
 class ActivityChatPage extends StatefulWidget {
-  const ActivityChatPage({required this.activity, super.key});
+  const ActivityChatPage({
+    required this.activity,
+    this.backFallbackRoute,
+    super.key,
+  });
 
   final HomeActivity activity;
+  final String? backFallbackRoute;
 
   @override
   State<ActivityChatPage> createState() => _ActivityChatPageState();
@@ -28,6 +35,7 @@ class _ActivityChatPageState extends State<ActivityChatPage>
     with WidgetsBindingObserver {
   final GetActivityChatMessages _getMessages = sl();
   final SendActivityChatMessage _sendMessage = sl();
+  final MarkActivityChatRead _markChatRead = sl();
   final ActivityChatNoticeController _chatNotices = sl();
   final ActivityChatRealtimeController _realtime = sl();
   final TextEditingController _messageController = TextEditingController();
@@ -39,6 +47,7 @@ class _ActivityChatPageState extends State<ActivityChatPage>
   bool _isCatchingUp = false;
   bool _isSending = false;
   String? _errorMessage;
+  String? _lastMarkedMessageId;
 
   @override
   void initState() {
@@ -126,6 +135,7 @@ class _ActivityChatPageState extends State<ActivityChatPage>
         if (showLoading || messagesChanged) {
           _scrollToBottom();
         }
+        _markLatestMessageRead();
       },
     );
   }
@@ -165,6 +175,7 @@ class _ActivityChatPageState extends State<ActivityChatPage>
       _errorMessage = null;
     });
     _scrollToBottom();
+    _markLatestMessageRead();
   }
 
   Future<void> _sendCurrentMessage() async {
@@ -208,7 +219,38 @@ class _ActivityChatPageState extends State<ActivityChatPage>
         });
         AnalyticsService.instance.track('message_sent');
         _scrollToBottom();
+        _markLatestMessageRead();
       },
+    );
+  }
+
+  void _markLatestMessageRead() {
+    if (!_isCurrentRoute || _messages.isEmpty) {
+      return;
+    }
+
+    final latestMessageId = _messages.last.id;
+    if (latestMessageId.isEmpty || latestMessageId == _lastMarkedMessageId) {
+      return;
+    }
+
+    _lastMarkedMessageId = latestMessageId;
+    unawaited(
+      _markChatRead(
+        MarkActivityChatReadParams(
+          activityId: widget.activity.id,
+          messageId: latestMessageId,
+        ),
+      ).then((result) {
+        result.fold((failure) {
+          AppLogger.debug(
+            'Marking activity chat read failed: ${failure.message}',
+          );
+          if (_lastMarkedMessageId == latestMessageId) {
+            _lastMarkedMessageId = null;
+          }
+        }, (_) {});
+      }),
     );
   }
 
@@ -229,44 +271,60 @@ class _ActivityChatPageState extends State<ActivityChatPage>
   Widget build(BuildContext context) {
     final colors = context.toch;
 
-    return Scaffold(
-      backgroundColor: colors.cream,
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 480),
-          child: SafeArea(
-            child: Column(
-              children: [
-                _ChatHeader(
-                  activity: widget.activity,
-                  onBackPressed: () {
-                    if (context.canPop()) {
-                      context.pop();
-                      return;
-                    }
-                    context.go(AppRoutes.activityMessages);
-                  },
-                ),
-                Expanded(
-                  child: _ChatBody(
-                    messages: _messages,
-                    isLoading: _isLoading,
-                    errorMessage: _errorMessage,
-                    scrollController: _scrollController,
-                    onRetry: _loadMessages,
+    return PopScope(
+      canPop: widget.backFallbackRoute == null,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) {
+          return;
+        }
+        _goBack(context);
+      },
+      child: Scaffold(
+        backgroundColor: colors.cream,
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: SafeArea(
+              child: Column(
+                children: [
+                  _ChatHeader(
+                    activity: widget.activity,
+                    onBackPressed: () => _goBack(context),
                   ),
-                ),
-                _MessageComposer(
-                  controller: _messageController,
-                  isSending: _isSending,
-                  onSendPressed: _sendCurrentMessage,
-                ),
-              ],
+                  Expanded(
+                    child: _ChatBody(
+                      messages: _messages,
+                      isLoading: _isLoading,
+                      errorMessage: _errorMessage,
+                      scrollController: _scrollController,
+                      onRetry: _loadMessages,
+                    ),
+                  ),
+                  _MessageComposer(
+                    controller: _messageController,
+                    isSending: _isSending,
+                    onSendPressed: _sendCurrentMessage,
+                  ),
+                ],
+              ),
             ),
           ),
         ),
       ),
     );
+  }
+
+  void _goBack(BuildContext context) {
+    final fallbackRoute = widget.backFallbackRoute;
+    if (fallbackRoute != null && fallbackRoute.isNotEmpty) {
+      context.go(fallbackRoute);
+      return;
+    }
+    if (context.canPop()) {
+      context.pop();
+      return;
+    }
+    context.go(AppRoutes.activityMessages);
   }
 }
 

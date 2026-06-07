@@ -150,7 +150,9 @@ class _HomeFeed extends StatelessWidget {
                 HomeHeader(
                   locationName: state.feed.locationName,
                   onLocationTap: () {
-                    context.read<HomeBloc>().add(const HomeLocationRequested());
+                    context.read<HomeBloc>().add(
+                      const HomeLocationRequested(forceRefresh: true),
+                    );
                   },
                 ),
                 HomeTimeFilters(
@@ -366,7 +368,7 @@ class _LocationBlocked extends StatelessWidget {
                     child: ElevatedButton.icon(
                       onPressed: () {
                         context.read<HomeBloc>().add(
-                          const HomeLocationRequested(),
+                          const HomeLocationRequested(forceRefresh: true),
                         );
                       },
                       icon: const Icon(Icons.my_location_rounded),

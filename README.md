@@ -1,213 +1,59 @@
-# TOCH
+# TOCH Flutter app
 
-> Van "ik wil iets doen" naar "ik ga toch".
+Flutter client voor TOCH. De app gebruikt Supabase Edge Functions, Supabase
+Realtime, MapLibre/OpenFreeMap en optioneel Firebase Cloud Messaging.
 
-TOCH is een social meetup platform dat mensen helpt om spontaan activiteiten te organiseren en nieuwe mensen te ontmoeten in de echte wereld.
+## Snel starten
 
-Geen eindeloos swipen.
-Geen eindeloos chatten.
-Gewoon iets plannen en gaan.
+Installeer dependencies:
 
----
+```powershell
+fvm flutter pub get
+```
 
-## Waarom TOCH bestaat
+Start in development mode:
 
-Veel mensen willen vaker iets ondernemen, maar lopen tegen dezelfde problemen aan:
+```powershell
+.\scripts\run_dev.ps1 -Device emulator-5554
+```
 
-* Niemand heeft tijd.
-* Niemand neemt initiatief.
-* Nieuwe mensen ontmoeten is lastig.
-* Bestaande sociale apps draaien vooral om likes, volgers of dating.
+Zonder `config/dev.local.json` gebruikt het script `config/dev.example.json`.
+Maak lokaal een eigen config wanneer je push, Sentry of PostHog wilt testen:
 
-TOCH draait om daadwerkelijke ontmoetingen.
+```powershell
+Copy-Item config\dev.example.json config\dev.local.json
+```
 
-Het doel is simpel:
+`config/dev.local.json` wordt niet gecommit.
 
-**Meer echte ontmoetingen. Minder schermtijd.**
+## Belangrijke dart defines
 
----
+- `TOCH_ENV`: gebruik `dev` lokaal en `prod` voor productie.
+- `TOCH_FAKE_PHONE_VERIFICATION`: alleen actief als `TOCH_ENV=dev`.
+- `TOCH_ENABLE_PUSH`: zet FCM-tokenregistratie aan.
+- `SUPABASE_URL` en `SUPABASE_ANON_KEY`: Supabase projectconfig.
+- `POSTHOG_API_KEY`, `POSTHOG_HOST`, `SENTRY_DSN`: observability.
+- `FIREBASE_PROJECT_ID`, `FIREBASE_MESSAGING_SENDER_ID`, `FIREBASE_APP_ID`,
+  `FIREBASE_API_KEY`: Firebase clientconfig.
 
-## Product Filosofie
+Voor productie mag fake phone verification nooit aan staan. De code negeert die
+flag buiten `TOCH_ENV=dev`, maar controleer buildconfig alsnog expliciet.
 
-Bij iedere feature stellen we onszelf één vraag:
+## Verificatie
 
-> Helpt dit mensen sneller samen iets te ondernemen?
+Gebruik voor een beta-check minimaal:
 
-Als het antwoord nee is, hoort de feature waarschijnlijk niet in TOCH thuis.
+```powershell
+fvm flutter analyze
+fvm flutter test
+fvm flutter build apk --debug
+```
 
-Daarom ligt de focus op:
+## Push-notificaties
 
-* Activiteiten
-* Vertrouwen
-* Community
-* Veiligheid
-* Lage instapdrempel
+Plaats `google-services.json` alleen in de Android app wanneer je FCM lokaal wilt
+testen. Beperk Firebase API keys in Google Cloud waar mogelijk.
 
-Niet op:
-
-* Influencers
-* Volgers
-* Populariteitswedstrijden
-* Oneindige feeds
-
----
-
-## Kernprincipes
-
-### Offline eerst
-
-TOCH is geen chat-app.
-
-Chat ondersteunt activiteiten.
-
-Activiteiten zijn het product.
-
----
-
-### Vertrouwen boven anonimiteit
-
-Gebruikers moeten zich comfortabel voelen om nieuwe mensen te ontmoeten.
-
-Daarom investeren we in:
-
-* Verificatie
-* Reputatie
-* Reviews
-* Opkomstscores
-* Moderatie
-
-Verificatie betekent niet dat iemand "veilig" is.
-
-Het betekent dat iemand echt en herleidbaar is.
-
----
-
-### Kwaliteit boven groei
-
-Een kleine community met betrokken gebruikers is waardevoller dan een grote community met lege profielen.
-
-Elke feature moet bijdragen aan:
-
-* Betere activiteiten
-* Betere deelnemers
-* Betere ontmoetingen
-
----
-
-## Veiligheidsvisie
-
-TOCH gaat uit van meerdere lagen van vertrouwen.
-
-Geen enkele maatregel maakt een gebruiker volledig veilig.
-
-Daarom combineren we:
-
-* Telefoonverificatie
-* Verificatiebadges
-* Reputatiescores
-* Reviews
-* Meldingen
-* Moderatie
-* Host-controles
-
-Veiligheid is geen functie.
-
-Veiligheid is een systeem.
-
----
-
-## Product Roadmap
-
-### MVP
-
-* Accounts
-* Profielen
-* Activiteiten
-* Chat
-* Deelnemen aan activiteiten
-* Reviews
-* Meldingen
-* Basisverificatie
-
-### Fase 2
-
-* Realtime verbeteringen
-* Vertrouwensscore
-* Geavanceerde hostinstellingen
-* Activiteit check-ins
-* Community management
-
-### Fase 3
-
-* Internationale uitbreiding
-* itsme / EUDI verificatie
-* Groepen en communities
-* Slimme aanbevelingen
-* Premium functionaliteiten
-
----
-
-## Technische Richtlijnen
-
-### Architectuur
-
-Code moet:
-
-* Simpel blijven
-* Testbaar blijven
-* Schaalbaar blijven
-* Begrijpelijk blijven
-
-Voeg liever geen complexiteit toe als hetzelfde eenvoudiger kan.
-
----
-
-### Database
-
-Data is leidend.
-
-Business logica hoort zoveel mogelijk centraal te staan.
-
-Duplicatie van data wordt vermeden tenzij dit aantoonbaar performancevoordeel oplevert.
-
----
-
-### Realtime
-
-Realtime functionaliteit moet betrouwbaar zijn.
-
-Voorkeur gaat uit naar oplossingen die:
-
-* Lage latency hebben
-* Automatisch reconnecten
-* Offline scenario's ondersteunen
-* Horizontaal schaalbaar zijn
-
----
-
-## Onze Definitie van Succes
-
-Niet:
-
-* Downloads
-* Registraties
-* Pageviews
-
-Wel:
-
-* Activiteiten die daadwerkelijk plaatsvinden
-* Mensen die terugkomen
-* Nieuwe vriendschappen
-* Nieuwe sociale contacten
-
-Als mensen vaker de deur uit gaan dankzij TOCH, dan heeft het product zijn doel bereikt.
-
----
-
-## Interne Regel
-
-Bij twijfel:
-
-> Maakt deze wijziging het makkelijker voor mensen om elkaar in het echt te ontmoeten?
-
-Zo niet, dan hoort het waarschijnlijk niet in het product.
+Een Firebase service-account private key hoort nooit in deze repo. Sla die alleen
+als Supabase secret op aan backendzijde en roteer hem direct als hij ooit in chat,
+logs of git terechtkomt.

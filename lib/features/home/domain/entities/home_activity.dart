@@ -14,6 +14,7 @@ class HomeActivity extends Equatable {
     required this.title,
     required this.dateLabel,
     required this.timeLabel,
+    this.startsAt,
     this.latitude = 0,
     this.longitude = 0,
     required this.locationName,
@@ -27,6 +28,7 @@ class HomeActivity extends Equatable {
     this.hostIdentityVerified = false,
     this.hostReputationLevel = 'new_member',
     this.hostAvatarUrl,
+    this.hostFeedbackSubmitted = false,
     required this.participants,
     required this.availableSpots,
     required this.spotsLabel,
@@ -40,6 +42,10 @@ class HomeActivity extends Equatable {
     this.isJoined = false,
     this.participationStatus,
     this.isOwnedByCurrentUser = false,
+    this.chatLastMessage,
+    this.chatLastMessageAt,
+    this.chatLastSenderName,
+    this.chatUnreadCount = 0,
   });
 
   final String id;
@@ -49,6 +55,7 @@ class HomeActivity extends Equatable {
   final String title;
   final String dateLabel;
   final String timeLabel;
+  final DateTime? startsAt;
   final double latitude;
   final double longitude;
   final String locationName;
@@ -62,6 +69,7 @@ class HomeActivity extends Equatable {
   final bool hostIdentityVerified;
   final String hostReputationLevel;
   final String? hostAvatarUrl;
+  final bool hostFeedbackSubmitted;
   final List<HomeParticipant> participants;
   final int availableSpots;
   final String spotsLabel;
@@ -75,6 +83,10 @@ class HomeActivity extends Equatable {
   final bool isJoined;
   final String? participationStatus;
   final bool isOwnedByCurrentUser;
+  final String? chatLastMessage;
+  final DateTime? chatLastMessageAt;
+  final String? chatLastSenderName;
+  final int chatUnreadCount;
 
   bool get isCompleted => status == 'completed';
 
@@ -97,6 +109,11 @@ class HomeActivity extends Equatable {
     bool? isJoined,
     String? participationStatus,
     bool? isOwnedByCurrentUser,
+    String? chatLastMessage,
+    DateTime? chatLastMessageAt,
+    String? chatLastSenderName,
+    int? chatUnreadCount,
+    bool? hostFeedbackSubmitted,
   }) {
     return HomeActivity(
       id: id,
@@ -106,6 +123,7 @@ class HomeActivity extends Equatable {
       title: title,
       dateLabel: dateLabel,
       timeLabel: timeLabel,
+      startsAt: startsAt,
       latitude: latitude,
       longitude: longitude,
       locationName: locationName,
@@ -119,6 +137,8 @@ class HomeActivity extends Equatable {
       hostIdentityVerified: hostIdentityVerified,
       hostReputationLevel: hostReputationLevel,
       hostAvatarUrl: hostAvatarUrl,
+      hostFeedbackSubmitted:
+          hostFeedbackSubmitted ?? this.hostFeedbackSubmitted,
       participants: participants ?? this.participants,
       availableSpots: availableSpots ?? this.availableSpots,
       spotsLabel: spotsLabel ?? this.spotsLabel,
@@ -133,6 +153,10 @@ class HomeActivity extends Equatable {
       isJoined: isJoined ?? this.isJoined,
       participationStatus: participationStatus ?? this.participationStatus,
       isOwnedByCurrentUser: isOwnedByCurrentUser ?? this.isOwnedByCurrentUser,
+      chatLastMessage: chatLastMessage ?? this.chatLastMessage,
+      chatLastMessageAt: chatLastMessageAt ?? this.chatLastMessageAt,
+      chatLastSenderName: chatLastSenderName ?? this.chatLastSenderName,
+      chatUnreadCount: chatUnreadCount ?? this.chatUnreadCount,
     );
   }
 
@@ -167,6 +191,7 @@ class HomeActivity extends Equatable {
     title,
     dateLabel,
     timeLabel,
+    startsAt,
     latitude,
     longitude,
     locationName,
@@ -180,6 +205,7 @@ class HomeActivity extends Equatable {
     hostIdentityVerified,
     hostReputationLevel,
     hostAvatarUrl,
+    hostFeedbackSubmitted,
     participants,
     availableSpots,
     spotsLabel,
@@ -193,5 +219,9 @@ class HomeActivity extends Equatable {
     isJoined,
     participationStatus,
     isOwnedByCurrentUser,
+    chatLastMessage,
+    chatLastMessageAt,
+    chatLastSenderName,
+    chatUnreadCount,
   ];
 }

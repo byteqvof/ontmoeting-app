@@ -31,6 +31,22 @@ void main() {
     expect(updated.spotsLabel, 'jij gaat ook');
   });
 
+  test('keeps attendance and feedback state on participants', () {
+    final markedParticipant = HomeParticipant(
+      id: 'profile-1',
+      displayName: 'Jasper Scheper',
+      initials: 'JS',
+      isHost: false,
+      attendanceStatus: 'present',
+      attendanceMarkedAt: DateTime.utc(2026, 6, 7, 10),
+      feedbackSubmitted: true,
+    );
+
+    expect(markedParticipant.attendanceStatus, 'present');
+    expect(markedParticipant.isAttendancePresent, isTrue);
+    expect(markedParticipant.feedbackSubmitted, isTrue);
+  });
+
   test('ignores participation update for another activity', () {
     final activity = _activity();
 

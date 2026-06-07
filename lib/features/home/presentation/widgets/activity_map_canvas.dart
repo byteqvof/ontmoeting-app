@@ -14,12 +14,14 @@ class ActivityMapCanvas extends StatefulWidget {
     required this.location,
     required this.activities,
     this.interactive = true,
+    this.onCameraIdleLocation,
     super.key,
   });
 
   final HomeLocation location;
   final List<HomeActivity> activities;
   final bool interactive;
+  final ValueChanged<HomeLocation>? onCameraIdleLocation;
 
   @override
   State<ActivityMapCanvas> createState() => _ActivityMapCanvasState();
@@ -27,24 +29,32 @@ class ActivityMapCanvas extends StatefulWidget {
 
 class _ActivityMapCanvasState extends State<ActivityMapCanvas> {
   MapLibreMapController? _controller;
+  bool _isStyleLoaded = false;
 
   @override
   void didUpdateWidget(covariant ActivityMapCanvas oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.activities != widget.activities ||
         oldWidget.location != widget.location) {
+      if (oldWidget.location != widget.location) {
+        unawaited(_moveCameraToLocation());
+      }
       unawaited(_syncMarkers());
     }
   }
 
   Future<void> _onMapCreated(MapLibreMapController controller) async {
     _controller = controller;
+  }
+
+  Future<void> _onStyleLoaded() async {
+    _isStyleLoaded = true;
     await _syncMarkers();
   }
 
   Future<void> _syncMarkers() async {
     final controller = _controller;
-    if (controller == null) {
+    if (controller == null || !_isStyleLoaded) {
       return;
     }
 
@@ -80,6 +90,19 @@ class _ActivityMapCanvasState extends State<ActivityMapCanvas> {
     }
   }
 
+  Future<void> _moveCameraToLocation() async {
+    final controller = _controller;
+    if (controller == null) {
+      return;
+    }
+    await controller.animateCamera(
+      CameraUpdate.newLatLngZoom(
+        LatLng(widget.location.latitude, widget.location.longitude),
+        widget.interactive ? 11.5 : 10.8,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return ColoredBox(
@@ -96,6 +119,12 @@ class _ActivityMapCanvasState extends State<ActivityMapCanvas> {
               zoom: widget.interactive ? 11.5 : 10.8,
             ),
             onMapCreated: _onMapCreated,
+            onStyleLoadedCallback: () {
+              unawaited(_onStyleLoaded());
+            },
+            trackCameraPosition:
+                widget.interactive && widget.onCameraIdleLocation != null,
+            onCameraIdle: _onCameraIdle,
             compassEnabled: widget.interactive,
             rotateGesturesEnabled: widget.interactive,
             scrollGesturesEnabled: widget.interactive,
@@ -126,6 +155,29 @@ class _ActivityMapCanvasState extends State<ActivityMapCanvas> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Future<void> _onCameraIdle() async {
+    final callback = widget.onCameraIdleLocation;
+    final controller = _controller;
+    if (callback == null || controller == null) {
+      return;
+    }
+
+    final position =
+        controller.cameraPosition ?? await controller.queryCameraPosition();
+    final target = position?.target;
+    if (target == null) {
+      return;
+    }
+
+    callback(
+      HomeLocation(
+        cityName: widget.location.cityName,
+        latitude: target.latitude,
+        longitude: target.longitude,
       ),
     );
   }

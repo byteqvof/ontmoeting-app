@@ -10,6 +10,8 @@ import '../../../../core/di/injection_container.dart';
 import '../../../home/domain/entities/home_feed_filters.dart';
 import '../../domain/entities/profile.dart';
 import '../../domain/entities/profile_avatar_file.dart';
+import '../../domain/entities/profile_interest.dart';
+import '../../domain/usecases/get_available_profile_interests.dart';
 import '../../domain/usecases/update_profile.dart';
 import '../bloc/edit_profile_bloc.dart';
 
@@ -21,7 +23,11 @@ class EditProfilePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => EditProfileBloc(sl<UpdateProfile>(), profile),
+      create: (_) => EditProfileBloc(
+        sl<UpdateProfile>(),
+        profile,
+        getAvailableInterests: sl<GetAvailableProfileInterests>(),
+      )..add(const EditProfileStarted()),
       child: const _EditProfileView(),
     );
   }
@@ -76,7 +82,9 @@ class _EditProfileView extends StatelessWidget {
         if (state.status == EditProfileStatus.invalid) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Vul je naam, plaats, leeftijdsband en gender in.'),
+              content: Text(
+                'Vul je naam, plaats, leeftijdsband, gender en interesses in.',
+              ),
             ),
           );
         }
@@ -88,6 +96,9 @@ class _EditProfileView extends StatelessWidget {
           );
         }
         if (state.status == EditProfileStatus.success) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Profiel bijgewerkt.')));
           context.pop(state.profile);
         }
       },
@@ -329,6 +340,8 @@ class _EditProfileForm extends StatelessWidget {
             context.read<EditProfileBloc>().add(EditProfileCityChanged(value));
           },
         ),
+        const SizedBox(height: TochSpacing.md),
+        const _EditInterestsSection(),
       ],
     );
   }
@@ -446,6 +459,109 @@ class _EditChoiceChip extends StatelessWidget {
   }
 }
 
+class _EditInterestsSection extends StatelessWidget {
+  const _EditInterestsSection();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.toch;
+
+    return BlocBuilder<EditProfileBloc, EditProfileState>(
+      buildWhen: (previous, current) =>
+          previous.availableInterests != current.availableInterests ||
+          previous.selectedInterestIds != current.selectedInterestIds,
+      builder: (context, state) {
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            color: colors.card,
+            borderRadius: BorderRadius.circular(TochRadius.lg),
+            border: Border.all(color: colors.line),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(TochSpacing.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Interesses',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: colors.ink,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: TochSpacing.xs),
+                Text(
+                  'Kies minimaal een interesse. Dit helpt activiteiten beter te laten aansluiten.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: colors.green700.withValues(alpha: .74),
+                    height: 1.3,
+                  ),
+                ),
+                const SizedBox(height: TochSpacing.md),
+                Wrap(
+                  spacing: TochSpacing.xs,
+                  runSpacing: TochSpacing.xs,
+                  children: [
+                    for (final interest in state.availableInterests)
+                      _EditInterestChip(
+                        interest: interest,
+                        selected: state.selectedInterestIds.contains(
+                          interest.id,
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _EditInterestChip extends StatelessWidget {
+  const _EditInterestChip({required this.interest, required this.selected});
+
+  final ProfileInterest interest;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.toch;
+
+    return FilterChip(
+      selected: selected,
+      label: Text(interest.label),
+      avatar: Icon(
+        _iconForKey(interest.iconKey),
+        size: 18,
+        color: selected
+            ? colors.cream
+            : _colorFromHex(
+                interest.foregroundColorHex,
+                fallback: colors.green,
+              ),
+      ),
+      selectedColor: colors.green,
+      backgroundColor: _colorFromHex(
+        interest.backgroundColorHex,
+        fallback: colors.green100,
+      ),
+      labelStyle: TextStyle(
+        color: selected ? colors.cream : colors.ink,
+        fontWeight: FontWeight.w900,
+      ),
+      side: BorderSide(color: selected ? colors.green : colors.line),
+      onSelected: (_) {
+        context.read<EditProfileBloc>().add(
+          EditProfileInterestToggled(interest.id),
+        );
+      },
+    );
+  }
+}
+
 class _ProfileField extends StatelessWidget {
   const _ProfileField({
     required this.label,
@@ -494,6 +610,35 @@ ImageProvider<Object>? _avatarImageFor(EditProfileState state) {
   }
 
   return NetworkImage(state.avatarUrl.trim());
+}
+
+Color _colorFromHex(String hex, {required Color fallback}) {
+  final normalized = hex.replaceFirst('#', '').trim();
+  if (normalized.length != 6 && normalized.length != 8) {
+    return fallback;
+  }
+
+  final value = int.tryParse(normalized, radix: 16);
+  if (value == null) {
+    return fallback;
+  }
+
+  return Color(normalized.length == 6 ? 0xFF000000 | value : value);
+}
+
+IconData _iconForKey(String key) {
+  return switch (key) {
+    'set_meal' || 'fishing' => Icons.set_meal_rounded,
+    'directions_walk' || 'walking' => Icons.directions_walk_rounded,
+    'local_cafe' || 'coffee' => Icons.local_cafe_rounded,
+    'sports_basketball' || 'sport' => Icons.sports_basketball_rounded,
+    'sports_esports' || 'gaming' => Icons.sports_esports_rounded,
+    'two_wheeler' || 'motor' => Icons.two_wheeler_rounded,
+    'casino' || 'boardgames' => Icons.casino_rounded,
+    'photo_camera' || 'photo' => Icons.photo_camera_rounded,
+    'favorite' || 'social' => Icons.favorite_rounded,
+    _ => Icons.interests_rounded,
+  };
 }
 
 String? _mimeTypeForFileName(String fileName) {

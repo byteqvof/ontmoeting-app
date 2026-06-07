@@ -14,6 +14,7 @@ import '../../features/home/presentation/pages/activity_join_confirmation_page.d
 import '../../features/home/presentation/pages/activity_map_page.dart';
 import '../../features/home/presentation/pages/activity_route_loader_page.dart';
 import '../../features/home/presentation/pages/create_activity_page.dart';
+import '../../features/home/presentation/pages/edit_activity_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
 import '../../features/onboarding/presentation/pages/onboarding_page.dart';
 import '../../features/onboarding/presentation/pages/splash_page.dart';
@@ -33,6 +34,7 @@ class AppRoutes {
   static const home = '/';
   static const createActivity = '/activities/create';
   static const activityDetail = '/activities/:activityId';
+  static const editActivity = '/activities/:activityId/edit';
   static const activityJoinConfirmation = '/activities/:activityId/joined';
   static const activityChat = '/activities/:activityId/chat';
   static const activityMessages = '/messages';
@@ -49,11 +51,19 @@ class AppRoutes {
   static String activityDetailPath(String activityId) =>
       '/activities/$activityId';
 
+  static String editActivityPath(String activityId) =>
+      '/activities/$activityId/edit';
+
   static String activityJoinConfirmationPath(String activityId) =>
       '/activities/$activityId/joined';
 
-  static String activityChatPath(String activityId) =>
-      '/activities/$activityId/chat';
+  static String activityChatPath(String activityId, {String? from}) {
+    final path = '/activities/$activityId/chat';
+    if (from == null || from.isEmpty) {
+      return path;
+    }
+    return '$path?from=${Uri.encodeQueryComponent(from)}';
+  }
 
   static String profilePath(String profileId) => '/profile/$profileId';
 }
@@ -128,7 +138,7 @@ GoRouter createRouter(AuthBloc authBloc) {
         builder: (context, state) {
           final args = state.extra;
           if (args is! ActivityMapPageArgs) {
-            return _protected(const MissingActivityMapPage());
+            return _protected(const ActivityMapLoaderPage());
           }
           return _protected(ActivityMapPage(args: args));
         },
@@ -137,13 +147,21 @@ GoRouter createRouter(AuthBloc authBloc) {
         path: AppRoutes.activityChat,
         builder: (context, state) {
           final activity = state.extra;
+          final from = state.uri.queryParameters['from'];
+          final backFallbackRoute = from == 'joined' ? AppRoutes.home : null;
           if (activity is HomeActivity) {
-            return _protected(ActivityChatPage(activity: activity));
+            return _protected(
+              ActivityChatPage(
+                activity: activity,
+                backFallbackRoute: backFallbackRoute,
+              ),
+            );
           }
           return _protected(
             ActivityRouteLoaderPage(
               activityId: state.pathParameters['activityId'] ?? '',
               target: ActivityRouteTarget.chat,
+              backFallbackRoute: backFallbackRoute,
             ),
           );
         },
@@ -156,6 +174,16 @@ GoRouter createRouter(AuthBloc authBloc) {
             return _protected(const MissingActivityDetailPage());
           }
           return _protected(ActivityJoinConfirmationPage(activity: activity));
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.editActivity,
+        builder: (context, state) {
+          final activity = state.extra;
+          if (activity is! HomeActivity) {
+            return _protected(const MissingActivityDetailPage());
+          }
+          return _protected(EditActivityPage(activity: activity));
         },
       ),
       GoRoute(

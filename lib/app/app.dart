@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../core/constants/app_constants.dart';
 import '../core/di/injection_container.dart';
+import '../core/services/push_notification_service.dart';
 import '../features/auth/presentation/bloc/auth_bloc.dart';
 import '../features/home/presentation/widgets/activity_chat_notice_host.dart';
 import 'router/app_router.dart';
@@ -32,14 +35,29 @@ class _AppViewState extends State<_AppView> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      title: AppConstants.appName,
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
-      routerConfig: _router,
-      builder: (context, child) {
-        return ActivityChatNoticeHost(child: child ?? const SizedBox.shrink());
+    return BlocListener<AuthBloc, AuthState>(
+      listenWhen: (previous, current) =>
+          previous.runtimeType != current.runtimeType,
+      listener: (context, state) {
+        final push = sl<PushNotificationService>();
+        if (state is AuthAuthenticated) {
+          unawaited(push.registerForCurrentUser());
+        }
+        if (state is AuthUnauthenticated) {
+          unawaited(push.unregisterCurrentToken());
+        }
       },
+      child: MaterialApp.router(
+        title: AppConstants.appName,
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light,
+        routerConfig: _router,
+        builder: (context, child) {
+          return ActivityChatNoticeHost(
+            child: child ?? const SizedBox.shrink(),
+          );
+        },
+      ),
     );
   }
 }

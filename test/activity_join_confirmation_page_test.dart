@@ -30,12 +30,18 @@ void main() {
   });
 
   testWidgets(
-    'opens chat with push navigation so back returns to confirmation',
+    'opens chat from confirmation so back returns to home',
     (tester) async {
       final activity = _activity();
       final router = GoRouter(
         initialLocation: AppRoutes.activityJoinConfirmationPath(activity.id),
         routes: [
+          GoRoute(
+            path: AppRoutes.home,
+            builder: (context, state) => const Scaffold(
+              body: SafeArea(child: Text('Home geopend')),
+            ),
+          ),
           GoRoute(
             path: AppRoutes.activityJoinConfirmation,
             builder: (context, state) =>
@@ -43,19 +49,29 @@ void main() {
           ),
           GoRoute(
             path: AppRoutes.activityChat,
-            builder: (context, state) => Scaffold(
-              body: SafeArea(
-                child: Column(
-                  children: [
-                    IconButton(
-                      onPressed: () => context.pop(),
-                      icon: const Icon(Icons.arrow_back_rounded),
-                    ),
-                    const Text('Chat geopend'),
-                  ],
+            builder: (context, state) {
+              final fromJoined =
+                  state.uri.queryParameters['from'] == 'joined';
+              return Scaffold(
+                body: SafeArea(
+                  child: Column(
+                    children: [
+                      IconButton(
+                        onPressed: () {
+                          if (fromJoined) {
+                            context.go(AppRoutes.home);
+                            return;
+                          }
+                          context.pop();
+                        },
+                        icon: const Icon(Icons.arrow_back_rounded),
+                      ),
+                      const Text('Chat geopend'),
+                    ],
+                  ),
                 ),
-              ),
-            ),
+              );
+            },
           ),
         ],
       );
@@ -68,12 +84,11 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Chat geopend'), findsOneWidget);
-      expect(router.canPop(), isTrue);
 
       await tester.tap(find.byIcon(Icons.arrow_back_rounded));
       await tester.pumpAndSettle();
 
-      expect(find.text('Je gaat!'), findsOneWidget);
+      expect(find.text('Home geopend'), findsOneWidget);
     },
   );
 }

@@ -156,6 +156,7 @@ class ProfileRemoteDataSource implements ProfileDataSource {
               'city_name': draft.cityName,
               'age_band': draft.ageBand,
               'gender': draft.gender,
+              'category_ids': jsonEncode(draft.categoryIds),
             },
             files: [
               MultipartFile.fromBytes(
@@ -182,6 +183,7 @@ class ProfileRemoteDataSource implements ProfileDataSource {
             'city_name': draft.cityName,
             'age_band': draft.ageBand,
             'gender': draft.gender,
+            'category_ids': draft.categoryIds,
             if (draft.removeAvatar) 'remove_avatar': true,
           },
         )

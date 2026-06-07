@@ -24,6 +24,7 @@ void main() {
       CreateActivity(repository),
       location: defaultHomeLocation,
       categories: const [_category],
+      geocodeMeetingPlace: _fakeGeocodeMeetingPlace,
     );
 
     bloc
@@ -47,6 +48,103 @@ void main() {
     expect(repository.createdDraft!.startsAt, DateTime(2099, 7, 10, 14, 35));
     await bloc.close();
   });
+
+  test(
+    'uses geocoded meeting place instead of current home location',
+    () async {
+      final repository = _CapturingHomeRepository();
+      final bloc = CreateActivityBloc(
+        CreateActivity(repository),
+        location: defaultHomeLocation,
+        categories: const [_category],
+        geocodeMeetingPlace: (query, fallbackLocation) async {
+          expect(query, 'Marktplein 1, Winschoten');
+          expect(fallbackLocation.cityName, 'Ter Apel');
+          return const ResolvedMeetingLocation(
+            addressLine: 'Marktplein 1',
+            city: 'Winschoten',
+            latitude: 53.144,
+            longitude: 7.034,
+          );
+        },
+      );
+
+      bloc
+        ..add(const CreateActivityTitleChanged('rondje wandelen'))
+        ..add(const CreateActivityLocationChanged('Marktplein 1, Winschoten'))
+        ..add(CreateActivityDateSelected(DateTime(2099, 7, 10)))
+        ..add(const CreateActivityTimeSelected(hour: 14, minute: 35))
+        ..add(const CreateActivitySubmitted());
+
+      await expectLater(
+        bloc.stream,
+        emitsThrough(
+          predicate<CreateActivityState>(
+            (state) =>
+                state.submissionStatus ==
+                CreateActivitySubmissionStatus.success,
+          ),
+        ),
+      );
+
+      expect(repository.createdDraft?.addressLine, 'Marktplein 1');
+      expect(repository.createdDraft?.city, 'Winschoten');
+      expect(repository.createdDraft?.latitude, 53.144);
+      expect(repository.createdDraft?.longitude, 7.034);
+      await bloc.close();
+    },
+  );
+
+  test(
+    'uses generated description when optional notes are too short',
+    () async {
+      final repository = _CapturingHomeRepository();
+      final bloc = CreateActivityBloc(
+        CreateActivity(repository),
+        location: defaultHomeLocation,
+        categories: const [_category],
+        geocodeMeetingPlace: _fakeGeocodeMeetingPlace,
+      );
+
+      bloc
+        ..add(const CreateActivityTitleChanged('Avond'))
+        ..add(const CreateActivityLocationChanged('Centrum Ter Apel'))
+        ..add(CreateActivityDateSelected(DateTime(2099, 7, 10)))
+        ..add(const CreateActivityTimeSelected(hour: 14, minute: 35))
+        ..add(const CreateActivityNotesChanged('ok'))
+        ..add(const CreateActivitySubmitted());
+
+      await expectLater(
+        bloc.stream,
+        emitsThrough(
+          predicate<CreateActivityState>(
+            (state) =>
+                state.submissionStatus ==
+                CreateActivitySubmissionStatus.success,
+          ),
+        ),
+      );
+
+      expect(repository.createdDraft?.description, contains('Ik ga Avond'));
+      expect(
+        repository.createdDraft!.description.length,
+        greaterThanOrEqualTo(10),
+      );
+      await bloc.close();
+    },
+  );
+}
+
+Future<ResolvedMeetingLocation> _fakeGeocodeMeetingPlace(
+  String query,
+  HomeLocation fallbackLocation,
+) async {
+  return ResolvedMeetingLocation(
+    addressLine: query,
+    city: fallbackLocation.cityName,
+    latitude: fallbackLocation.latitude,
+    longitude: fallbackLocation.longitude,
+  );
 }
 
 const _category = HomeCategory(
@@ -64,6 +162,14 @@ class _CapturingHomeRepository implements HomeRepository {
   Future<Either<Failure, String>> createActivity(CreateActivityDraft draft) {
     createdDraft = draft;
     return Future.value(right('activity-1'));
+  }
+
+  @override
+  Future<Either<Failure, HomeActivity>> updateActivity({
+    required String activityId,
+    required CreateActivityDraft draft,
+  }) {
+    throw UnimplementedError();
   }
 
   @override
@@ -88,7 +194,9 @@ class _CapturingHomeRepository implements HomeRepository {
   }
 
   @override
-  Future<Either<Failure, HomeLocation>> getCurrentLocation() {
+  Future<Either<Failure, HomeLocation>> getCurrentLocation({
+    bool forceRefresh = false,
+  }) {
     throw UnimplementedError();
   }
 
@@ -96,6 +204,7 @@ class _CapturingHomeRepository implements HomeRepository {
   Future<Either<Failure, HomeFeed>> getHomeFeed({
     required HomeLocation location,
     required HomeFeedFilters filters,
+    bool forceRefresh = false,
   }) {
     throw UnimplementedError();
   }
@@ -110,6 +219,14 @@ class _CapturingHomeRepository implements HomeRepository {
     required String activityId,
     required String body,
     required String clientMessageId,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Either<Failure, void>> markActivityChatRead({
+    required String activityId,
+    String? messageId,
   }) {
     throw UnimplementedError();
   }

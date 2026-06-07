@@ -26,6 +26,11 @@ import '../models/activity_feedback_model.dart';
 abstract interface class HomeRemoteDataSource {
   Future<String> createActivity(CreateActivityDraft draft);
 
+  Future<HomeActivity> updateActivity({
+    required String activityId,
+    required CreateActivityDraft draft,
+  });
+
   Future<HomeFeed> getHomeFeed({
     required HomeLocation location,
     required HomeFeedFilters filters,
@@ -50,6 +55,11 @@ abstract interface class HomeRemoteDataSource {
     required String activityId,
     required String body,
     required String clientMessageId,
+  });
+
+  Future<void> markActivityChatRead({
+    required String activityId,
+    String? messageId,
   });
 
   Future<ActivityCompletionUpdate> completeActivity({
@@ -107,6 +117,54 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
 
     AppLogger.debug('Created activity $activityId');
     return activityId;
+  }
+
+  @override
+  Future<HomeActivity> updateActivity({
+    required String activityId,
+    required CreateActivityDraft draft,
+  }) async {
+    AppLogger.debug('Updating activity $activityId');
+
+    final response = await _client.functions
+        .invoke(
+          supabaseUpdateActivityFunctionName,
+          headers: authenticatedFunctionHeaders(_client),
+          body: {
+            'activity_id': activityId,
+            'category_id': draft.categoryId,
+            'title': draft.title,
+            'description': draft.description,
+            'latitude': draft.latitude,
+            'longitude': draft.longitude,
+            'address_line': draft.addressLine,
+            'city': draft.city,
+            'country_code': draft.countryCode,
+            'starts_at': draft.startsAt.toUtc().toIso8601String(),
+            'max_participants': draft.maxParticipants,
+            'group_type': draft.groupType,
+            'min_reputation_level': draft.minReputationLevel,
+            'requires_identity_verified': draft.requiresIdentityVerified,
+            'is_private_location': draft.isPrivateLocation,
+            'target_age_bands': draft.targetAgeBands,
+            'target_genders': draft.targetGenders,
+          },
+        )
+        .timeout(_functionTimeout);
+
+    final payload = _asMap(response.data);
+    final activityJson = _asMap(payload['activity']);
+    final activity = _activityFromJson(
+      activityJson,
+      _locationForActivityJson(activityJson),
+      _client.auth.currentUser?.id,
+      distanceLabelFallback: _locationLabelForActivityJson(activityJson),
+      isOwnedByCurrentUserOverride: true,
+    );
+    if (activity.id.isEmpty) {
+      throw StateError('Update activity completed without an activity id.');
+    }
+    return activity;
   }
 
   @override
@@ -372,6 +430,27 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
   }
 
   @override
+  Future<void> markActivityChatRead({
+    required String activityId,
+    String? messageId,
+  }) async {
+    AppLogger.debug('Marking activity chat read for $activityId');
+
+    await _client.functions
+        .invoke(
+          supabaseActivityChatFunctionName,
+          method: HttpMethod.patch,
+          headers: authenticatedFunctionHeaders(_client),
+          body: {
+            'activity_id': activityId,
+            if (messageId != null && messageId.isNotEmpty)
+              'message_id': messageId,
+          },
+        )
+        .timeout(_functionTimeout);
+  }
+
+  @override
   Future<ActivityCompletionUpdate> completeActivity({
     required String activityId,
   }) async {
@@ -490,6 +569,10 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
     );
     final host = _asMap(json['host']);
     final hostTrust = _asMap(host['trust']);
+    final chatSummary = _asMap(json['chat_summary'] ?? json['chatSummary']);
+    final lastSender = _asMap(
+      chatSummary['last_sender'] ?? chatSummary['lastSender'],
+    );
     final participants = _asList(
       json['participants'] ??
           json['participantPreview'] ??
@@ -566,6 +649,7 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
         json['timeLabel'] ?? json['time_label'],
         fallback: startAt == null ? '' : _formatTimeLabel(startAt),
       ),
+      startsAt: startAt,
       latitude: latitude,
       longitude: longitude,
       locationName: cityName,
@@ -600,6 +684,9 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
         fallback: 'new_member',
       ),
       hostAvatarUrl: _nullableString(host['avatarUrl'] ?? host['avatar_url']),
+      hostFeedbackSubmitted: _boolValue(
+        host['feedback_submitted'] ?? host['feedbackSubmitted'],
+      ),
       participants: participants.map(_participantFromJson).toList(),
       availableSpots: availableSpots,
       spotsLabel: _stringValue(
@@ -623,6 +710,21 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
       isJoined: isJoinedOverride ?? isJoined,
       participationStatus: participationStatus,
       isOwnedByCurrentUser: isOwnedByCurrentUser,
+      chatLastMessage: _nullableString(
+        chatSummary['last_message'] ?? chatSummary['lastMessage'],
+      ),
+      chatLastMessageAt: _dateTimeOrNull(
+        chatSummary['last_message_at'] ?? chatSummary['lastMessageAt'],
+      ),
+      chatLastSenderName: _nullableString(
+        lastSender['display_name'] ??
+            lastSender['displayName'] ??
+            chatSummary['last_sender_name'] ??
+            chatSummary['lastSenderName'],
+      ),
+      chatUnreadCount: _intValue(
+        chatSummary['unread_count'] ?? chatSummary['unreadCount'],
+      ),
     );
   }
 
@@ -640,6 +742,15 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
       ),
       isHost: _boolValue(json['isHost'] ?? json['is_host']),
       avatarUrl: _nullableString(json['avatarUrl'] ?? json['avatar_url']),
+      attendanceStatus: _nullableString(
+        json['attendanceStatus'] ?? json['attendance_status'],
+      ),
+      attendanceMarkedAt: _dateTimeOrNull(
+        json['attendanceMarkedAt'] ?? json['attendance_marked_at'],
+      ),
+      feedbackSubmitted: _boolValue(
+        json['feedbackSubmitted'] ?? json['feedback_submitted'],
+      ),
     );
   }
 

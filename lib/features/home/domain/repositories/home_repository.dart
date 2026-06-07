@@ -15,9 +15,15 @@ import '../entities/home_location.dart';
 abstract interface class HomeRepository {
   Future<Either<Failure, String>> createActivity(CreateActivityDraft draft);
 
+  Future<Either<Failure, HomeActivity>> updateActivity({
+    required String activityId,
+    required CreateActivityDraft draft,
+  });
+
   Future<Either<Failure, HomeFeed>> getHomeFeed({
     required HomeLocation location,
     required HomeFeedFilters filters,
+    bool forceRefresh = false,
   });
 
   Future<Either<Failure, HomeActivity>> getActivityById(String activityId);
@@ -39,6 +45,11 @@ abstract interface class HomeRepository {
     required String clientMessageId,
   });
 
+  Future<Either<Failure, void>> markActivityChatRead({
+    required String activityId,
+    String? messageId,
+  });
+
   Future<Either<Failure, ActivityCompletionUpdate>> completeActivity({
     required String activityId,
   });
@@ -50,7 +61,9 @@ abstract interface class HomeRepository {
     required String comment,
   });
 
-  Future<Either<Failure, HomeLocation>> getCurrentLocation();
+  Future<Either<Failure, HomeLocation>> getCurrentLocation({
+    bool forceRefresh = false,
+  });
 
   Stream<Either<Failure, HomeLocation>> watchCurrentLocation();
 }

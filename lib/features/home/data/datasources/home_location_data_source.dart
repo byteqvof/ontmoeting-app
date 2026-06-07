@@ -8,7 +8,7 @@ import '../../../../core/utils/app_logger.dart';
 import '../../domain/entities/home_location.dart';
 
 abstract interface class HomeLocationDataSource {
-  Future<HomeLocation> getCurrentLocation();
+  Future<HomeLocation> getCurrentLocation({bool forceRefresh = false});
 
   Stream<HomeLocation> watchCurrentLocation();
 }
@@ -25,7 +25,7 @@ class HomeLocationDataSourceImpl implements HomeLocationDataSource {
   final Duration geocodingTimeout;
 
   @override
-  Future<HomeLocation> getCurrentLocation() async {
+  Future<HomeLocation> getCurrentLocation({bool forceRefresh = false}) async {
     if (!useDeviceLocation) {
       AppLogger.debug('Using default Ter Apel location');
       return defaultHomeLocation;
@@ -33,7 +33,7 @@ class HomeLocationDataSourceImpl implements HomeLocationDataSource {
 
     await _ensureLocationAccess();
 
-    final position = await _getQuickPosition();
+    final position = await _getQuickPosition(forceRefresh: forceRefresh);
     if (position == null) {
       AppLogger.debug('No quick location fix; using Ter Apel fallback');
       return defaultHomeLocation;
@@ -44,10 +44,27 @@ class HomeLocationDataSourceImpl implements HomeLocationDataSource {
 
   @override
   Stream<HomeLocation> watchCurrentLocation() async* {
-    yield await getCurrentLocation();
+    if (!useDeviceLocation) {
+      yield defaultHomeLocation;
+      return;
+    }
+
+    await _ensureLocationAccess();
+    await for (final position in Geolocator.getPositionStream(
+      locationSettings: _locationSettings(
+        forceAndroidLocationManager: false,
+        distanceFilter: 25,
+      ),
+    )) {
+      yield await _locationFromPosition(position);
+    }
   }
 
-  Future<Position?> _getQuickPosition() async {
+  Future<Position?> _getQuickPosition({required bool forceRefresh}) async {
+    if (forceRefresh) {
+      return _requestCurrentPosition();
+    }
+
     AppLogger.debug('Checking last known location');
     final lastKnownPosition = await Geolocator.getLastKnownPosition();
     if (lastKnownPosition != null) {

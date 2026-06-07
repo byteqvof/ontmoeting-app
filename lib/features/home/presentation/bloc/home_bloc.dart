@@ -52,7 +52,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   StreamSubscription? _locationSubscription;
 
   Future<void> _onStarted(HomeStarted event, Emitter<HomeState> emit) async {
-    add(const HomeLocationRequested());
+    add(const HomeLocationRequested(forceRefresh: true));
   }
 
   Future<void> _onLocationRequested(
@@ -60,7 +60,9 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     Emitter<HomeState> emit,
   ) async {
     emit(const HomeResolvingLocation());
-    final result = await _getCurrentLocation(const NoParams());
+    final result = await _getCurrentLocation(
+      GetCurrentLocationParams(forceRefresh: event.forceRefresh),
+    );
     await result.fold(
       (failure) async => emit(HomeLocationBlocked(failure.message)),
       (location) async {
@@ -121,7 +123,11 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
     emit(current.copyWith(isRefreshing: true));
     final result = await _getHomeFeed(
-      GetHomeFeedParams(location: current.location, filters: current.filters),
+      GetHomeFeedParams(
+        location: current.location,
+        filters: current.filters,
+        forceRefresh: true,
+      ),
     );
 
     result.fold(
