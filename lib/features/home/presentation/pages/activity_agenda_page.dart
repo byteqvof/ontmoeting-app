@@ -401,10 +401,12 @@ class _ActivityTile extends StatelessWidget {
     final hasUnread = showChatSummary && activity.chatUnreadCount > 0;
     final lastMessage = activity.chatLastMessage?.trim();
     final lastSender = activity.chatLastSenderName?.trim();
+    final isSystemPreview = activity.chatLastMessageType == 'system';
     final preview =
         showChatSummary && lastMessage != null && lastMessage.isNotEmpty
         ? [
-            if (lastSender != null && lastSender.isNotEmpty) '$lastSender:',
+            if (!isSystemPreview && lastSender != null && lastSender.isNotEmpty)
+              '$lastSender:',
             lastMessage,
           ].join(' ')
         : [

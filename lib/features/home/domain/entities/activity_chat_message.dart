@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
 
+enum ActivityChatMessageType { user, system }
+
 class ActivityChatMessage extends Equatable {
   const ActivityChatMessage({
     required this.id,
@@ -10,6 +12,7 @@ class ActivityChatMessage extends Equatable {
     required this.body,
     required this.createdAt,
     required this.isMine,
+    this.messageType = ActivityChatMessageType.user,
     this.clientMessageId,
     this.senderAvatarUrl,
   });
@@ -23,7 +26,10 @@ class ActivityChatMessage extends Equatable {
   final String body;
   final DateTime createdAt;
   final bool isMine;
+  final ActivityChatMessageType messageType;
   final String? clientMessageId;
+
+  bool get isSystem => messageType == ActivityChatMessageType.system;
 
   @override
   List<Object?> get props => [
@@ -36,6 +42,7 @@ class ActivityChatMessage extends Equatable {
     body,
     createdAt,
     isMine,
+    messageType,
     clientMessageId,
   ];
 }

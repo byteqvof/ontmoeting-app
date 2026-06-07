@@ -10,6 +10,7 @@ class ActivityChatMessageModel extends ActivityChatMessage {
     required super.body,
     required super.createdAt,
     required super.isMine,
+    super.messageType,
     super.clientMessageId,
     super.senderAvatarUrl,
   });
@@ -25,6 +26,9 @@ class ActivityChatMessageModel extends ActivityChatMessage {
     final senderName = _stringValue(
       sender['display_name'] ?? sender['displayName'],
       fallback: 'Iemand',
+    );
+    final messageType = _messageTypeValue(
+      json['message_type'] ?? json['messageType'],
     );
 
     return ActivityChatMessageModel(
@@ -43,6 +47,7 @@ class ActivityChatMessageModel extends ActivityChatMessage {
       clientMessageId: _nullableString(
         json['client_message_id'] ?? json['clientMessageId'],
       ),
+      messageType: messageType,
       createdAt:
           _dateTimeOrNull(json['created_at'] ?? json['createdAt']) ??
           DateTime.fromMillisecondsSinceEpoch(0),
@@ -98,4 +103,11 @@ String _initialsFor(String name) {
         .toUpperCase();
   }
   return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
+}
+
+ActivityChatMessageType _messageTypeValue(Object? value) {
+  return switch (_stringValue(value, fallback: 'user').toLowerCase()) {
+    'system' => ActivityChatMessageType.system,
+    _ => ActivityChatMessageType.user,
+  };
 }

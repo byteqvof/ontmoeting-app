@@ -329,7 +329,6 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
             _locationForActivityJson(activity),
             currentUserId,
             distanceLabelFallback: _locationLabelForActivityJson(activity),
-            isJoinedOverride: true,
             isOwnedByCurrentUserOverride: false,
           ),
         )
@@ -631,6 +630,14 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
         (currentUserId != null &&
             currentUserId.isNotEmpty &&
             hostId == currentUserId);
+    final effectiveIsJoined = isJoinedOverride ?? isJoined;
+    final canSendChat = _boolValue(
+      json['can_send_chat'] ??
+          json['canSendChat'] ??
+          chatSummary['can_send_chat'] ??
+          chatSummary['canSendChat'],
+      fallback: isOwnedByCurrentUser || effectiveIsJoined,
+    );
 
     return HomeActivity(
       id: _stringValue(json['id']),
@@ -693,7 +700,7 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
         json['spotsLabel'] ?? json['spots_label'],
         fallback: _spotsLabelFor(
           status: _stringValue(json['status'], fallback: 'published'),
-          isJoined: isJoined,
+          isJoined: effectiveIsJoined,
           availableSpots: availableSpots,
         ),
       ),
@@ -707,7 +714,7 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
       isPrivateLocation: _boolValue(json['is_private_location']),
       targetAgeBands: _stringListValue(json['target_age_bands']),
       targetGenders: _stringListValue(json['target_genders']),
-      isJoined: isJoinedOverride ?? isJoined,
+      isJoined: effectiveIsJoined,
       participationStatus: participationStatus,
       isOwnedByCurrentUser: isOwnedByCurrentUser,
       chatLastMessage: _nullableString(
@@ -722,9 +729,14 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
             chatSummary['last_sender_name'] ??
             chatSummary['lastSenderName'],
       ),
+      chatLastMessageType: _stringValue(
+        chatSummary['last_message_type'] ?? chatSummary['lastMessageType'],
+        fallback: 'user',
+      ),
       chatUnreadCount: _intValue(
         chatSummary['unread_count'] ?? chatSummary['unreadCount'],
       ),
+      canSendChat: canSendChat,
     );
   }
 

@@ -8,10 +8,11 @@ import '../../../../app/theme/toch_theme.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../domain/entities/home_activity.dart';
 import '../../domain/usecases/get_activity_detail.dart';
+import 'activity_chat_members_page.dart';
 import 'activity_chat_page.dart';
 import 'activity_detail_page.dart';
 
-enum ActivityRouteTarget { detail, chat }
+enum ActivityRouteTarget { detail, chat, members }
 
 class ActivityRouteLoaderPage extends StatefulWidget {
   const ActivityRouteLoaderPage({
@@ -83,12 +84,17 @@ class _ActivityRouteLoaderPageState extends State<ActivityRouteLoaderPage> {
           activity: activity,
           backFallbackRoute: widget.backFallbackRoute,
         ),
+        ActivityRouteTarget.members => ActivityChatMembersPage(
+          activity: activity,
+        ),
       };
     }
 
-    final title = widget.target == ActivityRouteTarget.chat
-        ? 'Chat laden'
-        : 'Activiteit laden';
+    final title = switch (widget.target) {
+      ActivityRouteTarget.chat => 'Chat laden',
+      ActivityRouteTarget.members => 'Deelnemers laden',
+      ActivityRouteTarget.detail => 'Activiteit laden',
+    };
 
     return Scaffold(
       backgroundColor: context.toch.cream,

@@ -17,12 +17,18 @@ import 'package:meetings_app/features/home/domain/repositories/home_repository.d
 import 'package:meetings_app/features/home/domain/usecases/create_activity.dart';
 import 'package:meetings_app/features/home/presentation/bloc/create_activity_bloc.dart';
 
+const _testLocation = HomeLocation(
+  cityName: 'Ter Apel',
+  latitude: 52.876,
+  longitude: 7.059,
+);
+
 void main() {
   test('submits the custom selected date and time', () async {
     final repository = _CapturingHomeRepository();
     final bloc = CreateActivityBloc(
       CreateActivity(repository),
-      location: defaultHomeLocation,
+      location: _testLocation,
       categories: const [_category],
       geocodeMeetingPlace: _fakeGeocodeMeetingPlace,
     );
@@ -55,7 +61,7 @@ void main() {
       final repository = _CapturingHomeRepository();
       final bloc = CreateActivityBloc(
         CreateActivity(repository),
-        location: defaultHomeLocation,
+        location: _testLocation,
         categories: const [_category],
         geocodeMeetingPlace: (query, fallbackLocation) async {
           expect(query, 'Marktplein 1, Winschoten');
@@ -101,7 +107,7 @@ void main() {
       final repository = _CapturingHomeRepository();
       final bloc = CreateActivityBloc(
         CreateActivity(repository),
-        location: defaultHomeLocation,
+        location: _testLocation,
         categories: const [_category],
         geocodeMeetingPlace: _fakeGeocodeMeetingPlace,
       );

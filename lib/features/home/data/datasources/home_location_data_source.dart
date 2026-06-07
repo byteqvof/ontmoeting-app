@@ -15,44 +15,27 @@ abstract interface class HomeLocationDataSource {
 
 class HomeLocationDataSourceImpl implements HomeLocationDataSource {
   const HomeLocationDataSourceImpl({
-    this.useDeviceLocation = false,
-    this.currentPositionTimeout = const Duration(seconds: 2),
+    this.currentPositionTimeout = const Duration(seconds: 10),
     this.geocodingTimeout = const Duration(seconds: 2),
   });
 
-  final bool useDeviceLocation;
   final Duration currentPositionTimeout;
   final Duration geocodingTimeout;
 
   @override
   Future<HomeLocation> getCurrentLocation({bool forceRefresh = false}) async {
-    if (!useDeviceLocation) {
-      AppLogger.debug('Using default Ter Apel location');
-      return defaultHomeLocation;
-    }
-
     await _ensureLocationAccess();
 
     final position = await _getQuickPosition(forceRefresh: forceRefresh);
-    if (position == null) {
-      AppLogger.debug('No quick location fix; using Ter Apel fallback');
-      return defaultHomeLocation;
-    }
-
     return _locationFromPosition(position);
   }
 
   @override
   Stream<HomeLocation> watchCurrentLocation() async* {
-    if (!useDeviceLocation) {
-      yield defaultHomeLocation;
-      return;
-    }
-
     await _ensureLocationAccess();
     await for (final position in Geolocator.getPositionStream(
       locationSettings: _locationSettings(
-        forceAndroidLocationManager: false,
+        forceAndroidLocationManager: _preferAndroidLocationManager,
         distanceFilter: 25,
       ),
     )) {
@@ -60,9 +43,11 @@ class HomeLocationDataSourceImpl implements HomeLocationDataSource {
     }
   }
 
-  Future<Position?> _getQuickPosition({required bool forceRefresh}) async {
+  Future<Position> _getQuickPosition({required bool forceRefresh}) async {
     if (forceRefresh) {
-      return _requestCurrentPosition();
+      return _requestCurrentPosition(
+        forceAndroidLocationManager: _preferAndroidLocationManager,
+      );
     }
 
     AppLogger.debug('Checking last known location');
@@ -90,18 +75,25 @@ class HomeLocationDataSourceImpl implements HomeLocationDataSource {
       }
     }
 
-    return _requestCurrentPosition();
+    return _requestCurrentPosition(
+      forceAndroidLocationManager: _preferAndroidLocationManager,
+    );
   }
 
-  Future<Position?> _requestCurrentPosition() async {
-    AppLogger.debug('Requesting current location briefly');
+  Future<Position> _requestCurrentPosition({
+    bool forceAndroidLocationManager = false,
+  }) async {
+    AppLogger.debug(
+      'Requesting current location '
+      '(androidLocationManager: $forceAndroidLocationManager)',
+    );
     try {
       final position = await Geolocator.getCurrentPosition(
         locationSettings: _locationSettings(
-          forceAndroidLocationManager: false,
+          forceAndroidLocationManager: forceAndroidLocationManager,
           timeLimit: currentPositionTimeout,
         ),
-      ).timeout(currentPositionTimeout + const Duration(milliseconds: 300));
+      );
 
       AppLogger.debug(
         'Current location received: ${position.latitude}, ${position.longitude}',
@@ -109,7 +101,13 @@ class HomeLocationDataSourceImpl implements HomeLocationDataSource {
       return position;
     } on TimeoutException catch (error) {
       AppLogger.debug('Current location quick lookup timed out', error: error);
-      return null;
+      if (forceAndroidLocationManager && _preferAndroidLocationManager) {
+        return _requestCurrentPosition(forceAndroidLocationManager: false);
+      }
+      throw TimeoutException(
+        'Location timed out before the device returned a fix.',
+        currentPositionTimeout,
+      );
     }
   }
 
@@ -172,12 +170,12 @@ class HomeLocationDataSourceImpl implements HomeLocationDataSource {
       }
     } catch (error) {
       AppLogger.debug(
-        'City lookup timed out; using Ter Apel label',
+        'City lookup failed; using generic current location label',
         error: error,
       );
     }
 
-    return defaultHomeLocation.cityName;
+    return 'Huidige locatie';
   }
 
   String? _firstNotBlank(List<String?> values) {
@@ -197,7 +195,7 @@ class HomeLocationDataSourceImpl implements HomeLocationDataSource {
   }) {
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       return AndroidSettings(
-        accuracy: LocationAccuracy.low,
+        accuracy: LocationAccuracy.high,
         distanceFilter: distanceFilter,
         forceLocationManager: forceAndroidLocationManager,
         timeLimit: timeLimit,
@@ -205,9 +203,12 @@ class HomeLocationDataSourceImpl implements HomeLocationDataSource {
     }
 
     return LocationSettings(
-      accuracy: LocationAccuracy.low,
+      accuracy: LocationAccuracy.high,
       distanceFilter: distanceFilter,
       timeLimit: timeLimit,
     );
   }
+
+  bool get _preferAndroidLocationManager =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 }

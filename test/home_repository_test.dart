@@ -22,6 +22,12 @@ import 'package:meetings_app/features/profile/domain/entities/profile_trust.dart
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+const _testLocation = HomeLocation(
+  cityName: 'Winschoten',
+  latitude: 53.144,
+  longitude: 7.034,
+);
+
 void main() {
   test('maps transient home connection reset to network failure', () async {
     final repository = HomeRepositoryImpl(
@@ -49,7 +55,7 @@ void main() {
     }, (_) => fail('Expected a network failure.'));
   });
 
-  test('uses Ter Apel fallback when device location times out', () async {
+  test('returns a location failure when device location times out', () async {
     final repository = HomeRepositoryImpl(
       _ThrowingHomeRemoteDataSource(Exception('unused')),
       _ThrowingLocationDataSource(
@@ -59,13 +65,13 @@ void main() {
 
     final result = await repository.getCurrentLocation();
 
-    result.fold((failure) => fail('Expected fallback location, got $failure'), (
-      location,
-    ) {
-      expect(location.cityName, 'Ter Apel');
-      expect(location.latitude, 52.876);
-      expect(location.longitude, 7.059);
-    });
+    result.fold((failure) {
+      expect(failure, isA<ServerFailure>());
+      expect(
+        failure.message,
+        'We kunnen je locatie niet bepalen. Controleer de locatie van je toestel en probeer opnieuw.',
+      );
+    }, (_) => fail('Expected location failure.'));
   });
 
   test('does not wait for a hanging device location lookup', () async {
@@ -77,15 +83,14 @@ void main() {
 
     final result = await repository.getCurrentLocation();
 
-    result.fold((failure) => fail('Expected fallback location, got $failure'), (
-      location,
-    ) {
-      expect(location.cityName, 'Ter Apel');
-    });
+    result.fold(
+      (failure) => expect(failure, isA<ServerFailure>()),
+      (_) => fail('Expected location failure.'),
+    );
   });
 
   test(
-    'does not cache fallback location as the real device location',
+    'does not cache failed location lookups as the real device location',
     () async {
       final locationDataSource = _SequenceLocationDataSource([
         TimeoutException('Future not completed', const Duration(seconds: 14)),
@@ -104,8 +109,8 @@ void main() {
       final live = await repository.getCurrentLocation(forceRefresh: true);
 
       fallback.fold(
-        (failure) => fail('Expected fallback location, got $failure'),
-        (location) => expect(location.cityName, 'Ter Apel'),
+        (failure) => expect(failure, isA<ServerFailure>()),
+        (_) => fail('Expected first lookup to fail.'),
       );
       live.fold(
         (failure) => fail('Expected live location, got $failure'),
@@ -168,7 +173,7 @@ void main() {
       feedCacheTtl: const Duration(seconds: 30),
     );
 
-    final location = defaultHomeLocation;
+    final location = _testLocation;
     final first = await repository.getHomeFeed(
       location: location,
       filters: const HomeFeedFilters(),
@@ -191,7 +196,7 @@ void main() {
       feedCacheTtl: const Duration(seconds: 30),
     );
 
-    final location = defaultHomeLocation;
+    final location = _testLocation;
     final first = await repository.getHomeFeed(
       location: location,
       filters: const HomeFeedFilters(),
@@ -214,7 +219,7 @@ void main() {
       const _FakeLocationDataSource(),
       feedCacheTtl: const Duration(seconds: 30),
     );
-    final location = defaultHomeLocation;
+    final location = _testLocation;
 
     await repository.getHomeFeed(
       location: location,

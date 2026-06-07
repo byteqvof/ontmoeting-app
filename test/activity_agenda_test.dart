@@ -76,6 +76,30 @@ void main() {
 
     expect(agenda.chatActivities, [unread, recent, quiet]);
   });
+
+  test('cancelled chats stay in messages but not active joined activities', () {
+    final cancelledChat = _activity(
+      'activity-4',
+      title: 'Borrelen',
+      isJoined: false,
+      participationStatus: 'cancelled',
+      chatLastMessageAt: DateTime(2026, 6, 6, 20),
+    );
+    final joined = _activity(
+      'activity-5',
+      title: 'Koffie',
+      isJoined: true,
+      chatLastMessageAt: DateTime(2026, 6, 6, 19),
+    );
+
+    final agenda = ActivityAgenda(
+      hostedActivities: const [],
+      joinedActivities: [cancelledChat, joined],
+    );
+
+    expect(agenda.activeJoinedActivities, [joined]);
+    expect(agenda.chatActivities, [cancelledChat, joined]);
+  });
 }
 
 HomeActivity _activity(
@@ -84,6 +108,8 @@ HomeActivity _activity(
   String status = 'published',
   int chatUnreadCount = 0,
   DateTime? chatLastMessageAt,
+  bool isJoined = true,
+  String? participationStatus,
 }) {
   return HomeActivity(
     id: id,
@@ -111,7 +137,10 @@ HomeActivity _activity(
     availableSpots: 4,
     spotsLabel: 'nog 4 plekken',
     status: status,
+    isJoined: isJoined,
+    participationStatus: participationStatus,
     chatUnreadCount: chatUnreadCount,
     chatLastMessageAt: chatLastMessageAt,
+    canSendChat: isJoined,
   );
 }

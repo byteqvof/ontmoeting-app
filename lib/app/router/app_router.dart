@@ -9,6 +9,7 @@ import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/home/domain/entities/home_activity.dart';
 import '../../features/home/presentation/pages/activity_agenda_page.dart';
 import '../../features/home/presentation/pages/activity_chat_page.dart';
+import '../../features/home/presentation/pages/activity_chat_members_page.dart';
 import '../../features/home/presentation/pages/activity_detail_page.dart';
 import '../../features/home/presentation/pages/activity_join_confirmation_page.dart';
 import '../../features/home/presentation/pages/activity_map_page.dart';
@@ -37,6 +38,7 @@ class AppRoutes {
   static const editActivity = '/activities/:activityId/edit';
   static const activityJoinConfirmation = '/activities/:activityId/joined';
   static const activityChat = '/activities/:activityId/chat';
+  static const activityChatMembers = '/activities/:activityId/chat/members';
   static const activityMessages = '/messages';
   static const activityAgenda = '/agenda';
   static const activityMap = '/map';
@@ -64,6 +66,9 @@ class AppRoutes {
     }
     return '$path?from=${Uri.encodeQueryComponent(from)}';
   }
+
+  static String activityChatMembersPath(String activityId) =>
+      '/activities/$activityId/chat/members';
 
   static String profilePath(String profileId) => '/profile/$profileId';
 }
@@ -162,6 +167,21 @@ GoRouter createRouter(AuthBloc authBloc) {
               activityId: state.pathParameters['activityId'] ?? '',
               target: ActivityRouteTarget.chat,
               backFallbackRoute: backFallbackRoute,
+            ),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.activityChatMembers,
+        builder: (context, state) {
+          final activity = state.extra;
+          if (activity is HomeActivity) {
+            return _protected(ActivityChatMembersPage(activity: activity));
+          }
+          return _protected(
+            ActivityRouteLoaderPage(
+              activityId: state.pathParameters['activityId'] ?? '',
+              target: ActivityRouteTarget.members,
             ),
           );
         },

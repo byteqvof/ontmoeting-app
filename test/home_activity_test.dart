@@ -29,7 +29,30 @@ void main() {
     expect(updated.participants, [participant]);
     expect(updated.availableSpots, 2);
     expect(updated.spotsLabel, 'jij gaat ook');
+    expect(updated.canSendChat, isTrue);
   });
+
+  test(
+    'leaving an activity disables chat sending but keeps read state possible',
+    () {
+      final activity = _activity().copyWith(isJoined: true, canSendChat: true);
+
+      final updated = activity.applyParticipationUpdate(
+        const ActivityParticipationUpdate(
+          activityId: 'activity-1',
+          isJoined: false,
+          participants: [],
+          participantsCount: 0,
+          availableSpots: 3,
+          participationStatus: 'cancelled',
+        ),
+      );
+
+      expect(updated.isJoined, isFalse);
+      expect(updated.participationStatus, 'cancelled');
+      expect(updated.canSendChat, isFalse);
+    },
+  );
 
   test('keeps attendance and feedback state on participants', () {
     final markedParticipant = HomeParticipant(

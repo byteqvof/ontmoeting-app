@@ -259,9 +259,6 @@ class HomeRepositoryImpl implements HomeRepository {
       _cachedLocation = location;
       return right(location);
     } catch (error) {
-      if (_shouldUseFallbackLocation(error)) {
-        return right(defaultHomeLocation);
-      }
       return left(_mapLocationError(error));
     }
   }
@@ -282,10 +279,6 @@ class HomeRepositoryImpl implements HomeRepository {
         yield right(location);
       }
     } catch (error) {
-      if (_shouldUseFallbackLocation(error)) {
-        yield right(defaultHomeLocation);
-        return;
-      }
       yield left(_mapLocationError(error));
     }
   }
@@ -302,7 +295,18 @@ class HomeRepositoryImpl implements HomeRepository {
         'Zet locatievoorzieningen aan om je plaats automatisch te vinden.',
       );
     }
-    return UnknownFailure(error.toString());
+    if (error is TimeoutException ||
+        message.contains('future not completed') ||
+        message.contains('location timed out') ||
+        message.contains('unable to get current location') ||
+        message.contains('no location fix')) {
+      return const ServerFailure(
+        'We kunnen je locatie niet bepalen. Controleer de locatie van je toestel en probeer opnieuw.',
+      );
+    }
+    return const ServerFailure(
+      'We kunnen je locatie niet bepalen. Controleer de locatie van je toestel en probeer opnieuw.',
+    );
   }
 
   Failure _mapRemoteError(Object error) {
@@ -479,18 +483,6 @@ class HomeRepositoryImpl implements HomeRepository {
     _cachedFeedFilters = null;
     _cachedFeedFetchedAt = null;
   }
-}
-
-bool _shouldUseFallbackLocation(Object error) {
-  if (error is TimeoutException) {
-    return true;
-  }
-
-  final message = error.toString().toLowerCase();
-  return message.contains('future not completed') ||
-      message.contains('location timed out') ||
-      message.contains('unable to get current location') ||
-      message.contains('no location fix');
 }
 
 bool _looksLikeTransientNetworkError(Object error) {

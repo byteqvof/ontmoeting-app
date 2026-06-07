@@ -82,7 +82,7 @@ Future<void> configureDependencies() async {
       () => HomeRemoteDataSourceImpl(sl()),
     )
     ..registerLazySingleton<HomeLocationDataSource>(
-      () => const HomeLocationDataSourceImpl(useDeviceLocation: true),
+      () => const HomeLocationDataSourceImpl(),
     )
     ..registerLazySingleton<HomeRepository>(
       () => HomeRepositoryImpl(sl(), sl(), accountTrustService: sl()),

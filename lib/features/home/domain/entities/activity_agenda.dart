@@ -36,6 +36,7 @@ class ActivityAgenda extends Equatable {
     return _uniqueActivities(
       joinedActivities.where(
         (activity) =>
+            activity.isJoined &&
             !activity.isCompleted &&
             !completedIds.contains(activity.id) &&
             !hostedIds.contains(activity.id),
@@ -60,6 +61,7 @@ class ActivityAgenda extends Equatable {
     for (final activity in [
       ...activeHostedActivities,
       ...activeJoinedActivities,
+      ..._inactiveChatHistoryActivities,
       ...uniqueCompletedActivities,
     ]) {
       activitiesById.putIfAbsent(activity.id, () => activity);
@@ -99,6 +101,23 @@ class ActivityAgenda extends Equatable {
     joinedActivities,
     completedActivities,
   ];
+
+  List<HomeActivity> get _inactiveChatHistoryActivities {
+    final completedIds = _completedActivityIds;
+    final hostedIds = activeHostedActivities
+        .map((activity) => activity.id)
+        .toSet();
+    return _uniqueActivities(
+      joinedActivities.where(
+        (activity) =>
+            !activity.isJoined &&
+            !activity.isCompleted &&
+            !completedIds.contains(activity.id) &&
+            !hostedIds.contains(activity.id) &&
+            activity.chatLastMessageAt != null,
+      ),
+    );
+  }
 
   Set<String> get _completedActivityIds =>
       uniqueCompletedActivities.map((activity) => activity.id).toSet();

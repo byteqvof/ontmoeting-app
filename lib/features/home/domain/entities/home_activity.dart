@@ -45,7 +45,9 @@ class HomeActivity extends Equatable {
     this.chatLastMessage,
     this.chatLastMessageAt,
     this.chatLastSenderName,
+    this.chatLastMessageType = 'user',
     this.chatUnreadCount = 0,
+    this.canSendChat = false,
   });
 
   final String id;
@@ -86,7 +88,9 @@ class HomeActivity extends Equatable {
   final String? chatLastMessage;
   final DateTime? chatLastMessageAt;
   final String? chatLastSenderName;
+  final String chatLastMessageType;
   final int chatUnreadCount;
+  final bool canSendChat;
 
   bool get isCompleted => status == 'completed';
 
@@ -112,7 +116,9 @@ class HomeActivity extends Equatable {
     String? chatLastMessage,
     DateTime? chatLastMessageAt,
     String? chatLastSenderName,
+    String? chatLastMessageType,
     int? chatUnreadCount,
+    bool? canSendChat,
     bool? hostFeedbackSubmitted,
   }) {
     return HomeActivity(
@@ -156,7 +162,9 @@ class HomeActivity extends Equatable {
       chatLastMessage: chatLastMessage ?? this.chatLastMessage,
       chatLastMessageAt: chatLastMessageAt ?? this.chatLastMessageAt,
       chatLastSenderName: chatLastSenderName ?? this.chatLastSenderName,
+      chatLastMessageType: chatLastMessageType ?? this.chatLastMessageType,
       chatUnreadCount: chatUnreadCount ?? this.chatUnreadCount,
+      canSendChat: canSendChat ?? this.canSendChat,
     );
   }
 
@@ -171,6 +179,7 @@ class HomeActivity extends Equatable {
       spotsLabel: update.spotsLabel,
       isJoined: update.isJoined,
       participationStatus: update.participationStatus,
+      canSendChat: isOwnedByCurrentUser || update.isJoined,
     );
   }
 
@@ -222,6 +231,8 @@ class HomeActivity extends Equatable {
     chatLastMessage,
     chatLastMessageAt,
     chatLastSenderName,
+    chatLastMessageType,
     chatUnreadCount,
+    canSendChat,
   ];
 }
