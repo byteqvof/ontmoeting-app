@@ -6,17 +6,30 @@ class ProfileMenuList extends StatelessWidget {
   const ProfileMenuList({
     required this.isOwnProfile,
     required this.onSignOutPressed,
+    this.onAccountVerificationPressed,
+    this.onDeleteAccountPressed,
+    this.onReportProfilePressed,
+    this.onBlockProfilePressed,
     super.key,
   });
 
   final bool isOwnProfile;
   final VoidCallback onSignOutPressed;
+  final VoidCallback? onAccountVerificationPressed;
+  final VoidCallback? onDeleteAccountPressed;
+  final VoidCallback? onReportProfilePressed;
+  final VoidCallback? onBlockProfilePressed;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        const _MenuItem(label: 'Account & verificatie'),
+        if (isOwnProfile)
+          _MenuItem(
+            label: 'Account & verificatie',
+            icon: Icons.verified_user_outlined,
+            onTap: onAccountVerificationPressed,
+          ),
         const _MenuItem(label: 'Privacy en locatie'),
         const _MenuItem(label: 'Meldingen'),
         const _MenuItem(label: 'Help & contact'),
@@ -27,6 +40,25 @@ class ProfileMenuList extends StatelessWidget {
             icon: Icons.logout_rounded,
             isDestructive: true,
             onTap: onSignOutPressed,
+          ),
+          _MenuItem(
+            label: 'Account verwijderen',
+            icon: Icons.delete_forever_rounded,
+            isDestructive: true,
+            onTap: onDeleteAccountPressed,
+          ),
+        ] else ...[
+          const SizedBox(height: TochSpacing.sm),
+          _MenuItem(
+            label: 'Profiel rapporteren',
+            icon: Icons.flag_rounded,
+            onTap: onReportProfilePressed,
+          ),
+          _MenuItem(
+            label: 'Gebruiker blokkeren',
+            icon: Icons.block_rounded,
+            isDestructive: true,
+            onTap: onBlockProfilePressed,
           ),
         ],
       ],

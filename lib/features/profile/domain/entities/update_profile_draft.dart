@@ -8,6 +8,8 @@ class UpdateProfileDraft extends Equatable {
     required this.displayName,
     required this.initials,
     required this.cityName,
+    required this.ageBand,
+    required this.gender,
     required this.avatarFile,
     required this.removeAvatar,
   });
@@ -16,6 +18,8 @@ class UpdateProfileDraft extends Equatable {
   final String displayName;
   final String initials;
   final String cityName;
+  final String ageBand;
+  final String gender;
   final ProfileAvatarFile? avatarFile;
   final bool removeAvatar;
 
@@ -25,6 +29,8 @@ class UpdateProfileDraft extends Equatable {
     displayName,
     initials,
     cityName,
+    ageBand,
+    gender,
     avatarFile,
     removeAvatar,
   ];

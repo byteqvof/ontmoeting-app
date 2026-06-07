@@ -14,6 +14,8 @@ class EditProfileBloc extends Bloc<EditProfileEvent, EditProfileState> {
     : super(EditProfileState.fromProfile(profile)) {
     on<EditProfileDisplayNameChanged>(_onDisplayNameChanged);
     on<EditProfileCityChanged>(_onCityChanged);
+    on<EditProfileAgeBandSelected>(_onAgeBandSelected);
+    on<EditProfileGenderSelected>(_onGenderSelected);
     on<EditProfileAvatarPicked>(_onAvatarPicked);
     on<EditProfileAvatarRemoved>(_onAvatarRemoved);
     on<EditProfileSubmitted>(_onSubmitted);
@@ -40,6 +42,22 @@ class EditProfileBloc extends Bloc<EditProfileEvent, EditProfileState> {
     emit(
       state.copyWith(cityName: event.cityName, status: EditProfileStatus.idle),
     );
+  }
+
+  void _onAgeBandSelected(
+    EditProfileAgeBandSelected event,
+    Emitter<EditProfileState> emit,
+  ) {
+    emit(
+      state.copyWith(ageBand: event.ageBand, status: EditProfileStatus.idle),
+    );
+  }
+
+  void _onGenderSelected(
+    EditProfileGenderSelected event,
+    Emitter<EditProfileState> emit,
+  ) {
+    emit(state.copyWith(gender: event.gender, status: EditProfileStatus.idle));
   }
 
   void _onAvatarPicked(
@@ -84,6 +102,8 @@ class EditProfileBloc extends Bloc<EditProfileEvent, EditProfileState> {
         displayName: state.displayName.trim(),
         initials: _initialsFor(state.displayName),
         cityName: state.cityName.trim(),
+        ageBand: state.ageBand,
+        gender: state.gender,
         avatarFile: state.avatarFile,
         removeAvatar: state.removeAvatar,
       ),

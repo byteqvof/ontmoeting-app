@@ -14,3 +14,9 @@ class HomeLocation extends Equatable {
   @override
   List<Object?> get props => [cityName, latitude, longitude];
 }
+
+const defaultHomeLocation = HomeLocation(
+  cityName: 'Ter Apel',
+  latitude: 52.876,
+  longitude: 7.059,
+);

@@ -1,12 +1,19 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/app_router.dart';
 import '../../../../app/theme/toch_theme.dart';
 import '../../../../core/di/injection_container.dart';
+import '../../../../core/services/analytics_service.dart';
 import '../../domain/entities/activity_chat_message.dart';
 import '../../domain/entities/home_activity.dart';
 import '../../domain/usecases/get_activity_chat_messages.dart';
 import '../../domain/usecases/send_activity_chat_message.dart';
+import '../controllers/activity_chat_notice_controller.dart';
+import '../controllers/activity_chat_realtime_controller.dart';
 
 class ActivityChatPage extends StatefulWidget {
   const ActivityChatPage({required this.activity, super.key});
@@ -17,38 +24,77 @@ class ActivityChatPage extends StatefulWidget {
   State<ActivityChatPage> createState() => _ActivityChatPageState();
 }
 
-class _ActivityChatPageState extends State<ActivityChatPage> {
+class _ActivityChatPageState extends State<ActivityChatPage>
+    with WidgetsBindingObserver {
   final GetActivityChatMessages _getMessages = sl();
   final SendActivityChatMessage _sendMessage = sl();
+  final ActivityChatNoticeController _chatNotices = sl();
+  final ActivityChatRealtimeController _realtime = sl();
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
   List<ActivityChatMessage> _messages = const [];
+  StreamSubscription<ActivityChatMessage>? _messageSubscription;
   bool _isLoading = true;
+  bool _isCatchingUp = false;
   bool _isSending = false;
   String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _loadMessages();
+    WidgetsBinding.instance.addObserver(this);
+    _chatNotices.markActivityOpen(widget.activity.id);
+    _messageSubscription = _realtime.messages.listen(_handleRealtimeMessage);
+    AnalyticsService.instance.track('chat_opened');
+    unawaited(_initializeChat());
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _chatNotices.markActivityClosed(widget.activity.id);
+    _messageSubscription?.cancel();
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
 
-  Future<void> _loadMessages() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted && _isCurrentRoute) {
+      unawaited(_catchUpMessages());
+    }
+  }
+
+  Future<void> _initializeChat() async {
+    await _loadMessages();
+    await _realtime.subscribeToActivity(widget.activity.id);
+    await _catchUpMessages();
+  }
+
+  Future<void> _loadMessages({
+    bool showLoading = true,
+    DateTime? afterCreatedAt,
+    String? afterId,
+  }) async {
+    if (!showLoading && !_isCurrentRoute) {
+      return;
+    }
+
+    if (showLoading) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
 
     final result = await _getMessages(
-      GetActivityChatMessagesParams(activityId: widget.activity.id),
+      GetActivityChatMessagesParams(
+        activityId: widget.activity.id,
+        afterCreatedAt: afterCreatedAt,
+        afterId: afterId,
+      ),
     );
     if (!mounted) {
       return;
@@ -57,18 +103,68 @@ class _ActivityChatPageState extends State<ActivityChatPage> {
     result.fold(
       (failure) {
         setState(() {
-          _isLoading = false;
+          if (showLoading) {
+            _isLoading = false;
+          }
           _errorMessage = failure.message;
         });
       },
       (messages) {
+        final nextMessages = afterCreatedAt == null && afterId == null
+            ? messages
+            : _mergeMessages(_messages, messages);
+        final messagesChanged = !listEquals(_messages, nextMessages);
         setState(() {
-          _messages = messages;
-          _isLoading = false;
+          if (messagesChanged) {
+            _messages = nextMessages;
+          }
+          if (showLoading) {
+            _isLoading = false;
+          }
+          _errorMessage = null;
         });
-        _scrollToBottom();
+        if (showLoading || messagesChanged) {
+          _scrollToBottom();
+        }
       },
     );
+  }
+
+  bool get _isCurrentRoute => ModalRoute.of(context)?.isCurrent ?? true;
+
+  Future<void> _catchUpMessages() async {
+    if (_isCatchingUp || _messages.isEmpty) {
+      return;
+    }
+
+    _isCatchingUp = true;
+    final lastMessage = _messages.last;
+    try {
+      await _loadMessages(
+        showLoading: false,
+        afterCreatedAt: lastMessage.createdAt,
+        afterId: lastMessage.id,
+      );
+    } finally {
+      _isCatchingUp = false;
+    }
+  }
+
+  void _handleRealtimeMessage(ActivityChatMessage message) {
+    if (!mounted || message.activityId != widget.activity.id) {
+      return;
+    }
+
+    final nextMessages = _mergeMessages(_messages, [message]);
+    if (listEquals(_messages, nextMessages)) {
+      return;
+    }
+
+    setState(() {
+      _messages = nextMessages;
+      _errorMessage = null;
+    });
+    _scrollToBottom();
   }
 
   Future<void> _sendCurrentMessage() async {
@@ -82,7 +178,11 @@ class _ActivityChatPageState extends State<ActivityChatPage> {
     });
 
     final result = await _sendMessage(
-      SendActivityChatMessageParams(activityId: widget.activity.id, body: body),
+      SendActivityChatMessageParams(
+        activityId: widget.activity.id,
+        body: body,
+        clientMessageId: createActivityChatClientMessageId(),
+      ),
     );
 
     if (!mounted) {
@@ -94,16 +194,19 @@ class _ActivityChatPageState extends State<ActivityChatPage> {
         setState(() {
           _isSending = false;
         });
+        AnalyticsService.instance.track('message_send_failed');
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(failure.message)));
       },
       (message) {
         _messageController.clear();
+        final nextMessages = _mergeMessages(_messages, [message]);
         setState(() {
-          _messages = [..._messages, message];
+          _messages = nextMessages;
           _isSending = false;
         });
+        AnalyticsService.instance.track('message_sent');
         _scrollToBottom();
       },
     );
@@ -136,7 +239,13 @@ class _ActivityChatPageState extends State<ActivityChatPage> {
               children: [
                 _ChatHeader(
                   activity: widget.activity,
-                  onBackPressed: () => context.pop(),
+                  onBackPressed: () {
+                    if (context.canPop()) {
+                      context.pop();
+                      return;
+                    }
+                    context.go(AppRoutes.activityMessages);
+                  },
                 ),
                 Expanded(
                   child: _ChatBody(
@@ -159,6 +268,29 @@ class _ActivityChatPageState extends State<ActivityChatPage> {
       ),
     );
   }
+}
+
+List<ActivityChatMessage> _mergeMessages(
+  List<ActivityChatMessage> current,
+  Iterable<ActivityChatMessage> incoming,
+) {
+  final messagesById = <String, ActivityChatMessage>{
+    for (final message in current)
+      if (message.id.isNotEmpty) message.id: message,
+  };
+  for (final message in incoming) {
+    if (message.id.isNotEmpty) {
+      messagesById[message.id] = message;
+    }
+  }
+
+  return messagesById.values.toList()..sort((left, right) {
+    final createdCompare = left.createdAt.compareTo(right.createdAt);
+    if (createdCompare != 0) {
+      return createdCompare;
+    }
+    return left.id.compareTo(right.id);
+  });
 }
 
 class MissingActivityChatPage extends StatelessWidget {

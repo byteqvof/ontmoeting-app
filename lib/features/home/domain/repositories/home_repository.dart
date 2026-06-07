@@ -3,9 +3,13 @@ import 'package:dartz/dartz.dart';
 import '../../../../core/errors/failures.dart';
 import '../entities/activity_agenda.dart';
 import '../entities/activity_chat_message.dart';
+import '../entities/activity_completion_update.dart';
+import '../entities/activity_feedback.dart';
 import '../entities/activity_participation_update.dart';
 import '../entities/create_activity_draft.dart';
+import '../entities/home_activity.dart';
 import '../entities/home_feed.dart';
+import '../entities/home_feed_filters.dart';
 import '../entities/home_location.dart';
 
 abstract interface class HomeRepository {
@@ -13,8 +17,10 @@ abstract interface class HomeRepository {
 
   Future<Either<Failure, HomeFeed>> getHomeFeed({
     required HomeLocation location,
-    required int distanceKm,
+    required HomeFeedFilters filters,
   });
+
+  Future<Either<Failure, HomeActivity>> getActivityById(String activityId);
 
   Future<Either<Failure, ActivityParticipationUpdate>>
   setActivityParticipation({required String activityId, required bool join});
@@ -23,11 +29,25 @@ abstract interface class HomeRepository {
 
   Future<Either<Failure, List<ActivityChatMessage>>> getActivityChatMessages({
     required String activityId,
+    DateTime? afterCreatedAt,
+    String? afterId,
   });
 
   Future<Either<Failure, ActivityChatMessage>> sendActivityChatMessage({
     required String activityId,
     required String body,
+    required String clientMessageId,
+  });
+
+  Future<Either<Failure, ActivityCompletionUpdate>> completeActivity({
+    required String activityId,
+  });
+
+  Future<Either<Failure, ActivityFeedback>> submitActivityFeedback({
+    required String activityId,
+    required String targetProfileId,
+    required int rating,
+    required String comment,
   });
 
   Future<Either<Failure, HomeLocation>> getCurrentLocation();

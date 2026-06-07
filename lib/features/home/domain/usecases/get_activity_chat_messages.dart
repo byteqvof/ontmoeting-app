@@ -17,15 +17,25 @@ class GetActivityChatMessages
   Future<Either<Failure, List<ActivityChatMessage>>> call(
     GetActivityChatMessagesParams params,
   ) {
-    return _repository.getActivityChatMessages(activityId: params.activityId);
+    return _repository.getActivityChatMessages(
+      activityId: params.activityId,
+      afterCreatedAt: params.afterCreatedAt,
+      afterId: params.afterId,
+    );
   }
 }
 
 class GetActivityChatMessagesParams extends Equatable {
-  const GetActivityChatMessagesParams({required this.activityId});
+  const GetActivityChatMessagesParams({
+    required this.activityId,
+    this.afterCreatedAt,
+    this.afterId,
+  });
 
   final String activityId;
+  final DateTime? afterCreatedAt;
+  final String? afterId;
 
   @override
-  List<Object?> get props => [activityId];
+  List<Object?> get props => [activityId, afterCreatedAt, afterId];
 }

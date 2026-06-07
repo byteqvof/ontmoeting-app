@@ -9,6 +9,7 @@ void main() {
       'sender_id': 'profile-1',
       'body': 'Ik ben er rond twee uur.',
       'created_at': '2026-06-05T12:30:00Z',
+      'client_message_id': 'client-message-1',
       'sender': {
         'id': 'profile-1',
         'display_name': 'Jasper Scheper',
@@ -25,6 +26,7 @@ void main() {
     expect(message.senderAvatarUrl, 'https://example.com/avatar.png');
     expect(message.body, 'Ik ben er rond twee uur.');
     expect(message.createdAt.toUtc(), DateTime.utc(2026, 6, 5, 12, 30));
+    expect(message.clientMessageId, 'client-message-1');
     expect(message.isMine, isTrue);
   });
 }

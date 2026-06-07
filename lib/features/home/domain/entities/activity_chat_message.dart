@@ -10,6 +10,7 @@ class ActivityChatMessage extends Equatable {
     required this.body,
     required this.createdAt,
     required this.isMine,
+    this.clientMessageId,
     this.senderAvatarUrl,
   });
 
@@ -22,6 +23,7 @@ class ActivityChatMessage extends Equatable {
   final String body;
   final DateTime createdAt;
   final bool isMine;
+  final String? clientMessageId;
 
   @override
   List<Object?> get props => [
@@ -34,5 +36,6 @@ class ActivityChatMessage extends Equatable {
     body,
     createdAt,
     isMine,
+    clientMessageId,
   ];
 }

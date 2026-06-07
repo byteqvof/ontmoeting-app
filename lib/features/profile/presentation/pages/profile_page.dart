@@ -5,9 +5,13 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/app_router.dart';
 import '../../../../app/theme/toch_theme.dart';
 import '../../../../core/di/injection_container.dart';
+import '../../../../core/services/analytics_service.dart';
+import '../../../../core/services/safety_service.dart';
+import '../../../../core/widgets/safety_report_dialog.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../home/domain/entities/home_activity.dart';
 import '../../../home/domain/entities/home_category.dart';
+import '../../../home/presentation/widgets/home_bottom_nav.dart';
 import '../../domain/entities/profile.dart';
 import '../../domain/entities/profile_activity.dart';
 import '../bloc/profile_bloc.dart';
@@ -45,6 +49,9 @@ class _ProfileView extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: colors.cream,
+      bottomNavigationBar: isOwnProfile
+          ? const HomeBottomNav(selected: HomeNavDestination.profile)
+          : null,
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 480),
@@ -124,11 +131,155 @@ class _ProfileContent extends StatelessWidget {
           ProfileMenuList(
             isOwnProfile: isOwnProfile,
             onSignOutPressed: () => _confirmSignOut(context),
+            onAccountVerificationPressed: isOwnProfile
+                ? () => context.push(AppRoutes.accountVerification)
+                : null,
+            onDeleteAccountPressed: isOwnProfile
+                ? () => _confirmDeleteAccount(context)
+                : null,
+            onReportProfilePressed: isOwnProfile
+                ? null
+                : () => _reportProfile(context, profile),
+            onBlockProfilePressed: isOwnProfile
+                ? null
+                : () => _blockProfile(context, profile),
           ),
         ],
       ),
     );
   }
+}
+
+Future<void> _reportProfile(BuildContext context, Profile profile) async {
+  final report = await _askForSafetyDetails(
+    context,
+    title: 'Profiel rapporteren',
+    body: 'Vertel kort wat er niet klopt. We bewaren dit voor moderatie.',
+    confirmLabel: 'Rapporteer',
+  );
+  if (report == null || !context.mounted) {
+    return;
+  }
+
+  try {
+    await sl<SafetyService>().reportProfile(
+      profileId: profile.id,
+      reason: report.reason,
+      details: report.details,
+    );
+    if (context.mounted) {
+      _showProfileMessage(context, 'Profiel gerapporteerd.');
+    }
+    AnalyticsService.instance.track(
+      'report_submitted',
+      properties: {'target_type': 'profile', 'reason': report.reason.name},
+    );
+  } catch (_) {
+    if (context.mounted) {
+      _showProfileMessage(context, 'Rapporteren lukt nu niet.');
+    }
+  }
+}
+
+Future<void> _blockProfile(BuildContext context, Profile profile) async {
+  final shouldBlock = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) {
+      return AlertDialog(
+        title: const Text('Gebruiker blokkeren?'),
+        content: Text(
+          '${profile.displayName} kan dan niet meer in je blokkeerlijst ontbreken. Je kunt dit later via Supabase/moderatie terugdraaien.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Annuleer'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Blokkeer'),
+          ),
+        ],
+      );
+    },
+  );
+
+  if (shouldBlock != true || !context.mounted) {
+    return;
+  }
+
+  try {
+    await sl<SafetyService>().blockProfile(profile.id);
+    if (context.mounted) {
+      _showProfileMessage(context, 'Gebruiker geblokkeerd.');
+      AnalyticsService.instance.track(
+        'block_submitted',
+        properties: {'target_type': 'profile'},
+      );
+      context.go(AppRoutes.home);
+    }
+  } catch (_) {
+    if (context.mounted) {
+      _showProfileMessage(context, 'Blokkeren lukt nu niet.');
+    }
+  }
+}
+
+Future<void> _confirmDeleteAccount(BuildContext context) async {
+  final shouldDelete = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) {
+      return AlertDialog(
+        title: const Text('Account verwijderen?'),
+        content: const Text(
+          'Je profiel, sessie en gekoppelde account worden verwijderd. Dit kun je niet terugdraaien.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Annuleer'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Verwijder'),
+          ),
+        ],
+      );
+    },
+  );
+
+  if (shouldDelete != true || !context.mounted) {
+    return;
+  }
+
+  try {
+    await sl<SafetyService>().deleteAccount();
+    if (context.mounted) {
+      context.read<AuthBloc>().add(const AuthSignOutRequested());
+    }
+  } catch (_) {
+    if (context.mounted) {
+      _showProfileMessage(context, 'Account verwijderen lukt nu niet.');
+    }
+  }
+}
+
+Future<SafetyReportDraft?> _askForSafetyDetails(
+  BuildContext context, {
+  required String title,
+  required String body,
+  required String confirmLabel,
+}) async {
+  return showSafetyReportDialog(
+    context,
+    title: title,
+    body: body,
+    confirmLabel: confirmLabel,
+  );
+}
+
+void _showProfileMessage(BuildContext context, String message) {
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
 }
 
 Future<void> _confirmSignOut(BuildContext context) async {
@@ -191,13 +342,16 @@ HomeActivity _homeActivityFromProfileActivity({
     hostName: profile.displayName.split(' ').first,
     hostFullName: profile.displayName,
     hostSubtitle: profile.cityName,
-    hostScore: profile.attendanceScore,
+    hostScore: profile.trust.reputationScore,
+    hostIdentityVerified: profile.trust.identityVerified,
+    hostReputationLevel: profile.trust.reputationLevel,
     hostAvatarUrl: profile.avatarUrl,
     participants: const [],
     availableSpots: activity.availableSpots,
     spotsLabel: activity.spotsLabel,
     isJoined: false,
     isOwnedByCurrentUser: isOwnProfile,
+    status: activity.status,
   );
 }
 

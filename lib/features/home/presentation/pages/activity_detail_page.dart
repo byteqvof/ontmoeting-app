@@ -4,8 +4,14 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/app_router.dart';
 import '../../../../app/theme/toch_theme.dart';
 import '../../../../core/di/injection_container.dart';
+import '../../../../core/services/activity_attendance_service.dart';
+import '../../../../core/services/analytics_service.dart';
+import '../../../../core/services/safety_service.dart';
+import '../../../../core/widgets/safety_report_dialog.dart';
 import '../../domain/entities/home_activity.dart';
+import '../../domain/usecases/complete_activity.dart';
 import '../../domain/usecases/set_activity_participation.dart';
+import '../../domain/usecases/submit_activity_feedback.dart';
 import '../widgets/activity_detail_action_bar.dart';
 import '../widgets/activity_detail_hero.dart';
 import '../widgets/activity_detail_host_card.dart';
@@ -24,7 +30,29 @@ class ActivityDetailPage extends StatefulWidget {
 class _ActivityDetailPageState extends State<ActivityDetailPage> {
   late HomeActivity _activity = widget.activity;
   final SetActivityParticipation _setActivityParticipation = sl();
+  final CompleteActivity _completeActivityUseCase = sl();
+  final SubmitActivityFeedback _submitActivityFeedback = sl();
+  final ActivityAttendanceService _attendanceService = sl();
+  final SafetyService _safetyService = sl();
   bool _isParticipationPending = false;
+  bool _isCompletionPending = false;
+  bool _isFeedbackPending = false;
+  final Set<String> _attendancePendingIds = {};
+
+  @override
+  void initState() {
+    super.initState();
+    AnalyticsService.instance.track(
+      'activity_viewed',
+      properties: {
+        'status': _activity.status,
+        'is_joined': _activity.isJoined,
+        'is_owned': _activity.isOwnedByCurrentUser,
+        'requires_identity_verified': _activity.requiresIdentityVerified,
+        'group_type': _activity.groupType,
+      },
+    );
+  }
 
   Future<void> _toggleParticipation() async {
     if (_activity.isOwnedByCurrentUser || _isParticipationPending) {
@@ -40,10 +68,11 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
       _isParticipationPending = true;
     });
 
+    final wasJoining = !_activity.isJoined;
     final result = await _setActivityParticipation(
       SetActivityParticipationParams(
         activityId: _activity.id,
-        join: !_activity.isJoined,
+        join: wasJoining,
       ),
     );
 
@@ -59,12 +88,135 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
         _showMessage(failure.message);
       },
       (update) {
+        final updatedActivity = _activity.applyParticipationUpdate(update);
         setState(() {
-          _activity = _activity.applyParticipationUpdate(update);
+          _activity = updatedActivity;
           _isParticipationPending = false;
         });
+        if (wasJoining && updatedActivity.isJoined) {
+          context.push(
+            AppRoutes.activityJoinConfirmationPath(updatedActivity.id),
+            extra: updatedActivity,
+          );
+        }
       },
     );
+  }
+
+  Future<void> _completeActivity() async {
+    if (!_activity.isOwnedByCurrentUser ||
+        _activity.isCompleted ||
+        _isCompletionPending) {
+      return;
+    }
+
+    setState(() {
+      _isCompletionPending = true;
+    });
+
+    final result = await _completeActivityUseCase(
+      CompleteActivityParams(activityId: _activity.id),
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    result.fold(
+      (failure) {
+        setState(() {
+          _isCompletionPending = false;
+        });
+        _showMessage(failure.message);
+      },
+      (update) {
+        setState(() {
+          _activity = _activity.applyCompletionUpdate(update);
+          _isCompletionPending = false;
+        });
+        _showMessage('Activiteit afgerond.');
+      },
+    );
+  }
+
+  Future<void> _submitFeedback({
+    required _FeedbackTarget target,
+    required int rating,
+    required String comment,
+  }) async {
+    if (_isFeedbackPending) {
+      return;
+    }
+
+    setState(() {
+      _isFeedbackPending = true;
+    });
+
+    final result = await _submitActivityFeedback(
+      SubmitActivityFeedbackParams(
+        activityId: _activity.id,
+        targetProfileId: target.id,
+        rating: rating,
+        comment: comment,
+      ),
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    result.fold(
+      (failure) {
+        setState(() {
+          _isFeedbackPending = false;
+        });
+        _showMessage(failure.message);
+      },
+      (_) {
+        setState(() {
+          _isFeedbackPending = false;
+        });
+        _showMessage('Feedback opgeslagen voor ${target.name}.');
+      },
+    );
+  }
+
+  Future<void> _markAttendance({
+    required _FeedbackTarget target,
+    required ActivityAttendanceStatus status,
+  }) async {
+    if (_attendancePendingIds.contains(target.id)) {
+      return;
+    }
+
+    setState(() {
+      _attendancePendingIds.add(target.id);
+    });
+
+    try {
+      await _attendanceService.markAttendance(
+        activityId: _activity.id,
+        profileId: target.id,
+        status: status,
+      );
+      if (mounted) {
+        _showMessage(
+          status == ActivityAttendanceStatus.present
+              ? '${target.name} gemarkeerd als aanwezig.'
+              : '${target.name} gemarkeerd als niet aanwezig.',
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        _showMessage('Aanwezigheid bijwerken lukt nu niet.');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _attendancePendingIds.remove(target.id);
+        });
+      }
+    }
   }
 
   void _showMessage(String message) {
@@ -80,6 +232,37 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
     }
 
     context.push(AppRoutes.activityChatPath(_activity.id), extra: _activity);
+  }
+
+  Future<void> _reportActivity() async {
+    final report = await _askForSafetyDetails(
+      context,
+      title: 'Activiteit rapporteren',
+      body: 'Vertel kort wat er niet klopt.',
+      confirmLabel: 'Rapporteer',
+    );
+    if (report == null || !mounted) {
+      return;
+    }
+
+    try {
+      await _safetyService.reportActivity(
+        activityId: _activity.id,
+        reason: report.reason,
+        details: report.details,
+      );
+      if (mounted) {
+        _showMessage('Activiteit gerapporteerd.');
+      }
+      AnalyticsService.instance.track(
+        'report_submitted',
+        properties: {'target_type': 'activity', 'reason': report.reason.name},
+      );
+    } catch (_) {
+      if (mounted) {
+        _showMessage('Rapporteren lukt nu niet.');
+      }
+    }
   }
 
   @override
@@ -122,8 +305,27 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
                             context.push(AppRoutes.profilePath(profileId));
                           },
                         ),
+                        if (_activity.isCompleted) ...[
+                          if (_activity.isOwnedByCurrentUser) ...[
+                            const SizedBox(height: TochSpacing.md),
+                            _AttendanceCard(
+                              activity: _activity,
+                              pendingProfileIds: _attendancePendingIds,
+                              onMarkAttendance: _markAttendance,
+                            ),
+                          ],
+                          const SizedBox(height: TochSpacing.md),
+                          _FeedbackCard(
+                            activity: _activity,
+                            isSubmitting: _isFeedbackPending,
+                            onSubmit: _submitFeedback,
+                          ),
+                        ],
                         const SizedBox(height: TochSpacing.md),
-                        const _SafetyCard(),
+                        _SafetyCard(
+                          canReport: !_activity.isOwnedByCurrentUser,
+                          onReportPressed: _reportActivity,
+                        ),
                       ],
                     ),
                   ),
@@ -136,12 +338,401 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
                 child: ActivityDetailActionBar(
                   activity: _activity,
                   isParticipationPending: _isParticipationPending,
+                  isCompletionPending: _isCompletionPending,
                   onParticipationPressed: _toggleParticipation,
+                  onCompletePressed: _completeActivity,
                   onChatPressed: _openChat,
                 ),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FeedbackTarget {
+  const _FeedbackTarget({
+    required this.id,
+    required this.name,
+    required this.initials,
+    this.avatarUrl,
+  });
+
+  final String id;
+  final String name;
+  final String initials;
+  final String? avatarUrl;
+}
+
+class _AttendanceCard extends StatelessWidget {
+  const _AttendanceCard({
+    required this.activity,
+    required this.pendingProfileIds,
+    required this.onMarkAttendance,
+  });
+
+  final HomeActivity activity;
+  final Set<String> pendingProfileIds;
+  final Future<void> Function({
+    required _FeedbackTarget target,
+    required ActivityAttendanceStatus status,
+  })
+  onMarkAttendance;
+
+  List<_FeedbackTarget> get _targets {
+    return activity.participants
+        .where((participant) => participant.id.isNotEmpty)
+        .map(
+          (participant) => _FeedbackTarget(
+            id: participant.id,
+            name: participant.displayName,
+            initials: participant.initials,
+            avatarUrl: participant.avatarUrl,
+          ),
+        )
+        .toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.toch;
+    final targets = _targets;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.card,
+        borderRadius: BorderRadius.circular(TochRadius.lg),
+        border: Border.all(color: colors.line),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(TochSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Opkomst',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: colors.green700.withValues(alpha: .7),
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: TochSpacing.xs),
+            Text(
+              'Markeer wie erbij was. Dit telt mee voor reputatie.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: colors.green700.withValues(alpha: .72),
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: TochSpacing.sm),
+            if (targets.isEmpty)
+              Text(
+                'Er zijn nog geen deelnemers om te markeren.',
+                style: Theme.of(context).textTheme.bodyMedium,
+              )
+            else
+              for (final target in targets) ...[
+                _AttendanceRow(
+                  target: target,
+                  isPending: pendingProfileIds.contains(target.id),
+                  onPresent: () => onMarkAttendance(
+                    target: target,
+                    status: ActivityAttendanceStatus.present,
+                  ),
+                  onAbsent: () => onMarkAttendance(
+                    target: target,
+                    status: ActivityAttendanceStatus.absent,
+                  ),
+                ),
+                if (target != targets.last)
+                  Divider(height: TochSpacing.md, color: colors.line),
+              ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AttendanceRow extends StatelessWidget {
+  const _AttendanceRow({
+    required this.target,
+    required this.isPending,
+    required this.onPresent,
+    required this.onAbsent,
+  });
+
+  final _FeedbackTarget target;
+  final bool isPending;
+  final VoidCallback onPresent;
+  final VoidCallback onAbsent;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.toch;
+
+    return Row(
+      children: [
+        CircleAvatar(
+          radius: 18,
+          backgroundColor: colors.green100,
+          foregroundColor: colors.green,
+          backgroundImage: target.avatarUrl == null
+              ? null
+              : NetworkImage(target.avatarUrl!),
+          child: target.avatarUrl == null
+              ? Text(
+                  target.initials,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                  ),
+                )
+              : null,
+        ),
+        const SizedBox(width: TochSpacing.sm),
+        Expanded(
+          child: Text(
+            target.name,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: colors.ink,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+        if (isPending)
+          SizedBox.square(
+            dimension: 22,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: colors.green,
+            ),
+          )
+        else ...[
+          IconButton(
+            onPressed: onAbsent,
+            tooltip: 'Niet aanwezig',
+            icon: Icon(Icons.close_rounded, color: colors.orange),
+          ),
+          IconButton(
+            onPressed: onPresent,
+            tooltip: 'Aanwezig',
+            icon: Icon(Icons.check_rounded, color: colors.green),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _FeedbackCard extends StatefulWidget {
+  const _FeedbackCard({
+    required this.activity,
+    required this.isSubmitting,
+    required this.onSubmit,
+  });
+
+  final HomeActivity activity;
+  final bool isSubmitting;
+  final Future<void> Function({
+    required _FeedbackTarget target,
+    required int rating,
+    required String comment,
+  })
+  onSubmit;
+
+  @override
+  State<_FeedbackCard> createState() => _FeedbackCardState();
+}
+
+class _FeedbackCardState extends State<_FeedbackCard> {
+  final TextEditingController _commentController = TextEditingController();
+  int _rating = 5;
+  String? _selectedTargetId;
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    super.dispose();
+  }
+
+  List<_FeedbackTarget> get _targets {
+    if (widget.activity.isOwnedByCurrentUser) {
+      return widget.activity.participants
+          .where((participant) => participant.id.isNotEmpty)
+          .map(
+            (participant) => _FeedbackTarget(
+              id: participant.id,
+              name: participant.displayName,
+              initials: participant.initials,
+              avatarUrl: participant.avatarUrl,
+            ),
+          )
+          .toList();
+    }
+
+    if (!widget.activity.isJoined || widget.activity.hostId.isEmpty) {
+      return const [];
+    }
+
+    return [
+      _FeedbackTarget(
+        id: widget.activity.hostId,
+        name: widget.activity.hostFullName,
+        initials: _initialsFor(widget.activity.hostFullName),
+        avatarUrl: widget.activity.hostAvatarUrl,
+      ),
+    ];
+  }
+
+  _FeedbackTarget? get _selectedTarget {
+    final targets = _targets;
+    if (targets.isEmpty) {
+      return null;
+    }
+    return targets.firstWhere(
+      (target) => target.id == _selectedTargetId,
+      orElse: () => targets.first,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.toch;
+    final targets = _targets;
+    final selectedTarget = _selectedTarget;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.card,
+        borderRadius: BorderRadius.circular(TochRadius.lg),
+        border: Border.all(color: colors.line),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(TochSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Feedback',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: colors.green700.withValues(alpha: .7),
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: TochSpacing.sm),
+            if (targets.isEmpty)
+              Text(
+                widget.activity.isOwnedByCurrentUser
+                    ? 'Er zijn nog geen deelnemers om feedback te geven.'
+                    : 'Je kunt feedback geven na deelname aan deze activiteit.',
+                style: Theme.of(context).textTheme.bodyMedium,
+              )
+            else ...[
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final target in targets)
+                    ChoiceChip(
+                      selected:
+                          target.id == (selectedTarget?.id ?? targets.first.id),
+                      onSelected: (_) {
+                        setState(() {
+                          _selectedTargetId = target.id;
+                        });
+                      },
+                      avatar: CircleAvatar(
+                        backgroundColor: colors.green100,
+                        foregroundColor: colors.green,
+                        backgroundImage: target.avatarUrl == null
+                            ? null
+                            : NetworkImage(target.avatarUrl!),
+                        child: target.avatarUrl == null
+                            ? Text(
+                                target.initials,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              )
+                            : null,
+                      ),
+                      label: Text(target.name),
+                    ),
+                ],
+              ),
+              const SizedBox(height: TochSpacing.sm),
+              Row(
+                children: [
+                  for (var star = 1; star <= 5; star++)
+                    IconButton(
+                      onPressed: () {
+                        setState(() {
+                          _rating = star;
+                        });
+                      },
+                      icon: Icon(
+                        star <= _rating
+                            ? Icons.star_rounded
+                            : Icons.star_border_rounded,
+                        color: colors.orange,
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: TochSpacing.xs),
+              TextField(
+                controller: _commentController,
+                maxLength: 500,
+                minLines: 2,
+                maxLines: 4,
+                decoration: InputDecoration(
+                  hintText: 'Korte feedback',
+                  filled: true,
+                  fillColor: colors.cream,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(TochRadius.md),
+                    borderSide: BorderSide(color: colors.line),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(TochRadius.md),
+                    borderSide: BorderSide(color: colors.line),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(TochRadius.md),
+                    borderSide: BorderSide(color: colors.green, width: 1.4),
+                  ),
+                ),
+              ),
+              const SizedBox(height: TochSpacing.sm),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: widget.isSubmitting || selectedTarget == null
+                      ? null
+                      : () => widget.onSubmit(
+                          target: selectedTarget,
+                          rating: _rating,
+                          comment: _commentController.text.trim(),
+                        ),
+                  icon: widget.isSubmitting
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.rate_review_rounded),
+                  label: const Text('Feedback opslaan'),
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );
@@ -236,7 +827,10 @@ class _DescriptionCard extends StatelessWidget {
 }
 
 class _SafetyCard extends StatelessWidget {
-  const _SafetyCard();
+  const _SafetyCard({required this.canReport, required this.onReportPressed});
+
+  final bool canReport;
+  final VoidCallback onReportPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -253,11 +847,11 @@ class _SafetyCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.verified_user_rounded, color: colors.green, size: 22),
+            Icon(Icons.info_rounded, color: colors.green, size: 22),
             const SizedBox(width: TochSpacing.sm),
             Expanded(
               child: Text(
-                'Geverifieerde host · deel altijd je locatie met iemand die je vertrouwt.',
+                'Spreek bij voorkeur af op een openbare plek. Deel je afspraak met iemand die je kent.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: colors.green,
                   fontWeight: FontWeight.w800,
@@ -265,9 +859,44 @@ class _SafetyCard extends StatelessWidget {
                 ),
               ),
             ),
+            if (canReport) ...[
+              const SizedBox(width: TochSpacing.xs),
+              IconButton(
+                onPressed: onReportPressed,
+                tooltip: 'Rapporteer activiteit',
+                icon: Icon(Icons.flag_rounded, color: colors.green),
+              ),
+            ],
           ],
         ),
       ),
     );
   }
+}
+
+Future<SafetyReportDraft?> _askForSafetyDetails(
+  BuildContext context, {
+  required String title,
+  required String body,
+  required String confirmLabel,
+}) async {
+  return showSafetyReportDialog(
+    context,
+    title: title,
+    body: body,
+    confirmLabel: confirmLabel,
+  );
+}
+
+String _initialsFor(String name) {
+  final parts = name.trim().split(RegExp(r'\s+'));
+  if (parts.isEmpty || parts.first.isEmpty) {
+    return '';
+  }
+  if (parts.length == 1) {
+    return parts.first
+        .substring(0, parts.first.length.clamp(0, 2))
+        .toUpperCase();
+  }
+  return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
 }

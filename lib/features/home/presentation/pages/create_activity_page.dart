@@ -4,14 +4,15 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/toch_theme.dart';
 import '../../../../core/di/injection_container.dart';
+import '../../../../core/widgets/always_24_hour_media_query.dart';
 import '../../domain/entities/home_category.dart';
+import '../../domain/entities/home_feed_filters.dart';
 import '../../domain/entities/home_location.dart';
 import '../../domain/usecases/create_activity.dart';
 import '../bloc/create_activity_bloc.dart';
 import '../widgets/create_activity_action_bar.dart';
 import '../widgets/create_activity_capacity_stepper.dart';
 import '../widgets/create_activity_category_picker.dart';
-import '../widgets/create_activity_choice_chips.dart';
 
 class CreateActivityPage extends StatelessWidget {
   const CreateActivityPage({
@@ -109,9 +110,12 @@ class _CreateActivityView extends StatelessWidget {
       listener: (context, state) {
         final status = state.submissionStatus;
         if (status == CreateActivitySubmissionStatus.invalid) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Vul titel en locatie nog even in.')),
-          );
+          final message = state.hasFutureStart
+              ? 'Vul titel en locatie nog even in.'
+              : 'Kies een datum en tijd in de toekomst.';
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(message)));
         }
         if (status == CreateActivitySubmissionStatus.success) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -153,6 +157,10 @@ class _CreateActivityView extends StatelessWidget {
                           _CreateActivityDateTimeSection(),
                           SizedBox(height: TochSpacing.lg),
                           CreateActivityCapacityStepper(),
+                          SizedBox(height: TochSpacing.lg),
+                          _CreateActivityAccessSection(),
+                          SizedBox(height: TochSpacing.lg),
+                          _CreateActivityAudienceSection(),
                           SizedBox(height: TochSpacing.lg),
                           _CreateActivityNotesField(),
                         ],
@@ -347,30 +355,230 @@ class _CreateActivityDateTimeSection extends StatelessWidget {
           children: [
             const _SectionLabel('Wanneer'),
             const SizedBox(height: TochSpacing.xs),
-            CreateActivityChoiceChips(
-              options: const ['Vandaag', 'Morgen', 'Weekend'],
-              selectedOption: state.day,
-              expand: true,
-              onSelected: (day) {
-                context.read<CreateActivityBloc>().add(
-                  CreateActivityDaySelected(day),
-                );
-              },
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final shortcut in const ['Vandaag', 'Morgen', 'Weekend'])
+                  _DateShortcutChip(
+                    label: shortcut,
+                    selected: _isSameDate(
+                      state.selectedDate,
+                      _dateForShortcut(shortcut),
+                    ),
+                    onSelected: () {
+                      context.read<CreateActivityBloc>().add(
+                        CreateActivityDateShortcutSelected(shortcut),
+                      );
+                    },
+                  ),
+              ],
             ),
-            const SizedBox(height: 9),
-            CreateActivityChoiceChips(
-              options: const ['09:00', '12:00', '17:00', '19:00', '20:30'],
-              selectedOption: state.time,
-              icon: Icons.schedule_rounded,
-              onSelected: (time) {
-                context.read<CreateActivityBloc>().add(
-                  CreateActivityTimeSelected(time),
-                );
-              },
+            const SizedBox(height: TochSpacing.sm),
+            Row(
+              children: [
+                Expanded(
+                  child: _DateTimePickerTile(
+                    label: 'Datum',
+                    value: state.dateLabel,
+                    icon: Icons.calendar_month_rounded,
+                    onTap: () => _pickDate(context, state),
+                  ),
+                ),
+                const SizedBox(width: TochSpacing.sm),
+                Expanded(
+                  child: _DateTimePickerTile(
+                    label: 'Tijd',
+                    value: state.timeLabel,
+                    icon: Icons.schedule_rounded,
+                    onTap: () => _pickTime(context, state),
+                  ),
+                ),
+              ],
             ),
+            if (!state.hasFutureStart) ...[
+              const SizedBox(height: TochSpacing.xs),
+              Row(
+                children: [
+                  Icon(
+                    Icons.info_rounded,
+                    color: context.toch.orange,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Kies een moment dat nog moet komen.',
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: context.toch.orange,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
         );
       },
+    );
+  }
+
+  Future<void> _pickDate(
+    BuildContext context,
+    CreateActivityState state,
+  ) async {
+    final today = _today();
+    final selectedDate = state.selectedDate.isBefore(today)
+        ? today
+        : state.selectedDate;
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: selectedDate,
+      firstDate: today,
+      lastDate: today.add(const Duration(days: 365)),
+      helpText: 'Kies een datum',
+      cancelText: 'Annuleer',
+      confirmText: 'Kies',
+    );
+    if (!context.mounted || pickedDate == null) {
+      return;
+    }
+    context.read<CreateActivityBloc>().add(
+      CreateActivityDateSelected(pickedDate),
+    );
+  }
+
+  Future<void> _pickTime(
+    BuildContext context,
+    CreateActivityState state,
+  ) async {
+    final pickedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(
+        hour: state.selectedHour,
+        minute: state.selectedMinute,
+      ),
+      initialEntryMode: TimePickerEntryMode.input,
+      helpText: 'Kies een tijd',
+      cancelText: 'Annuleer',
+      confirmText: 'Kies',
+      hourLabelText: 'Uur',
+      minuteLabelText: 'Minuut',
+      builder: (context, child) {
+        return Always24HourMediaQuery(child: child ?? const SizedBox.shrink());
+      },
+    );
+    if (!context.mounted || pickedTime == null) {
+      return;
+    }
+    context.read<CreateActivityBloc>().add(
+      CreateActivityTimeSelected(
+        hour: pickedTime.hour,
+        minute: pickedTime.minute,
+      ),
+    );
+  }
+}
+
+class _DateShortcutChip extends StatelessWidget {
+  const _DateShortcutChip({
+    required this.label,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.toch;
+
+    return ChoiceChip(
+      label: Text(label),
+      selected: selected,
+      onSelected: (_) => onSelected(),
+      showCheckmark: false,
+      labelStyle: Theme.of(context).textTheme.labelMedium?.copyWith(
+        color: selected ? Colors.white : colors.ink,
+        fontWeight: FontWeight.w900,
+      ),
+      backgroundColor: colors.card,
+      selectedColor: colors.green,
+      side: BorderSide(color: selected ? colors.green : colors.line),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(TochRadius.pill),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+    );
+  }
+}
+
+class _DateTimePickerTile extends StatelessWidget {
+  const _DateTimePickerTile({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.toch;
+
+    return Material(
+      color: colors.card,
+      borderRadius: BorderRadius.circular(TochRadius.lg),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(TochRadius.lg),
+        child: Ink(
+          padding: const EdgeInsets.fromLTRB(13, 12, 13, 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(TochRadius.lg),
+            border: Border.all(color: colors.line),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, color: colors.green, size: 22),
+              const SizedBox(width: 9),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: colors.green700.withValues(alpha: .62),
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      value,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: colors.ink,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -389,6 +597,289 @@ class _CreateActivityNotesField extends StatelessWidget {
       onChanged: (value) {
         context.read<CreateActivityBloc>().add(
           CreateActivityNotesChanged(value),
+        );
+      },
+    );
+  }
+}
+
+class _CreateActivityAudienceSection extends StatelessWidget {
+  const _CreateActivityAudienceSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<CreateActivityBloc, CreateActivityState>(
+      buildWhen: (previous, current) =>
+          previous.targetAgeBands != current.targetAgeBands ||
+          previous.targetGenders != current.targetGenders,
+      builder: (context, state) {
+        final colors = context.toch;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const _SectionLabel('Doelgroep'),
+            const SizedBox(height: TochSpacing.xs),
+            Text(
+              'Laat leeg als iedereen welkom is. Dit wordt alleen gebruikt om deelname te matchen met expliciete event-doelgroepen.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: colors.green700.withValues(alpha: .72),
+                fontWeight: FontWeight.w700,
+                height: 1.32,
+              ),
+            ),
+            const SizedBox(height: TochSpacing.sm),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final ageBand in tochAgeBands)
+                  _AudienceChip(
+                    label: ageBandLabel(ageBand),
+                    selected: state.targetAgeBands.contains(ageBand),
+                    onSelected: () {
+                      context.read<CreateActivityBloc>().add(
+                        CreateActivityTargetAgeBandToggled(ageBand),
+                      );
+                    },
+                  ),
+              ],
+            ),
+            const SizedBox(height: TochSpacing.sm),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final gender in tochGenderValues)
+                  _AudienceChip(
+                    label: genderLabel(gender),
+                    selected: state.targetGenders.contains(gender),
+                    onSelected: () {
+                      context.read<CreateActivityBloc>().add(
+                        CreateActivityTargetGenderToggled(gender),
+                      );
+                    },
+                  ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _AudienceChip extends StatelessWidget {
+  const _AudienceChip({
+    required this.label,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.toch;
+
+    return FilterChip(
+      selected: selected,
+      label: Text(label),
+      selectedColor: colors.green,
+      backgroundColor: colors.card,
+      side: BorderSide(color: selected ? colors.green : colors.line),
+      labelStyle: Theme.of(context).textTheme.labelMedium?.copyWith(
+        color: selected ? colors.cream : colors.ink,
+        fontWeight: FontWeight.w900,
+      ),
+      onSelected: (_) => onSelected(),
+    );
+  }
+}
+
+class _CreateActivityAccessSection extends StatelessWidget {
+  const _CreateActivityAccessSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<CreateActivityBloc, CreateActivityState>(
+      buildWhen: (previous, current) =>
+          previous.groupType != current.groupType ||
+          previous.minReputationLevel != current.minReputationLevel ||
+          previous.isPrivateLocation != current.isPrivateLocation,
+      builder: (context, state) {
+        final colors = context.toch;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const _SectionLabel('Toelating'),
+            const SizedBox(height: TochSpacing.xs),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: const [
+                _AccessChoiceChip(
+                  label: 'Open groep',
+                  value: 'open',
+                  icon: Icons.group_add_rounded,
+                ),
+                _AccessChoiceChip(
+                  label: 'Goedkeuring',
+                  value: 'approval',
+                  icon: Icons.fact_check_rounded,
+                ),
+              ],
+            ),
+            const SizedBox(height: TochSpacing.md),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: colors.card,
+                borderRadius: BorderRadius.circular(TochRadius.lg),
+                border: Border.all(color: colors.line),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: TochSpacing.md,
+                  vertical: TochSpacing.sm,
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: state.minReputationLevel,
+                    isExpanded: true,
+                    icon: const Icon(Icons.expand_more_rounded),
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'new_member',
+                        child: Text('Minimum: Nieuw lid'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'active_member',
+                        child: Text('Minimum: Actief lid'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'known_member',
+                        child: Text('Minimum: Bekend lid'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'top_participant',
+                        child: Text('Minimum: Top deelnemer'),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      if (value == null) {
+                        return;
+                      }
+                      context.read<CreateActivityBloc>().add(
+                        CreateActivityMinReputationSelected(value),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: TochSpacing.sm),
+            SwitchListTile(
+              value: state.isPrivateLocation,
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Prive- of thuislocatie'),
+              subtitle: const Text(
+                'Kies dit alleen als de plek niet openbaar toegankelijk is.',
+              ),
+              activeThumbColor: colors.green,
+              onChanged: (value) {
+                context.read<CreateActivityBloc>().add(
+                  CreateActivityPrivateLocationToggled(value),
+                );
+              },
+            ),
+            if (state.isPrivateLocation) ...[
+              const SizedBox(height: TochSpacing.xs),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: colors.orangeSoft,
+                  borderRadius: BorderRadius.circular(TochRadius.md),
+                  border: Border.all(
+                    color: colors.orange.withValues(alpha: .2),
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(TochSpacing.sm),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.info_rounded, color: colors.orange, size: 18),
+                      const SizedBox(width: TochSpacing.xs),
+                      Expanded(
+                        child: Text(
+                          'Voor eerste ontmoetingen werkt een openbare plek meestal beter.',
+                          style: Theme.of(context).textTheme.labelMedium
+                              ?.copyWith(
+                                color: colors.ink,
+                                fontWeight: FontWeight.w800,
+                              ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _AccessChoiceChip extends StatelessWidget {
+  const _AccessChoiceChip({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<CreateActivityBloc, CreateActivityState>(
+      buildWhen: (previous, current) => previous.groupType != current.groupType,
+      builder: (context, state) {
+        final colors = context.toch;
+        final selected = state.groupType == value;
+
+        return ChoiceChip(
+          label: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 17),
+              const SizedBox(width: 6),
+              Text(label),
+            ],
+          ),
+          selected: selected,
+          onSelected: (_) {
+            context.read<CreateActivityBloc>().add(
+              CreateActivityGroupTypeSelected(value),
+            );
+          },
+          showCheckmark: false,
+          labelStyle: Theme.of(context).textTheme.labelMedium?.copyWith(
+            color: selected ? Colors.white : colors.ink,
+            fontWeight: FontWeight.w900,
+          ),
+          backgroundColor: colors.card,
+          selectedColor: colors.green,
+          side: BorderSide(color: selected ? colors.green : colors.line),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(TochRadius.pill),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
         );
       },
     );
@@ -454,6 +945,32 @@ class _LabeledField extends StatelessWidget {
       ],
     );
   }
+}
+
+DateTime _today() {
+  final now = DateTime.now();
+  return DateTime(now.year, now.month, now.day);
+}
+
+DateTime _dateForShortcut(String shortcut) {
+  final today = _today();
+  return switch (shortcut) {
+    'Morgen' => today.add(const Duration(days: 1)),
+    'Weekend' => _nextSaturdayOrToday(today),
+    _ => today,
+  };
+}
+
+DateTime _nextSaturdayOrToday(DateTime today) {
+  const saturday = DateTime.saturday;
+  final daysUntilSaturday = (saturday - today.weekday) % DateTime.daysPerWeek;
+  return today.add(Duration(days: daysUntilSaturday));
+}
+
+bool _isSameDate(DateTime left, DateTime right) {
+  return left.year == right.year &&
+      left.month == right.month &&
+      left.day == right.day;
 }
 
 class _SectionLabel extends StatelessWidget {

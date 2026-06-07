@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../core/constants/app_constants.dart';
 import '../core/di/injection_container.dart';
 import '../features/auth/presentation/bloc/auth_bloc.dart';
+import '../features/home/presentation/widgets/activity_chat_notice_host.dart';
 import 'router/app_router.dart';
 import 'theme/app_theme.dart';
 
@@ -36,6 +37,9 @@ class _AppViewState extends State<_AppView> {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       routerConfig: _router,
+      builder: (context, child) {
+        return ActivityChatNoticeHost(child: child ?? const SizedBox.shrink());
+      },
     );
   }
 }

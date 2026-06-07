@@ -207,6 +207,7 @@ class _StatusChip extends StatelessWidget {
       'draft' => 'Concept',
       'cancelled' => 'Geannuleerd',
       'archived' => 'Archief',
+      'completed' => 'Afgerond',
       _ => 'Live',
     };
 

@@ -58,12 +58,18 @@ class ActivityDetailHostCard extends StatelessWidget {
                               style: Theme.of(context).textTheme.titleMedium,
                             ),
                           ),
-                          const SizedBox(width: 5),
-                          Icon(
-                            Icons.verified_rounded,
-                            color: const Color(0xFF2E7E5C),
-                            size: 17,
-                          ),
+                          if (activity.hostIdentityVerified) ...[
+                            const SizedBox(width: 5),
+                            Tooltip(
+                              message:
+                                  'Deze gebruiker heeft zijn identiteit geverifieerd.',
+                              child: Icon(
+                                Icons.verified_rounded,
+                                color: const Color(0xFF2E7E5C),
+                                size: 17,
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                       const SizedBox(height: 2),

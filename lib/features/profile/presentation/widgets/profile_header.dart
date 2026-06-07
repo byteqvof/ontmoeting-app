@@ -32,14 +32,17 @@ class ProfileHeader extends StatelessWidget {
                 ),
               ),
             ),
-            if (profile.isVerified)
+            if (profile.trust.identityVerified)
               Positioned(
                 right: -2,
                 bottom: 2,
-                child: Icon(
-                  Icons.verified_rounded,
-                  color: const Color(0xFF2E7E5C),
-                  size: 28,
+                child: Tooltip(
+                  message: 'Deze gebruiker heeft zijn identiteit geverifieerd.',
+                  child: Icon(
+                    Icons.verified_rounded,
+                    color: const Color(0xFF2E7E5C),
+                    size: 28,
+                  ),
                 ),
               ),
           ],
@@ -55,14 +58,83 @@ class ProfileHeader extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          '${profile.cityName} · lid sinds ${_memberSinceLabel(profile.memberSince)}',
+          '${profile.cityName} - lid sinds ${_memberSinceLabel(profile.memberSince)}',
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.labelMedium?.copyWith(
             color: colors.green700.withValues(alpha: .7),
             fontWeight: FontWeight.w800,
           ),
         ),
+        const SizedBox(height: TochSpacing.xs),
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: TochSpacing.xs,
+          runSpacing: TochSpacing.xs,
+          children: [
+            _StatusPill(
+              label: profile.trust.phoneStatusLabel,
+              icon: Icons.phone_android_rounded,
+              isConfirmed: profile.trust.phoneVerified,
+            ),
+            _StatusPill(
+              label: profile.trust.reputationLabel,
+              icon: Icons.trending_up_rounded,
+              isConfirmed: profile.trust.reputationScore > 0,
+            ),
+            if (profile.trust.identityVerified)
+              const _StatusPill(
+                label: 'Identiteit bevestigd',
+                icon: Icons.badge_outlined,
+                isConfirmed: true,
+              ),
+          ],
+        ),
       ],
+    );
+  }
+}
+
+class _StatusPill extends StatelessWidget {
+  const _StatusPill({
+    required this.label,
+    required this.icon,
+    required this.isConfirmed,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool isConfirmed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.toch;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: isConfirmed ? colors.green100 : colors.orangeSoft,
+        borderRadius: BorderRadius.circular(TochRadius.pill),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 15,
+              color: isConfirmed ? colors.green : colors.orange,
+            ),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: colors.ink,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

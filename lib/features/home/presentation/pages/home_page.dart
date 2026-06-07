@@ -9,9 +9,9 @@ import '../../domain/entities/home_activity.dart';
 import '../bloc/home_bloc.dart';
 import '../widgets/home_activity_card.dart';
 import '../widgets/home_bottom_nav.dart';
-import '../widgets/home_category_strip.dart';
 import '../widgets/home_distance_filter.dart';
 import '../widgets/home_feed_summary.dart';
+import '../widgets/home_filter_sheet.dart';
 import '../widgets/home_header.dart';
 import '../widgets/home_map_preview.dart';
 import '../widgets/home_time_filters.dart';
@@ -48,14 +48,38 @@ class _HomeView extends StatelessWidget {
               final currentError = current is HomeLoaded
                   ? current.participationError
                   : null;
-              return currentError != null && currentError != previousError;
+              final previousConfirmation = previous is HomeLoaded
+                  ? previous.joinedActivityConfirmation
+                  : null;
+              final currentConfirmation = current is HomeLoaded
+                  ? current.joinedActivityConfirmation
+                  : null;
+              return currentError != null && currentError != previousError ||
+                  currentConfirmation != null &&
+                      currentConfirmation != previousConfirmation;
             },
             listener: (context, state) {
-              if (state is! HomeLoaded || state.participationError == null) {
+              if (state is! HomeLoaded) {
                 return;
               }
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(state.participationError!)),
+              final error = state.participationError;
+              if (error != null) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text(error)));
+                return;
+              }
+
+              final confirmation = state.joinedActivityConfirmation;
+              if (confirmation == null) {
+                return;
+              }
+              context.read<HomeBloc>().add(
+                const HomeParticipationConfirmationConsumed(),
+              );
+              context.push(
+                AppRoutes.activityJoinConfirmationPath(confirmation.id),
+                extra: confirmation,
               );
             },
             child: BlocBuilder<HomeBloc, HomeState>(
@@ -147,16 +171,25 @@ class _HomeFeed extends StatelessWidget {
                     );
                   },
                 ),
-                HomeCategoryStrip(
-                  categories: state.feed.categories,
-                  selectedCategoryId: state.selectedCategoryId,
-                  onSelected: (categoryId) {
-                    context.read<HomeBloc>().add(
-                      HomeCategorySelected(categoryId),
+                HomeFilterButton(
+                  hasActiveFilters: state.filters.hasAdvancedFilters,
+                  onPressed: () async {
+                    final filters = await showHomeFilterSheet(
+                      context: context,
+                      filters: state.filters,
+                      categories: state.feed.categories,
                     );
+                    if (!context.mounted || filters == null) {
+                      return;
+                    }
+                    context.read<HomeBloc>().add(HomeFiltersApplied(filters));
                   },
                 ),
-                HomeMapPreview(activityCount: activities.length),
+                HomeMapPreview(
+                  location: state.location,
+                  activities: activities,
+                  filters: state.filters,
+                ),
                 HomeFeedSummary(activityCount: activities.length),
                 if (activities.isEmpty)
                   const _EmptyActivities()

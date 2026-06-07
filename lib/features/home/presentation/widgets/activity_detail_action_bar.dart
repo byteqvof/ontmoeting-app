@@ -7,21 +7,33 @@ class ActivityDetailActionBar extends StatelessWidget {
   const ActivityDetailActionBar({
     required this.activity,
     this.onParticipationPressed,
+    this.onCompletePressed,
     this.onChatPressed,
     this.isParticipationPending = false,
+    this.isCompletionPending = false,
     super.key,
   });
 
   final HomeActivity activity;
   final VoidCallback? onParticipationPressed;
+  final VoidCallback? onCompletePressed;
   final VoidCallback? onChatPressed;
   final bool isParticipationPending;
+  final bool isCompletionPending;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.toch;
     final isOwnActivity = activity.isOwnedByCurrentUser;
     final isFull = !activity.isJoined && activity.availableSpots <= 0;
+    final isPrimaryPending = isOwnActivity
+        ? isCompletionPending
+        : isParticipationPending;
+    final isPrimaryDisabled =
+        activity.isCompleted ||
+        activity.isParticipationPending ||
+        isPrimaryPending ||
+        (!isOwnActivity && isFull);
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -36,10 +48,12 @@ class ActivityDetailActionBar extends StatelessWidget {
             children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: isOwnActivity || isFull || isParticipationPending
+                  onPressed: isPrimaryDisabled
                       ? null
+                      : isOwnActivity
+                      ? onCompletePressed
                       : onParticipationPressed,
-                  icon: isParticipationPending
+                  icon: isPrimaryPending
                       ? SizedBox.square(
                           dimension: 18,
                           child: CircularProgressIndicator(
@@ -47,10 +61,10 @@ class ActivityDetailActionBar extends StatelessWidget {
                             color: colors.green,
                           ),
                         )
-                      : Icon(_joinIconFor(activity)),
-                  label: Text(_joinLabelFor(activity)),
+                      : Icon(_primaryIconFor(activity)),
+                  label: Text(_primaryLabelFor(activity)),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: isOwnActivity || isFull
+                    foregroundColor: activity.isCompleted || isFull
                         ? colors.green700.withValues(alpha: .55)
                         : colors.green,
                     side: BorderSide(
@@ -90,9 +104,15 @@ class ActivityDetailActionBar extends StatelessWidget {
   }
 }
 
-IconData _joinIconFor(HomeActivity activity) {
+IconData _primaryIconFor(HomeActivity activity) {
+  if (activity.isCompleted) {
+    return Icons.verified_rounded;
+  }
   if (activity.isOwnedByCurrentUser) {
     return Icons.event_available_rounded;
+  }
+  if (activity.isParticipationPending) {
+    return Icons.hourglass_top_rounded;
   }
   if (!activity.isJoined && activity.availableSpots <= 0) {
     return Icons.block_rounded;
@@ -100,9 +120,15 @@ IconData _joinIconFor(HomeActivity activity) {
   return activity.isJoined ? Icons.close_rounded : Icons.add_rounded;
 }
 
-String _joinLabelFor(HomeActivity activity) {
+String _primaryLabelFor(HomeActivity activity) {
+  if (activity.isCompleted) {
+    return 'Afgerond';
+  }
   if (activity.isOwnedByCurrentUser) {
-    return 'Jouw activiteit';
+    return 'Afronden';
+  }
+  if (activity.isParticipationPending) {
+    return 'Wacht op akkoord';
   }
   if (!activity.isJoined && activity.availableSpots <= 0) {
     return 'Vol';

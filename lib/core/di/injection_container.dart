@@ -16,16 +16,21 @@ import '../../features/home/data/datasources/home_location_data_source.dart';
 import '../../features/home/data/datasources/home_remote_data_source.dart';
 import '../../features/home/data/repositories/home_repository_impl.dart';
 import '../../features/home/domain/repositories/home_repository.dart';
+import '../../features/home/domain/usecases/complete_activity.dart';
 import '../../features/home/domain/usecases/create_activity.dart';
 import '../../features/home/domain/usecases/get_activity_agenda.dart';
 import '../../features/home/domain/usecases/get_activity_chat_messages.dart';
+import '../../features/home/domain/usecases/get_activity_detail.dart';
 import '../../features/home/domain/usecases/get_current_city_name.dart';
 import '../../features/home/domain/usecases/get_current_location.dart';
 import '../../features/home/domain/usecases/get_home_feed.dart';
 import '../../features/home/domain/usecases/send_activity_chat_message.dart';
 import '../../features/home/domain/usecases/set_activity_participation.dart';
+import '../../features/home/domain/usecases/submit_activity_feedback.dart';
 import '../../features/home/domain/usecases/watch_current_location.dart';
 import '../../features/home/domain/usecases/watch_current_city_name.dart';
+import '../../features/home/presentation/controllers/activity_chat_notice_controller.dart';
+import '../../features/home/presentation/controllers/activity_chat_realtime_controller.dart';
 import '../../features/home/presentation/bloc/home_bloc.dart';
 import '../../features/profile/data/datasources/profile_data_source.dart';
 import '../../features/profile/data/datasources/profile_remote_data_source.dart';
@@ -39,6 +44,10 @@ import '../../features/profile/domain/usecases/is_profile_onboarding_required.da
 import '../../features/profile/domain/usecases/update_profile.dart';
 import '../../features/profile/presentation/bloc/profile_bloc.dart';
 import '../../features/profile/presentation/bloc/profile_setup_bloc.dart';
+import '../services/account_trust_service.dart';
+import '../services/activity_attendance_service.dart';
+import '../services/analytics_service.dart';
+import '../services/safety_service.dart';
 import '../utils/app_preferences.dart';
 
 final sl = GetIt.instance;
@@ -50,6 +59,10 @@ Future<void> configureDependencies() async {
     ..registerLazySingleton<SharedPreferences>(() => preferences)
     ..registerLazySingleton(() => AppPreferences(sl()))
     ..registerLazySingleton<SupabaseClient>(() => Supabase.instance.client)
+    ..registerLazySingleton<AnalyticsService>(() => AnalyticsService.instance)
+    ..registerLazySingleton(() => AccountTrustService(sl(), sl()))
+    ..registerLazySingleton(() => ActivityAttendanceService(sl()))
+    ..registerLazySingleton(() => SafetyService(sl()))
     ..registerLazySingleton<AuthRemoteDataSource>(
       () => AuthRemoteDataSourceImpl(sl()),
     )
@@ -68,16 +81,21 @@ Future<void> configureDependencies() async {
       () => const HomeLocationDataSourceImpl(),
     )
     ..registerLazySingleton<HomeRepository>(
-      () => HomeRepositoryImpl(sl(), sl()),
+      () => HomeRepositoryImpl(sl(), sl(), accountTrustService: sl()),
     )
+    ..registerLazySingleton(() => ActivityChatRealtimeController(sl()))
+    ..registerLazySingleton(() => ActivityChatNoticeController(sl(), sl()))
     ..registerLazySingleton(() => CreateActivity(sl()))
+    ..registerLazySingleton(() => CompleteActivity(sl()))
     ..registerLazySingleton(() => GetActivityAgenda(sl()))
     ..registerLazySingleton(() => GetActivityChatMessages(sl()))
+    ..registerLazySingleton(() => GetActivityDetail(sl()))
     ..registerLazySingleton(() => GetHomeFeed(sl()))
     ..registerLazySingleton(() => GetCurrentCityName(sl()))
     ..registerLazySingleton(() => GetCurrentLocation(sl()))
     ..registerLazySingleton(() => SendActivityChatMessage(sl()))
     ..registerLazySingleton(() => SetActivityParticipation(sl()))
+    ..registerLazySingleton(() => SubmitActivityFeedback(sl()))
     ..registerLazySingleton(() => WatchCurrentCityName(sl()))
     ..registerLazySingleton(() => WatchCurrentLocation(sl()))
     ..registerFactory(() => HomeBloc(sl(), sl(), sl(), sl()))
@@ -85,7 +103,11 @@ Future<void> configureDependencies() async {
       () => ProfileRemoteDataSource(sl()),
     )
     ..registerLazySingleton<ProfileRepository>(
-      () => ProfileRepositoryImpl(sl()),
+      () => ProfileRepositoryImpl(
+        sl(),
+        accountTrustService: sl(),
+        currentUserIdProvider: () => sl<SupabaseClient>().auth.currentUser?.id,
+      ),
     )
     ..registerLazySingleton(() => CreateProfile(sl()))
     ..registerLazySingleton(() => GetAvailableProfileInterests(sl()))

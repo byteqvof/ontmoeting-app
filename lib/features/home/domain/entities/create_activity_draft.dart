@@ -12,6 +12,12 @@ class CreateActivityDraft extends Equatable {
     required this.countryCode,
     required this.startsAt,
     required this.maxParticipants,
+    this.groupType = 'open',
+    this.minReputationLevel = 'new_member',
+    this.requiresIdentityVerified = false,
+    this.isPrivateLocation = false,
+    this.targetAgeBands = const [],
+    this.targetGenders = const [],
   });
 
   final String categoryId;
@@ -24,6 +30,12 @@ class CreateActivityDraft extends Equatable {
   final String countryCode;
   final DateTime startsAt;
   final int maxParticipants;
+  final String groupType;
+  final String minReputationLevel;
+  final bool requiresIdentityVerified;
+  final bool isPrivateLocation;
+  final List<String> targetAgeBands;
+  final List<String> targetGenders;
 
   @override
   List<Object?> get props => [
@@ -37,5 +49,11 @@ class CreateActivityDraft extends Equatable {
     countryCode,
     startsAt,
     maxParticipants,
+    groupType,
+    minReputationLevel,
+    requiresIdentityVerified,
+    isPrivateLocation,
+    targetAgeBands,
+    targetGenders,
   ];
 }

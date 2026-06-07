@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -6,8 +8,11 @@ import '../../../../app/theme/toch_theme.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../../../core/usecases/usecase.dart';
 import '../../domain/entities/activity_agenda.dart';
+import '../../domain/entities/activity_chat_notice.dart';
 import '../../domain/entities/home_activity.dart';
 import '../../domain/usecases/get_activity_agenda.dart';
+import '../controllers/activity_chat_notice_controller.dart';
+import '../widgets/home_bottom_nav.dart';
 
 class ActivityAgendaPage extends StatefulWidget {
   const ActivityAgendaPage({super.key});
@@ -76,7 +81,6 @@ class _ActivityAgendaPageState extends State<ActivityAgendaPage> {
                 _PageHeader(
                   title: 'Agenda',
                   icon: Icons.calendar_month_rounded,
-                  onBackPressed: () => context.pop(),
                 ),
                 Expanded(
                   child: RefreshIndicator(
@@ -92,6 +96,7 @@ class _ActivityAgendaPageState extends State<ActivityAgendaPage> {
                     ),
                   ),
                 ),
+                const HomeBottomNav(selected: HomeNavDestination.agenda),
               ],
             ),
           ),
@@ -152,6 +157,13 @@ class _AgendaBody extends StatelessWidget {
           emptyMessage: 'Je bent nog nergens aangemeld.',
           onActivityPressed: onActivityPressed,
         ),
+        const SizedBox(height: TochSpacing.md),
+        _ActivitySection(
+          title: 'Afgerond',
+          activities: currentAgenda.completedActivities,
+          emptyMessage: 'Afgeronde activiteiten verschijnen hier.',
+          onActivityPressed: onActivityPressed,
+        ),
       ],
     );
   }
@@ -166,15 +178,27 @@ class ActivityMessagesPage extends StatefulWidget {
 
 class _ActivityMessagesPageState extends State<ActivityMessagesPage> {
   final GetActivityAgenda _getActivityAgenda = sl();
+  final ActivityChatNoticeController _chatNotices = sl();
 
   ActivityAgenda? _agenda;
+  StreamSubscription<ActivityChatNotice>? _noticeSubscription;
   bool _isLoading = true;
   String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
+    _chatNotices.clearUnread();
+    _noticeSubscription = _chatNotices.notices.listen((_) {
+      _chatNotices.clearUnread();
+    });
     _loadAgenda();
+  }
+
+  @override
+  void dispose() {
+    _noticeSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadAgenda() async {
@@ -224,7 +248,6 @@ class _ActivityMessagesPageState extends State<ActivityMessagesPage> {
                 _PageHeader(
                   title: 'Berichten',
                   icon: Icons.chat_bubble_rounded,
-                  onBackPressed: () => context.pop(),
                 ),
                 Expanded(
                   child: RefreshIndicator(
@@ -240,6 +263,7 @@ class _ActivityMessagesPageState extends State<ActivityMessagesPage> {
                     ),
                   ),
                 ),
+                const HomeBottomNav(selected: HomeNavDestination.messages),
               ],
             ),
           ),
@@ -462,15 +486,10 @@ class _ActivityTile extends StatelessWidget {
 }
 
 class _PageHeader extends StatelessWidget {
-  const _PageHeader({
-    required this.title,
-    required this.icon,
-    required this.onBackPressed,
-  });
+  const _PageHeader({required this.title, required this.icon});
 
   final String title;
   final IconData icon;
-  final VoidCallback onBackPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -480,15 +499,6 @@ class _PageHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(12, 10, 18, 14),
       child: Row(
         children: [
-          IconButton(
-            onPressed: onBackPressed,
-            style: IconButton.styleFrom(
-              backgroundColor: colors.card,
-              foregroundColor: colors.ink,
-            ),
-            icon: const Icon(Icons.arrow_back_rounded),
-          ),
-          const SizedBox(width: TochSpacing.xs),
           DecoratedBox(
             decoration: BoxDecoration(
               color: colors.green100,

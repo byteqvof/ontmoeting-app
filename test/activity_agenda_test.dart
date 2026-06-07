@@ -9,14 +9,16 @@ void main() {
     final hosted = _activity('activity-1', title: 'Vissen');
     final joined = _activity('activity-2', title: 'Koffie');
     final duplicate = _activity('activity-1', title: 'Vissen later');
+    final completed = _activity('activity-3', title: 'Wandelen');
 
     final agenda = ActivityAgenda(
       hostedActivities: [hosted],
       joinedActivities: [joined, duplicate],
+      completedActivities: [completed],
     );
 
-    expect(agenda.chatActivities, [hosted, joined]);
-    expect(agenda.totalCount, 3);
+    expect(agenda.chatActivities, [hosted, joined, completed]);
+    expect(agenda.totalCount, 4);
   });
 }
 

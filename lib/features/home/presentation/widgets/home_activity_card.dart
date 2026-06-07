@@ -161,12 +161,18 @@ class HomeActivityCard extends StatelessWidget {
                                       ),
                                 ),
                               ),
-                              const SizedBox(width: 4),
-                              Icon(
-                                Icons.verified_rounded,
-                                color: const Color(0xFF2E7E5C),
-                                size: 14,
-                              ),
+                              if (activity.hostIdentityVerified) ...[
+                                const SizedBox(width: 4),
+                                Tooltip(
+                                  message:
+                                      'Deze gebruiker heeft zijn identiteit geverifieerd.',
+                                  child: Icon(
+                                    Icons.verified_rounded,
+                                    color: const Color(0xFF2E7E5C),
+                                    size: 14,
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                           const SizedBox(height: 1),
@@ -216,7 +222,13 @@ class _JoinButton extends StatelessWidget {
     final isFull = !activity.isJoined && activity.availableSpots <= 0;
 
     return TextButton.icon(
-      onPressed: isOwnActivity || isFull || isPending ? null : onPressed,
+      onPressed:
+          isOwnActivity ||
+              isFull ||
+              isPending ||
+              activity.isParticipationPending
+          ? null
+          : onPressed,
       style: TextButton.styleFrom(
         foregroundColor: isOwnActivity || isFull
             ? colors.green700.withValues(alpha: .55)
@@ -247,6 +259,9 @@ IconData _joinIconFor(HomeActivity activity) {
   if (activity.isOwnedByCurrentUser) {
     return Icons.event_available_rounded;
   }
+  if (activity.isParticipationPending) {
+    return Icons.hourglass_top_rounded;
+  }
   if (!activity.isJoined && activity.availableSpots <= 0) {
     return Icons.block_rounded;
   }
@@ -256,6 +271,9 @@ IconData _joinIconFor(HomeActivity activity) {
 String _joinLabelFor(HomeActivity activity) {
   if (activity.isOwnedByCurrentUser) {
     return 'Jouw event';
+  }
+  if (activity.isParticipationPending) {
+    return 'In aanvraag';
   }
   if (!activity.isJoined && activity.availableSpots <= 0) {
     return 'Vol';

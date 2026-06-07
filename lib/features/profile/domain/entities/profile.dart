@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 
 import 'profile_interest.dart';
+import 'profile_trust.dart';
 
 class Profile extends Equatable {
   const Profile({
@@ -8,6 +9,8 @@ class Profile extends Equatable {
     required this.displayName,
     required this.initials,
     required this.cityName,
+    this.ageBand,
+    this.gender,
     required this.memberSince,
     required this.avatarUrl,
     required this.attendanceScore,
@@ -16,6 +19,7 @@ class Profile extends Equatable {
     required this.rating,
     required this.isVerified,
     required this.isPremium,
+    this.trust = ProfileTrust.empty,
     required this.interests,
   });
 
@@ -23,6 +27,8 @@ class Profile extends Equatable {
   final String displayName;
   final String initials;
   final String cityName;
+  final String? ageBand;
+  final String? gender;
   final DateTime memberSince;
   final String? avatarUrl;
   final int attendanceScore;
@@ -31,6 +37,7 @@ class Profile extends Equatable {
   final double rating;
   final bool isVerified;
   final bool isPremium;
+  final ProfileTrust trust;
   final List<ProfileInterest> interests;
 
   @override
@@ -39,6 +46,8 @@ class Profile extends Equatable {
     displayName,
     initials,
     cityName,
+    ageBand,
+    gender,
     memberSince,
     avatarUrl,
     attendanceScore,
@@ -47,6 +56,7 @@ class Profile extends Equatable {
     rating,
     isVerified,
     isPremium,
+    trust,
     interests,
   ];
 }
