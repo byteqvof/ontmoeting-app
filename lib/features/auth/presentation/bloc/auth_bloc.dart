@@ -9,9 +9,11 @@ import '../../../../core/services/analytics_service.dart';
 import '../../../../core/usecases/usecase.dart';
 import '../../../../core/utils/app_logger.dart';
 import '../../domain/entities/auth_oauth_provider.dart';
+import '../../domain/entities/auth_sign_up_result.dart';
 import '../../domain/entities/auth_user.dart';
 import '../../domain/usecases/auth_state_changes.dart';
 import '../../domain/usecases/get_current_user.dart';
+import '../../domain/usecases/resend_sign_up_verification_email.dart';
 import '../../domain/usecases/sign_in.dart';
 import '../../domain/usecases/sign_in_with_oauth.dart';
 import '../../domain/usecases/sign_out.dart';
@@ -25,6 +27,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     this._signIn,
     this._signInWithOAuth,
     this._signUp,
+    this._resendSignUpVerificationEmail,
     this._signOut,
     this._getCurrentUser,
     this._authStateChanges,
@@ -33,6 +36,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthSignInRequested>(_onSignInRequested);
     on<AuthOAuthSignInRequested>(_onOAuthSignInRequested);
     on<AuthSignUpRequested>(_onSignUpRequested);
+    on<AuthVerificationEmailResendRequested>(
+      _onVerificationEmailResendRequested,
+    );
     on<AuthSignOutRequested>(_onSignOutRequested);
     on<AuthUserChanged>(_onUserChanged);
     on<AuthFailureReceived>(_onFailureReceived);
@@ -41,6 +47,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final SignIn _signIn;
   final SignInWithOAuth _signInWithOAuth;
   final SignUp _signUp;
+  final ResendSignUpVerificationEmail _resendSignUpVerificationEmail;
   final SignOut _signOut;
   final GetCurrentUser _getCurrentUser;
   final AuthStateChanges _authStateChanges;
@@ -156,14 +163,82 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         );
         emit(AuthError(failure.message));
       },
-      (user) {
-        AppLogger.debug('AuthBloc sign-up authenticated ${user.id}');
-        AnalyticsService.instance.identify(user.id);
+      (signUpResult) {
+        switch (signUpResult) {
+          case AuthSignUpAuthenticated(:final user):
+            AppLogger.debug('AuthBloc sign-up authenticated ${user.id}');
+            AnalyticsService.instance.identify(user.id);
+            AnalyticsService.instance.track(
+              'registration_funnel',
+              properties: {'step': 'sign_up', 'status': 'success'},
+            );
+            emit(AuthAuthenticated(user));
+          case AuthSignUpEmailVerificationRequired(:final email):
+            AppLogger.debug('AuthBloc sign-up pending email verification');
+            AnalyticsService.instance.track(
+              'registration_funnel',
+              properties: {'step': 'email_verification', 'status': 'pending'},
+            );
+            emit(AuthEmailVerificationPending(email));
+        }
+      },
+    );
+  }
+
+  Future<void> _onVerificationEmailResendRequested(
+    AuthVerificationEmailResendRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    final current = state;
+    final email = event.email.trim();
+    if (email.isEmpty) {
+      return;
+    }
+
+    emit(
+      AuthEmailVerificationPending(
+        email,
+        isResending: true,
+        noticeMessage: current is AuthEmailVerificationPending
+            ? current.noticeMessage
+            : null,
+      ),
+    );
+
+    final result = await _resendSignUpVerificationEmail(
+      ResendSignUpVerificationEmailParams(email),
+    );
+
+    result.fold(
+      (failure) {
+        AppLogger.debug(
+          'AuthBloc verification email resend failed: ${failure.message}',
+        );
         AnalyticsService.instance.track(
           'registration_funnel',
-          properties: {'step': 'sign_up', 'status': 'success'},
+          properties: {
+            'step': 'email_verification_resend',
+            'status': 'failure',
+          },
         );
-        emit(AuthAuthenticated(user));
+        emit(
+          AuthEmailVerificationPending(email, errorMessage: failure.message),
+        );
+      },
+      (_) {
+        AnalyticsService.instance.track(
+          'registration_funnel',
+          properties: {
+            'step': 'email_verification_resend',
+            'status': 'success',
+          },
+        );
+        emit(
+          AuthEmailVerificationPending(
+            email,
+            noticeMessage: 'We hebben je een nieuwe verificatiemail gestuurd.',
+          ),
+        );
       },
     );
   }

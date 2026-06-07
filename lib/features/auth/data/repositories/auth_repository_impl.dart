@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 import '../../../../core/errors/failures.dart';
 import '../../../../core/utils/app_logger.dart';
 import '../../domain/entities/auth_oauth_provider.dart';
+import '../../domain/entities/auth_sign_up_result.dart';
 import '../../domain/entities/auth_user.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../datasources/auth_remote_data_source.dart';
@@ -14,7 +15,7 @@ class AuthRepositoryImpl implements AuthRepository {
   final AuthRemoteDataSource _remoteDataSource;
 
   @override
-  Future<Either<Failure, AuthUser>> signUp({
+  Future<Either<Failure, AuthSignUpResult>> signUp({
     required String email,
     required String password,
   }) async {
@@ -42,6 +43,16 @@ class AuthRepositoryImpl implements AuthRepository {
     return _guardNetworkCall(
       operation: 'signInWithOAuth:${provider.name}',
       () => _remoteDataSource.signInWithOAuth(provider),
+    );
+  }
+
+  @override
+  Future<Either<Failure, void>> resendSignUpVerificationEmail(
+    String email,
+  ) async {
+    return _guardNetworkCall(
+      operation: 'resendSignUpVerificationEmail',
+      () => _remoteDataSource.resendSignUpVerificationEmail(email),
     );
   }
 

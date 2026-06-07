@@ -28,6 +28,42 @@ final class AuthUnauthenticated extends AuthState {
   const AuthUnauthenticated();
 }
 
+final class AuthEmailVerificationPending extends AuthState {
+  const AuthEmailVerificationPending(
+    this.email, {
+    this.isResending = false,
+    this.noticeMessage,
+    this.errorMessage,
+  });
+
+  final String email;
+  final bool isResending;
+  final String? noticeMessage;
+  final String? errorMessage;
+
+  AuthEmailVerificationPending copyWith({
+    bool? isResending,
+    String? noticeMessage,
+    String? errorMessage,
+    bool clearNoticeMessage = false,
+    bool clearErrorMessage = false,
+  }) {
+    return AuthEmailVerificationPending(
+      email,
+      isResending: isResending ?? this.isResending,
+      noticeMessage: clearNoticeMessage
+          ? null
+          : noticeMessage ?? this.noticeMessage,
+      errorMessage: clearErrorMessage
+          ? null
+          : errorMessage ?? this.errorMessage,
+    );
+  }
+
+  @override
+  List<Object?> get props => [email, isResending, noticeMessage, errorMessage];
+}
+
 final class AuthError extends AuthState {
   const AuthError(this.message);
 

@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
+import '../../features/auth/presentation/pages/email_verification_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/home/domain/entities/home_activity.dart';
@@ -32,6 +33,8 @@ class AppRoutes {
 
   static const login = '/login';
   static const register = '/register';
+  static const emailVerification = '/auth/email-verification';
+  static const emailVerified = '/auth/email-verified';
   static const home = '/';
   static const createActivity = '/activities/create';
   static const activityDetail = '/activities/:activityId';
@@ -71,6 +74,13 @@ class AppRoutes {
       '/activities/$activityId/chat/members';
 
   static String profilePath(String profileId) => '/profile/$profileId';
+
+  static String emailVerificationPath(String email) {
+    if (email.trim().isEmpty) {
+      return emailVerification;
+    }
+    return '$emailVerification?email=${Uri.encodeQueryComponent(email)}';
+  }
 }
 
 Widget _protected(Widget child) {
@@ -90,15 +100,23 @@ GoRouter createRouter(AuthBloc authBloc) {
       final isAuthRoute =
           state.matchedLocation == AppRoutes.login ||
           state.matchedLocation == AppRoutes.register;
+      final isEmailVerificationRoute =
+          state.matchedLocation == AppRoutes.emailVerification ||
+          state.matchedLocation == AppRoutes.emailVerified;
       final isFtiRoute =
           state.matchedLocation == AppRoutes.splash ||
           state.matchedLocation == AppRoutes.onboarding;
 
-      if (authState is AuthAuthenticated && (isAuthRoute || isFtiRoute)) {
+      if (authState is AuthAuthenticated &&
+          (isAuthRoute || isFtiRoute) &&
+          !isEmailVerificationRoute) {
         return AppRoutes.home;
       }
 
-      if (authState is AuthUnauthenticated && !isAuthRoute && !isFtiRoute) {
+      if (authState is AuthUnauthenticated &&
+          !isAuthRoute &&
+          !isFtiRoute &&
+          !isEmailVerificationRoute) {
         return AppRoutes.splash;
       }
 
@@ -270,6 +288,23 @@ GoRouter createRouter(AuthBloc authBloc) {
       GoRoute(
         path: AppRoutes.register,
         builder: (context, state) => const RegisterPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.emailVerification,
+        builder: (context, state) {
+          return EmailVerificationPage(
+            mode: EmailVerificationPageMode.pending,
+            email: state.uri.queryParameters['email'],
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.emailVerified,
+        builder: (context, state) {
+          return const EmailVerificationPage(
+            mode: EmailVerificationPageMode.success,
+          );
+        },
       ),
     ],
   );

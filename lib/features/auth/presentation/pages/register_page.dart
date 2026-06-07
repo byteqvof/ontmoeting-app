@@ -59,6 +59,10 @@ class _RegisterPageState extends State<RegisterPage> {
   Widget build(BuildContext context) {
     return BlocConsumer<AuthBloc, AuthState>(
       listener: (context, state) {
+        if (state is AuthEmailVerificationPending) {
+          context.go(AppRoutes.emailVerificationPath(state.email));
+          return;
+        }
         if (state is AuthError) {
           ScaffoldMessenger.of(
             context,

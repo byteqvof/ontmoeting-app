@@ -29,6 +29,8 @@ const supabaseAnonKey = String.fromEnvironment(
   defaultValue: 'sb_publishable_q9O8Q1jmRZ-9PVGdj_9dYg_S24tTwwt',
 );
 const supabaseOAuthRedirectUrl = 'meetingsapp://auth-callback';
+const supabaseEmailVerificationRedirectUrl =
+    'meetingsapp://auth-callback/email-verification';
 const supabaseNearbyActivitiesFunctionName = 'activities-nearby';
 const supabaseActivityDetailFunctionName = 'activities-detail';
 const supabaseCreateActivityFunctionName = 'activities-create';
@@ -53,6 +55,13 @@ class SupabaseConfig {
       return null;
     }
     return supabaseOAuthRedirectUrl;
+  }
+
+  static String? get emailVerificationRedirectTo {
+    if (kIsWeb) {
+      return null;
+    }
+    return supabaseEmailVerificationRedirectUrl;
   }
 
   static Future<void> initialize() {

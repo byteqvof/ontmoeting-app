@@ -3,10 +3,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/config/supabase_config.dart';
 import '../../../../core/utils/app_logger.dart';
 import '../../domain/entities/auth_oauth_provider.dart';
+import '../../domain/entities/auth_sign_up_result.dart';
 import '../models/auth_user_model.dart';
 
 abstract interface class AuthRemoteDataSource {
-  Future<AuthUserModel> signUp({
+  Future<AuthSignUpResult> signUp({
     required String email,
     required String password,
   });
@@ -17,6 +18,8 @@ abstract interface class AuthRemoteDataSource {
   });
 
   Future<void> signInWithOAuth(AuthOAuthProvider provider);
+
+  Future<void> resendSignUpVerificationEmail(String email);
 
   Future<void> signOut();
 
@@ -31,7 +34,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   final SupabaseClient _client;
 
   @override
-  Future<AuthUserModel> signUp({
+  Future<AuthSignUpResult> signUp({
     required String email,
     required String password,
   }) async {
@@ -40,15 +43,22 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     final response = await _client.auth.signUp(
       email: email,
       password: password,
+      emailRedirectTo: SupabaseConfig.emailVerificationRedirectTo,
     );
 
     final user = response.user;
-    if (user == null) {
-      throw const AuthException('Sign up completed without a user.');
+    if (response.session == null) {
+      AppLogger.debug('Supabase auth.signUp requires email verification');
+      return AuthSignUpEmailVerificationRequired(user?.email ?? email);
     }
 
+    if (user == null) {
+      throw const AuthException(
+        'Sign up completed with a session but no user.',
+      );
+    }
     AppLogger.debug('Supabase auth.signUp succeeded for ${user.id}');
-    return AuthUserModel.fromSupabaseUser(user);
+    return AuthSignUpAuthenticated(AuthUserModel.fromSupabaseUser(user));
   }
 
   @override
@@ -98,6 +108,16 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
     AppLogger.debug(
       'Supabase auth.signInWithOAuth launched for ${provider.name}',
+    );
+  }
+
+  @override
+  Future<void> resendSignUpVerificationEmail(String email) async {
+    AppLogger.debug('Supabase auth.resend signup verification for $email');
+    await _client.auth.resend(
+      type: OtpType.signup,
+      email: email,
+      emailRedirectTo: SupabaseConfig.emailVerificationRedirectTo,
     );
   }
 

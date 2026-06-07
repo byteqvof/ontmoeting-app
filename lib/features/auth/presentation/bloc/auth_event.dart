@@ -40,6 +40,15 @@ final class AuthSignUpRequested extends AuthEvent {
   List<Object?> get props => [email, password];
 }
 
+final class AuthVerificationEmailResendRequested extends AuthEvent {
+  const AuthVerificationEmailResendRequested(this.email);
+
+  final String email;
+
+  @override
+  List<Object?> get props => [email];
+}
+
 final class AuthSignOutRequested extends AuthEvent {
   const AuthSignOutRequested();
 }

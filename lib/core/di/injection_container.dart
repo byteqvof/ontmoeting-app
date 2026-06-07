@@ -7,6 +7,7 @@ import '../../features/auth/data/repositories/auth_repository_impl.dart';
 import '../../features/auth/domain/repositories/auth_repository.dart';
 import '../../features/auth/domain/usecases/auth_state_changes.dart';
 import '../../features/auth/domain/usecases/get_current_user.dart';
+import '../../features/auth/domain/usecases/resend_sign_up_verification_email.dart';
 import '../../features/auth/domain/usecases/sign_in.dart';
 import '../../features/auth/domain/usecases/sign_in_with_oauth.dart';
 import '../../features/auth/domain/usecases/sign_out.dart';
@@ -74,10 +75,11 @@ Future<void> configureDependencies() async {
     ..registerLazySingleton(() => SignIn(sl()))
     ..registerLazySingleton(() => SignInWithOAuth(sl()))
     ..registerLazySingleton(() => SignUp(sl()))
+    ..registerLazySingleton(() => ResendSignUpVerificationEmail(sl()))
     ..registerLazySingleton(() => SignOut(sl()))
     ..registerLazySingleton(() => GetCurrentUser(sl()))
     ..registerLazySingleton(() => AuthStateChanges(sl()))
-    ..registerFactory(() => AuthBloc(sl(), sl(), sl(), sl(), sl(), sl()))
+    ..registerFactory(() => AuthBloc(sl(), sl(), sl(), sl(), sl(), sl(), sl()))
     ..registerLazySingleton<HomeRemoteDataSource>(
       () => HomeRemoteDataSourceImpl(sl()),
     )
