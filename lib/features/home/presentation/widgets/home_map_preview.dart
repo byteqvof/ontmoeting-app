@@ -52,7 +52,7 @@ class HomeMapPreview extends StatelessWidget {
               );
             },
             child: SizedBox(
-              height: 132,
+              height: 198,
               child: Stack(
                 children: [
                   Positioned.fill(
@@ -125,6 +125,54 @@ class HomeMapPreview extends StatelessWidget {
                           Icons.open_in_full_rounded,
                           color: Colors.white,
                           size: 19,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: 12,
+                    right: 12,
+                    bottom: 12,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: colors.card.withValues(alpha: .94),
+                        borderRadius: BorderRadius.circular(TochRadius.pill),
+                        boxShadow: [
+                          BoxShadow(
+                            color: colors.ink.withValues(alpha: .10),
+                            blurRadius: 14,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.travel_explore_rounded,
+                              color: colors.green,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Bekijk op kaart',
+                                style: Theme.of(context).textTheme.labelLarge
+                                    ?.copyWith(
+                                      color: colors.ink,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                              ),
+                            ),
+                            Icon(
+                              Icons.chevron_right_rounded,
+                              color: colors.green,
+                            ),
+                          ],
                         ),
                       ),
                     ),

@@ -174,6 +174,7 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
       },
       (_) {
         setState(() {
+          _activity = _activityWithSubmittedFeedback(_activity, target.id);
           _isFeedbackPending = false;
         });
         _showMessage('Feedback opgeslagen voor ${target.name}.');
@@ -200,11 +201,21 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
         status: status,
       );
       if (mounted) {
-        _showMessage(
-          status == ActivityAttendanceStatus.present
-              ? '${target.name} gemarkeerd als aanwezig.'
-              : '${target.name} gemarkeerd als niet aanwezig.',
-        );
+        setState(() {
+          _activity = _activityWithAttendance(
+            _activity,
+            target.id,
+            status.backendValue,
+          );
+        });
+        _showMessage(switch (status) {
+          ActivityAttendanceStatus.present =>
+            '${target.name} gemarkeerd als aanwezig.',
+          ActivityAttendanceStatus.absent =>
+            '${target.name} gemarkeerd als niet aanwezig.',
+          ActivityAttendanceStatus.unknown =>
+            '${target.name} gemarkeerd als onbekend.',
+        });
       }
     } catch (_) {
       if (mounted) {
@@ -265,6 +276,20 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
     }
   }
 
+  Future<void> _editActivity() async {
+    final updated = await context.push<HomeActivity>(
+      AppRoutes.editActivityPath(_activity.id),
+      extra: _activity,
+    );
+    if (!mounted || updated == null) {
+      return;
+    }
+    setState(() {
+      _activity = updated;
+    });
+    _showMessage('Activiteit bijgewerkt.');
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = context.toch;
@@ -282,6 +307,11 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
                     child: ActivityDetailHero(
                       activity: _activity,
                       onBackPressed: () => context.pop(_activity),
+                      onEditPressed:
+                          _activity.isOwnedByCurrentUser &&
+                              !_activity.isCompleted
+                          ? _editActivity
+                          : null,
                     ),
                   ),
                   SliverPadding(
@@ -358,12 +388,16 @@ class _FeedbackTarget {
     required this.name,
     required this.initials,
     this.avatarUrl,
+    this.attendanceStatus,
+    this.feedbackSubmitted = false,
   });
 
   final String id;
   final String name;
   final String initials;
   final String? avatarUrl;
+  final String? attendanceStatus;
+  final bool feedbackSubmitted;
 }
 
 class _AttendanceCard extends StatelessWidget {
@@ -390,6 +424,8 @@ class _AttendanceCard extends StatelessWidget {
             name: participant.displayName,
             initials: participant.initials,
             avatarUrl: participant.avatarUrl,
+            attendanceStatus: participant.attendanceStatus,
+            feedbackSubmitted: participant.feedbackSubmitted,
           ),
         )
         .toList();
@@ -437,6 +473,7 @@ class _AttendanceCard extends StatelessWidget {
                 _AttendanceRow(
                   target: target,
                   isPending: pendingProfileIds.contains(target.id),
+                  selectedStatus: target.attendanceStatus,
                   onPresent: () => onMarkAttendance(
                     target: target,
                     status: ActivityAttendanceStatus.present,
@@ -444,6 +481,10 @@ class _AttendanceCard extends StatelessWidget {
                   onAbsent: () => onMarkAttendance(
                     target: target,
                     status: ActivityAttendanceStatus.absent,
+                  ),
+                  onUnknown: () => onMarkAttendance(
+                    target: target,
+                    status: ActivityAttendanceStatus.unknown,
                   ),
                 ),
                 if (target != targets.last)
@@ -460,14 +501,18 @@ class _AttendanceRow extends StatelessWidget {
   const _AttendanceRow({
     required this.target,
     required this.isPending,
+    required this.selectedStatus,
     required this.onPresent,
     required this.onAbsent,
+    required this.onUnknown,
   });
 
   final _FeedbackTarget target;
   final bool isPending;
+  final String? selectedStatus;
   final VoidCallback onPresent;
   final VoidCallback onAbsent;
+  final VoidCallback onUnknown;
 
   @override
   Widget build(BuildContext context) {
@@ -511,18 +556,46 @@ class _AttendanceRow extends StatelessWidget {
               color: colors.green,
             ),
           )
-        else ...[
-          IconButton(
-            onPressed: onAbsent,
-            tooltip: 'Niet aanwezig',
-            icon: Icon(Icons.close_rounded, color: colors.orange),
+        else
+          SegmentedButton<String>(
+            showSelectedIcon: false,
+            style: ButtonStyle(
+              visualDensity: VisualDensity.compact,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              minimumSize: const WidgetStatePropertyAll(Size(0, 34)),
+              padding: const WidgetStatePropertyAll(
+                EdgeInsets.symmetric(horizontal: 8),
+              ),
+            ),
+            segments: const [
+              ButtonSegment(
+                value: 'absent',
+                icon: Icon(Icons.close_rounded, size: 17),
+                tooltip: 'Niet aanwezig',
+              ),
+              ButtonSegment(
+                value: 'unknown',
+                icon: Icon(Icons.remove_rounded, size: 17),
+                tooltip: 'Onbekend',
+              ),
+              ButtonSegment(
+                value: 'present',
+                icon: Icon(Icons.check_rounded, size: 17),
+                tooltip: 'Aanwezig',
+              ),
+            ],
+            selected: {selectedStatus ?? 'unknown'},
+            onSelectionChanged: (selection) {
+              switch (selection.first) {
+                case 'present':
+                  onPresent();
+                case 'absent':
+                  onAbsent();
+                default:
+                  onUnknown();
+              }
+            },
           ),
-          IconButton(
-            onPressed: onPresent,
-            tooltip: 'Aanwezig',
-            icon: Icon(Icons.check_rounded, color: colors.green),
-          ),
-        ],
       ],
     );
   }
@@ -569,6 +642,8 @@ class _FeedbackCardState extends State<_FeedbackCard> {
               name: participant.displayName,
               initials: participant.initials,
               avatarUrl: participant.avatarUrl,
+              attendanceStatus: participant.attendanceStatus,
+              feedbackSubmitted: participant.feedbackSubmitted,
             ),
           )
           .toList();
@@ -584,6 +659,7 @@ class _FeedbackCardState extends State<_FeedbackCard> {
         name: widget.activity.hostFullName,
         initials: _initialsFor(widget.activity.hostFullName),
         avatarUrl: widget.activity.hostAvatarUrl,
+        feedbackSubmitted: widget.activity.hostFeedbackSubmitted,
       ),
     ];
   }
@@ -665,6 +741,29 @@ class _FeedbackCardState extends State<_FeedbackCard> {
                     ),
                 ],
               ),
+              if (selectedTarget?.feedbackSubmitted == true) ...[
+                const SizedBox(height: TochSpacing.sm),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.check_circle_rounded,
+                      color: colors.green,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Feedback opgeslagen. Je kunt deze nog bijwerken.',
+                        style: Theme.of(context).textTheme.labelMedium
+                            ?.copyWith(
+                              color: colors.green,
+                              fontWeight: FontWeight.w800,
+                            ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
               const SizedBox(height: TochSpacing.sm),
               Row(
                 children: [
@@ -899,4 +998,42 @@ String _initialsFor(String name) {
         .toUpperCase();
   }
   return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
+}
+
+HomeActivity _activityWithAttendance(
+  HomeActivity activity,
+  String profileId,
+  String status,
+) {
+  return activity.copyWith(
+    participants: activity.participants
+        .map(
+          (participant) => participant.id == profileId
+              ? participant.copyWith(
+                  attendanceStatus: status,
+                  attendanceMarkedAt: DateTime.now().toUtc(),
+                )
+              : participant,
+        )
+        .toList(),
+  );
+}
+
+HomeActivity _activityWithSubmittedFeedback(
+  HomeActivity activity,
+  String targetProfileId,
+) {
+  if (targetProfileId == activity.hostId) {
+    return activity.copyWith(hostFeedbackSubmitted: true);
+  }
+
+  return activity.copyWith(
+    participants: activity.participants
+        .map(
+          (participant) => participant.id == targetProfileId
+              ? participant.copyWith(feedbackSubmitted: true)
+              : participant,
+        )
+        .toList(),
+  );
 }

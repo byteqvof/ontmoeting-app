@@ -24,9 +24,11 @@ import '../../features/home/domain/usecases/get_activity_detail.dart';
 import '../../features/home/domain/usecases/get_current_city_name.dart';
 import '../../features/home/domain/usecases/get_current_location.dart';
 import '../../features/home/domain/usecases/get_home_feed.dart';
+import '../../features/home/domain/usecases/mark_activity_chat_read.dart';
 import '../../features/home/domain/usecases/send_activity_chat_message.dart';
 import '../../features/home/domain/usecases/set_activity_participation.dart';
 import '../../features/home/domain/usecases/submit_activity_feedback.dart';
+import '../../features/home/domain/usecases/update_activity.dart';
 import '../../features/home/domain/usecases/watch_current_location.dart';
 import '../../features/home/domain/usecases/watch_current_city_name.dart';
 import '../../features/home/presentation/controllers/activity_chat_notice_controller.dart';
@@ -47,6 +49,7 @@ import '../../features/profile/presentation/bloc/profile_setup_bloc.dart';
 import '../services/account_trust_service.dart';
 import '../services/activity_attendance_service.dart';
 import '../services/analytics_service.dart';
+import '../services/push_notification_service.dart';
 import '../services/safety_service.dart';
 import '../utils/app_preferences.dart';
 
@@ -60,6 +63,7 @@ Future<void> configureDependencies() async {
     ..registerLazySingleton(() => AppPreferences(sl()))
     ..registerLazySingleton<SupabaseClient>(() => Supabase.instance.client)
     ..registerLazySingleton<AnalyticsService>(() => AnalyticsService.instance)
+    ..registerLazySingleton(() => PushNotificationService(sl()))
     ..registerLazySingleton(() => AccountTrustService(sl(), sl()))
     ..registerLazySingleton(() => ActivityAttendanceService(sl()))
     ..registerLazySingleton(() => SafetyService(sl()))
@@ -78,7 +82,7 @@ Future<void> configureDependencies() async {
       () => HomeRemoteDataSourceImpl(sl()),
     )
     ..registerLazySingleton<HomeLocationDataSource>(
-      () => const HomeLocationDataSourceImpl(),
+      () => const HomeLocationDataSourceImpl(useDeviceLocation: true),
     )
     ..registerLazySingleton<HomeRepository>(
       () => HomeRepositoryImpl(sl(), sl(), accountTrustService: sl()),
@@ -93,9 +97,11 @@ Future<void> configureDependencies() async {
     ..registerLazySingleton(() => GetHomeFeed(sl()))
     ..registerLazySingleton(() => GetCurrentCityName(sl()))
     ..registerLazySingleton(() => GetCurrentLocation(sl()))
+    ..registerLazySingleton(() => MarkActivityChatRead(sl()))
     ..registerLazySingleton(() => SendActivityChatMessage(sl()))
     ..registerLazySingleton(() => SetActivityParticipation(sl()))
     ..registerLazySingleton(() => SubmitActivityFeedback(sl()))
+    ..registerLazySingleton(() => UpdateActivity(sl()))
     ..registerLazySingleton(() => WatchCurrentCityName(sl()))
     ..registerLazySingleton(() => WatchCurrentLocation(sl()))
     ..registerFactory(() => HomeBloc(sl(), sl(), sl(), sl()))

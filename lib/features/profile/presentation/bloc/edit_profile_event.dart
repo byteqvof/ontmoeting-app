@@ -7,6 +7,10 @@ sealed class EditProfileEvent extends Equatable {
   List<Object?> get props => [];
 }
 
+final class EditProfileStarted extends EditProfileEvent {
+  const EditProfileStarted();
+}
+
 final class EditProfileDisplayNameChanged extends EditProfileEvent {
   const EditProfileDisplayNameChanged(this.displayName);
 
@@ -41,6 +45,15 @@ final class EditProfileGenderSelected extends EditProfileEvent {
 
   @override
   List<Object?> get props => [gender];
+}
+
+final class EditProfileInterestToggled extends EditProfileEvent {
+  const EditProfileInterestToggled(this.interestId);
+
+  final String interestId;
+
+  @override
+  List<Object?> get props => [interestId];
 }
 
 final class EditProfileAvatarPicked extends EditProfileEvent {

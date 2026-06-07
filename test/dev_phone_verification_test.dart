@@ -69,7 +69,7 @@ void main() {
     );
 
     test(
-      'fails fake verification when backend dev sync is unavailable',
+      'keeps fake verification local-only when backend dev sync is unavailable',
       () async {
         SharedPreferences.setMockInitialValues({});
         final preferences = await SharedPreferences.getInstance();
@@ -84,12 +84,16 @@ void main() {
 
         await service.requestPhoneCode('+31625215170');
 
-        await expectLater(
-          service.verifyPhoneCode(phoneNumber: '+31625215170', token: '1234'),
-          throwsA(isA<AccountTrustException>()),
+        final trust = await service.verifyPhoneCode(
+          phoneNumber: '+31625215170',
+          token: '1234',
         );
+        final syncedTrust = await service.syncTrust();
 
-        expect(service.localFakeTrust, isNull);
+        expect(trust.phoneVerified, isTrue);
+        expect(trust.phoneVerifiedAt, isNotNull);
+        expect(syncedTrust.phoneVerified, isTrue);
+        expect(service.localFakeTrust, isNotNull);
       },
     );
 

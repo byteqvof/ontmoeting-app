@@ -85,6 +85,55 @@ void main() {
   });
 
   test(
+    'does not cache fallback location as the real device location',
+    () async {
+      final locationDataSource = _SequenceLocationDataSource([
+        TimeoutException('Future not completed', const Duration(seconds: 14)),
+        const HomeLocation(
+          cityName: 'Winschoten',
+          latitude: 53.144,
+          longitude: 7.034,
+        ),
+      ]);
+      final repository = HomeRepositoryImpl(
+        _ThrowingHomeRemoteDataSource(Exception('unused')),
+        locationDataSource,
+      );
+
+      final fallback = await repository.getCurrentLocation();
+      final live = await repository.getCurrentLocation(forceRefresh: true);
+
+      fallback.fold(
+        (failure) => fail('Expected fallback location, got $failure'),
+        (location) => expect(location.cityName, 'Ter Apel'),
+      );
+      live.fold(
+        (failure) => fail('Expected live location, got $failure'),
+        (location) => expect(location.cityName, 'Winschoten'),
+      );
+    },
+  );
+
+  test('passes force refresh through to the location data source', () async {
+    final locationDataSource = _RecordingLocationDataSource(
+      const HomeLocation(
+        cityName: 'Winschoten',
+        latitude: 53.144,
+        longitude: 7.034,
+      ),
+    );
+    final repository = HomeRepositoryImpl(
+      _ThrowingHomeRemoteDataSource(Exception('unused')),
+      locationDataSource,
+    );
+
+    final result = await repository.getCurrentLocation(forceRefresh: true);
+
+    expect(result.isRight(), isTrue);
+    expect(locationDataSource.lastForceRefresh, isTrue);
+  });
+
+  test(
     'reuses cached location on later requests and watcher startup',
     () async {
       final locationDataSource = _CountingLocationDataSource(
@@ -132,6 +181,59 @@ void main() {
     expect(first.isRight(), isTrue);
     expect(second.isRight(), isTrue);
     expect(remoteDataSource.getHomeFeedCalls, 1);
+  });
+
+  test('force refresh bypasses the fresh home feed cache', () async {
+    final remoteDataSource = _HomeRemoteDataSourceStub(feed: _feed());
+    final repository = HomeRepositoryImpl(
+      remoteDataSource,
+      const _FakeLocationDataSource(),
+      feedCacheTtl: const Duration(seconds: 30),
+    );
+
+    final location = defaultHomeLocation;
+    final first = await repository.getHomeFeed(
+      location: location,
+      filters: const HomeFeedFilters(),
+    );
+    final refreshed = await repository.getHomeFeed(
+      location: location,
+      filters: const HomeFeedFilters(),
+      forceRefresh: true,
+    );
+
+    expect(first.isRight(), isTrue);
+    expect(refreshed.isRight(), isTrue);
+    expect(remoteDataSource.getHomeFeedCalls, 2);
+  });
+
+  test('marking chat read delegates to remote and clears feed cache', () async {
+    final remoteDataSource = _HomeRemoteDataSourceStub(feed: _feed());
+    final repository = HomeRepositoryImpl(
+      remoteDataSource,
+      const _FakeLocationDataSource(),
+      feedCacheTtl: const Duration(seconds: 30),
+    );
+    final location = defaultHomeLocation;
+
+    await repository.getHomeFeed(
+      location: location,
+      filters: const HomeFeedFilters(),
+    );
+    final result = await repository.markActivityChatRead(
+      activityId: 'activity-1',
+      messageId: 'message-1',
+    );
+    await repository.getHomeFeed(
+      location: location,
+      filters: const HomeFeedFilters(),
+    );
+
+    expect(result.isRight(), isTrue);
+    expect(remoteDataSource.markActivityChatReadCalls, 1);
+    expect(remoteDataSource.lastMarkedActivityId, 'activity-1');
+    expect(remoteDataSource.lastMarkedMessageId, 'message-1');
+    expect(remoteDataSource.getHomeFeedCalls, 2);
   });
 
   test('maps leave failures without chat access copy', () async {
@@ -218,6 +320,14 @@ class _ThrowingHomeRemoteDataSource implements HomeRemoteDataSource {
   }
 
   @override
+  Future<HomeActivity> updateActivity({
+    required String activityId,
+    required CreateActivityDraft draft,
+  }) async {
+    throw error;
+  }
+
+  @override
   Future<HomeFeed> getHomeFeed({
     required HomeLocation location,
     required HomeFeedFilters filters,
@@ -262,6 +372,14 @@ class _ThrowingHomeRemoteDataSource implements HomeRemoteDataSource {
   }
 
   @override
+  Future<void> markActivityChatRead({
+    required String activityId,
+    String? messageId,
+  }) async {
+    throw error;
+  }
+
+  @override
   Future<ActivityCompletionUpdate> completeActivity({
     required String activityId,
   }) async {
@@ -283,7 +401,7 @@ class _FakeLocationDataSource implements HomeLocationDataSource {
   const _FakeLocationDataSource();
 
   @override
-  Future<HomeLocation> getCurrentLocation() async {
+  Future<HomeLocation> getCurrentLocation({bool forceRefresh = false}) async {
     return const HomeLocation(
       cityName: 'Ter Apel',
       latitude: 52.876,
@@ -303,7 +421,7 @@ class _ThrowingLocationDataSource implements HomeLocationDataSource {
   final Object error;
 
   @override
-  Future<HomeLocation> getCurrentLocation() async {
+  Future<HomeLocation> getCurrentLocation({bool forceRefresh = false}) async {
     throw error;
   }
 
@@ -317,13 +435,34 @@ class _HangingLocationDataSource implements HomeLocationDataSource {
   const _HangingLocationDataSource();
 
   @override
-  Future<HomeLocation> getCurrentLocation() {
+  Future<HomeLocation> getCurrentLocation({bool forceRefresh = false}) {
     return Completer<HomeLocation>().future;
   }
 
   @override
   Stream<HomeLocation> watchCurrentLocation() {
     return const Stream.empty();
+  }
+}
+
+class _SequenceLocationDataSource implements HomeLocationDataSource {
+  _SequenceLocationDataSource(this.results);
+
+  final List<Object> results;
+  int _index = 0;
+
+  @override
+  Future<HomeLocation> getCurrentLocation({bool forceRefresh = false}) async {
+    final result = results[_index++];
+    if (result is HomeLocation) {
+      return result;
+    }
+    throw result;
+  }
+
+  @override
+  Stream<HomeLocation> watchCurrentLocation() async* {
+    yield await getCurrentLocation();
   }
 }
 
@@ -335,7 +474,7 @@ class _CountingLocationDataSource implements HomeLocationDataSource {
   int watchLocationCalls = 0;
 
   @override
-  Future<HomeLocation> getCurrentLocation() async {
+  Future<HomeLocation> getCurrentLocation({bool forceRefresh = false}) async {
     currentLocationCalls++;
     return location;
   }
@@ -347,15 +486,44 @@ class _CountingLocationDataSource implements HomeLocationDataSource {
   }
 }
 
+class _RecordingLocationDataSource implements HomeLocationDataSource {
+  _RecordingLocationDataSource(this.location);
+
+  final HomeLocation location;
+  bool? lastForceRefresh;
+
+  @override
+  Future<HomeLocation> getCurrentLocation({bool forceRefresh = false}) async {
+    lastForceRefresh = forceRefresh;
+    return location;
+  }
+
+  @override
+  Stream<HomeLocation> watchCurrentLocation() async* {
+    yield location;
+  }
+}
+
 class _HomeRemoteDataSourceStub implements HomeRemoteDataSource {
   _HomeRemoteDataSourceStub({required this.feed});
 
   final HomeFeed feed;
   int getHomeFeedCalls = 0;
+  int markActivityChatReadCalls = 0;
+  String? lastMarkedActivityId;
+  String? lastMarkedMessageId;
 
   @override
   Future<String> createActivity(CreateActivityDraft draft) async {
     return 'activity-1';
+  }
+
+  @override
+  Future<HomeActivity> updateActivity({
+    required String activityId,
+    required CreateActivityDraft draft,
+  }) async {
+    throw UnimplementedError();
   }
 
   @override
@@ -408,6 +576,16 @@ class _HomeRemoteDataSourceStub implements HomeRemoteDataSource {
     required String clientMessageId,
   }) async {
     throw UnimplementedError();
+  }
+
+  @override
+  Future<void> markActivityChatRead({
+    required String activityId,
+    String? messageId,
+  }) async {
+    markActivityChatReadCalls++;
+    lastMarkedActivityId = activityId;
+    lastMarkedMessageId = messageId;
   }
 
   @override

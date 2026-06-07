@@ -18,16 +18,22 @@ class GetHomeFeed implements UseCase<HomeFeed, GetHomeFeedParams> {
     return _repository.getHomeFeed(
       location: params.location,
       filters: params.filters,
+      forceRefresh: params.forceRefresh,
     );
   }
 }
 
 class GetHomeFeedParams extends Equatable {
-  const GetHomeFeedParams({required this.location, required this.filters});
+  const GetHomeFeedParams({
+    required this.location,
+    required this.filters,
+    this.forceRefresh = false,
+  });
 
   final HomeLocation location;
   final HomeFeedFilters filters;
+  final bool forceRefresh;
 
   @override
-  List<Object?> get props => [location, filters];
+  List<Object?> get props => [location, filters, forceRefresh];
 }

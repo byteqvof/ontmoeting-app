@@ -56,6 +56,8 @@ void main() {
       expect(profile.trust.phoneVerified, isTrue);
       expect(profile.trust.phoneVerifiedAt, isNotNull);
       expect(profile.trust.reputationScore, 37);
+      expect(profile.ageBand, '25_34');
+      expect(profile.gender, 'man');
     });
   });
 
@@ -113,6 +115,8 @@ ProfileModel _profile({required String id}) {
     displayName: 'Jasper',
     initials: 'JS',
     cityName: 'Ter Apel',
+    ageBand: '25_34',
+    gender: 'man',
     memberSince: DateTime(2026),
     avatarUrl: null,
     attendanceScore: 100,

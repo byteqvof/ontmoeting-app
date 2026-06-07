@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:geocoding/geocoding.dart';
 
 import '../../../../core/services/analytics_service.dart';
 import '../../domain/entities/create_activity_draft.dart';
@@ -17,7 +18,9 @@ class CreateActivityBloc
     this._createActivity, {
     required HomeLocation location,
     required List<HomeCategory> categories,
+    MeetingPlaceGeocoder geocodeMeetingPlace = _defaultGeocodeMeetingPlace,
   }) : _location = location,
+       _geocodeMeetingPlace = geocodeMeetingPlace,
        super(_initialState(categories)) {
     on<CreateActivityCategorySelected>(_onCategorySelected);
     on<CreateActivityTitleChanged>(_onTitleChanged);
@@ -57,6 +60,7 @@ class CreateActivityBloc
 
   final CreateActivity _createActivity;
   final HomeLocation _location;
+  final MeetingPlaceGeocoder _geocodeMeetingPlace;
 
   void _onCategorySelected(
     CreateActivityCategorySelected event,
@@ -285,7 +289,14 @@ class CreateActivityBloc
         submissionStatus: CreateActivitySubmissionStatus.submitting,
       ),
     );
-    final result = await _createActivity(_draftFromState(state));
+    final resolvedLocation = await _resolveMeetingPlace(state, emit);
+    if (resolvedLocation == null) {
+      return;
+    }
+
+    final result = await _createActivity(
+      _draftFromState(state, resolvedLocation),
+    );
     result.fold(
       (failure) {
         AnalyticsService.instance.track(
@@ -314,18 +325,51 @@ class CreateActivityBloc
     );
   }
 
-  CreateActivityDraft _draftFromState(CreateActivityState state) {
+  Future<ResolvedMeetingLocation?> _resolveMeetingPlace(
+    CreateActivityState state,
+    Emitter<CreateActivityState> emit,
+  ) async {
+    final query = state.location.trim();
+    if (_looksLikeOnlyCity(query, _location.cityName)) {
+      emit(
+        state.copyWith(
+          submissionStatus: CreateActivitySubmissionStatus.failure,
+          errorMessage:
+              'Vul een herkenbare meetingplek in, bijvoorbeeld een adres, plein of cafe.',
+        ),
+      );
+      return null;
+    }
+
+    try {
+      return await _geocodeMeetingPlace(query, _location);
+    } catch (_) {
+      emit(
+        state.copyWith(
+          submissionStatus: CreateActivitySubmissionStatus.failure,
+          errorMessage:
+              'We kunnen deze meetingplek niet vinden. Vul een exactere plek of adres in.',
+        ),
+      );
+      return null;
+    }
+  }
+
+  CreateActivityDraft _draftFromState(
+    CreateActivityState state,
+    ResolvedMeetingLocation meetingLocation,
+  ) {
     final title = state.title.trim();
     final notes = state.notes.trim();
 
     return CreateActivityDraft(
       categoryId: state.categoryId,
       title: title,
-      description: notes.isEmpty ? 'Ik ga $title. Sluit gezellig aan.' : notes,
-      latitude: _location.latitude,
-      longitude: _location.longitude,
-      addressLine: state.location.trim(),
-      city: _location.cityName,
+      description: _descriptionFor(title: title, notes: notes),
+      latitude: meetingLocation.latitude,
+      longitude: meetingLocation.longitude,
+      addressLine: meetingLocation.addressLine,
+      city: meetingLocation.city,
       countryCode: 'NL',
       startsAt: state.startsAt,
       maxParticipants: state.capacity,
@@ -358,6 +402,100 @@ class CreateActivityBloc
   DateTime _dateOnly(DateTime value) {
     return DateTime(value.year, value.month, value.day);
   }
+}
+
+String _descriptionFor({required String title, required String notes}) {
+  if (notes.trim().length >= 10) {
+    return notes.trim();
+  }
+  return 'Ik ga $title. Sluit gezellig aan.';
+}
+
+typedef MeetingPlaceGeocoder =
+    Future<ResolvedMeetingLocation> Function(
+      String query,
+      HomeLocation fallbackLocation,
+    );
+
+class ResolvedMeetingLocation extends Equatable {
+  const ResolvedMeetingLocation({
+    required this.addressLine,
+    required this.city,
+    required this.latitude,
+    required this.longitude,
+  });
+
+  final String addressLine;
+  final String city;
+  final double latitude;
+  final double longitude;
+
+  @override
+  List<Object?> get props => [addressLine, city, latitude, longitude];
+}
+
+Future<ResolvedMeetingLocation> _defaultGeocodeMeetingPlace(
+  String query,
+  HomeLocation fallbackLocation,
+) async {
+  final searchQuery = _queryWithFallbackCity(query, fallbackLocation.cityName);
+  final locations = await locationFromAddress(
+    searchQuery,
+  ).timeout(const Duration(seconds: 6));
+  if (locations.isEmpty) {
+    throw StateError('No geocoding result for meeting place.');
+  }
+
+  final location = locations.first;
+  final placemarks = await placemarkFromCoordinates(
+    location.latitude,
+    location.longitude,
+  ).timeout(const Duration(seconds: 4), onTimeout: () => const <Placemark>[]);
+  final placemark = placemarks.isEmpty ? null : placemarks.first;
+  final city = _cityFromPlacemark(placemark) ?? fallbackLocation.cityName;
+
+  return ResolvedMeetingLocation(
+    addressLine: query.trim(),
+    city: city,
+    latitude: location.latitude,
+    longitude: location.longitude,
+  );
+}
+
+String _queryWithFallbackCity(String query, String city) {
+  final trimmed = query.trim();
+  if (trimmed.toLowerCase().contains(city.trim().toLowerCase())) {
+    return '$trimmed, Nederland';
+  }
+  return '$trimmed, $city, Nederland';
+}
+
+String? _cityFromPlacemark(Placemark? placemark) {
+  if (placemark == null) {
+    return null;
+  }
+  for (final value in [
+    placemark.locality,
+    placemark.subAdministrativeArea,
+    placemark.administrativeArea,
+  ]) {
+    final trimmed = value?.trim();
+    if (trimmed != null && trimmed.isNotEmpty) {
+      return trimmed;
+    }
+  }
+  return null;
+}
+
+bool _looksLikeOnlyCity(String query, String city) {
+  final normalizedQuery = query.trim().toLowerCase();
+  final normalizedCity = city.trim().toLowerCase();
+  if (normalizedQuery == normalizedCity) {
+    return true;
+  }
+  return !normalizedQuery.contains(RegExp(r'[\s,]')) &&
+      !normalizedQuery.contains(RegExp(r'\d')) &&
+      normalizedQuery.length < 16;
 }
 
 Map<String, Object> _activityAnalyticsProperties(CreateActivityState state) {

@@ -1,27 +1,60 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/usecases/usecase.dart';
 import '../../domain/entities/profile.dart';
 import '../../domain/entities/profile_avatar_file.dart';
+import '../../domain/entities/profile_interest.dart';
 import '../../domain/entities/update_profile_draft.dart';
+import '../../domain/usecases/get_available_profile_interests.dart';
 import '../../domain/usecases/update_profile.dart';
 
 part 'edit_profile_event.dart';
 part 'edit_profile_state.dart';
 
 class EditProfileBloc extends Bloc<EditProfileEvent, EditProfileState> {
-  EditProfileBloc(this._updateProfile, Profile profile)
-    : super(EditProfileState.fromProfile(profile)) {
+  EditProfileBloc(
+    this._updateProfile,
+    Profile profile, {
+    GetAvailableProfileInterests? getAvailableInterests,
+  }) : _getAvailableInterests = getAvailableInterests,
+       super(EditProfileState.fromProfile(profile)) {
+    on<EditProfileStarted>(_onStarted);
     on<EditProfileDisplayNameChanged>(_onDisplayNameChanged);
     on<EditProfileCityChanged>(_onCityChanged);
     on<EditProfileAgeBandSelected>(_onAgeBandSelected);
     on<EditProfileGenderSelected>(_onGenderSelected);
+    on<EditProfileInterestToggled>(_onInterestToggled);
     on<EditProfileAvatarPicked>(_onAvatarPicked);
     on<EditProfileAvatarRemoved>(_onAvatarRemoved);
     on<EditProfileSubmitted>(_onSubmitted);
   }
 
   final UpdateProfile _updateProfile;
+  final GetAvailableProfileInterests? _getAvailableInterests;
+
+  Future<void> _onStarted(
+    EditProfileStarted event,
+    Emitter<EditProfileState> emit,
+  ) async {
+    final getAvailableInterests = _getAvailableInterests;
+    if (getAvailableInterests == null) {
+      return;
+    }
+
+    final result = await getAvailableInterests(const NoParams());
+    result.fold(
+      (_) {},
+      (interests) => emit(
+        state.copyWith(
+          availableInterests: _mergeInterests(
+            interests,
+            state.availableInterests,
+          ),
+        ),
+      ),
+    );
+  }
 
   void _onDisplayNameChanged(
     EditProfileDisplayNameChanged event,
@@ -58,6 +91,24 @@ class EditProfileBloc extends Bloc<EditProfileEvent, EditProfileState> {
     Emitter<EditProfileState> emit,
   ) {
     emit(state.copyWith(gender: event.gender, status: EditProfileStatus.idle));
+  }
+
+  void _onInterestToggled(
+    EditProfileInterestToggled event,
+    Emitter<EditProfileState> emit,
+  ) {
+    final selectedIds = [...state.selectedInterestIds];
+    if (selectedIds.contains(event.interestId)) {
+      selectedIds.remove(event.interestId);
+    } else {
+      selectedIds.add(event.interestId);
+    }
+    emit(
+      state.copyWith(
+        selectedInterestIds: selectedIds,
+        status: EditProfileStatus.idle,
+      ),
+    );
   }
 
   void _onAvatarPicked(
@@ -104,6 +155,7 @@ class EditProfileBloc extends Bloc<EditProfileEvent, EditProfileState> {
         cityName: state.cityName.trim(),
         ageBand: state.ageBand,
         gender: state.gender,
+        categoryIds: state.selectedInterestIds,
         avatarFile: state.avatarFile,
         removeAvatar: state.removeAvatar,
       ),
@@ -121,6 +173,19 @@ class EditProfileBloc extends Bloc<EditProfileEvent, EditProfileState> {
       ),
     );
   }
+}
+
+List<ProfileInterest> _mergeInterests(
+  List<ProfileInterest> available,
+  List<ProfileInterest> selected,
+) {
+  final byId = <String, ProfileInterest>{
+    for (final interest in available) interest.id: interest,
+  };
+  for (final interest in selected) {
+    byId.putIfAbsent(interest.id, () => interest);
+  }
+  return byId.values.toList();
 }
 
 String _initialsFor(String name) {

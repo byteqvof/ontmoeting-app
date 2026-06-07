@@ -17,11 +17,13 @@ class ActivityRouteLoaderPage extends StatefulWidget {
   const ActivityRouteLoaderPage({
     required this.activityId,
     required this.target,
+    this.backFallbackRoute,
     super.key,
   });
 
   final String activityId;
   final ActivityRouteTarget target;
+  final String? backFallbackRoute;
 
   @override
   State<ActivityRouteLoaderPage> createState() =>
@@ -77,7 +79,10 @@ class _ActivityRouteLoaderPageState extends State<ActivityRouteLoaderPage> {
     if (activity != null) {
       return switch (widget.target) {
         ActivityRouteTarget.detail => ActivityDetailPage(activity: activity),
-        ActivityRouteTarget.chat => ActivityChatPage(activity: activity),
+        ActivityRouteTarget.chat => ActivityChatPage(
+          activity: activity,
+          backFallbackRoute: widget.backFallbackRoute,
+        ),
       };
     }
 

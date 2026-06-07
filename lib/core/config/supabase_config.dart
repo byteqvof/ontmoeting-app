@@ -13,6 +13,13 @@ const tochFakePhoneVerificationRequested = bool.fromEnvironment(
 );
 const tochFakePhoneVerificationEnabled =
     tochFakePhoneVerificationRequested && appEnvironment == 'dev';
+const tochPushEnabled = bool.fromEnvironment('TOCH_ENABLE_PUSH');
+const firebaseApiKey = String.fromEnvironment('FIREBASE_API_KEY');
+const firebaseAppId = String.fromEnvironment('FIREBASE_APP_ID');
+const firebaseMessagingSenderId = String.fromEnvironment(
+  'FIREBASE_MESSAGING_SENDER_ID',
+);
+const firebaseProjectId = String.fromEnvironment('FIREBASE_PROJECT_ID');
 const supabaseUrl = String.fromEnvironment(
   'SUPABASE_URL',
   defaultValue: 'https://pmnymluxikcmqehlbxlt.supabase.co',
@@ -25,12 +32,14 @@ const supabaseOAuthRedirectUrl = 'meetingsapp://auth-callback';
 const supabaseNearbyActivitiesFunctionName = 'activities-nearby';
 const supabaseActivityDetailFunctionName = 'activities-detail';
 const supabaseCreateActivityFunctionName = 'activities-create';
+const supabaseUpdateActivityFunctionName = 'activities-update';
 const supabaseActivityParticipationFunctionName = 'activities-participation';
 const supabaseActivityAgendaFunctionName = 'activities-agenda';
 const supabaseActivityChatFunctionName = 'activity-chat';
 const supabaseActivityCompleteFunctionName = 'activities-complete';
 const supabaseActivityFeedbackFunctionName = 'activity-feedback';
 const supabaseActivityAttendanceFunctionName = 'activity-attendance';
+const supabasePushTokenFunctionName = 'push-token';
 const supabaseProfilesFunctionName = 'profiles';
 const supabaseSafetyActionsFunctionName = 'safety-actions';
 const supabaseAccountTrustFunctionName = 'account-trust';

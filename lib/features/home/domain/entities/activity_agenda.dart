@@ -14,20 +14,83 @@ class ActivityAgenda extends Equatable {
   final List<HomeActivity> completedActivities;
 
   int get totalCount =>
-      hostedActivities.length +
-      joinedActivities.length +
-      completedActivities.length;
+      activeHostedActivities.length +
+      activeJoinedActivities.length +
+      uniqueCompletedActivities.length;
+
+  List<HomeActivity> get activeHostedActivities {
+    final completedIds = _completedActivityIds;
+    return _uniqueActivities(
+      hostedActivities.where(
+        (activity) =>
+            !activity.isCompleted && !completedIds.contains(activity.id),
+      ),
+    );
+  }
+
+  List<HomeActivity> get activeJoinedActivities {
+    final completedIds = _completedActivityIds;
+    final hostedIds = activeHostedActivities
+        .map((activity) => activity.id)
+        .toSet();
+    return _uniqueActivities(
+      joinedActivities.where(
+        (activity) =>
+            !activity.isCompleted &&
+            !completedIds.contains(activity.id) &&
+            !hostedIds.contains(activity.id),
+      ),
+    );
+  }
+
+  List<HomeActivity> get uniqueCompletedActivities {
+    final completedById = <String, HomeActivity>{};
+    for (final activity in [
+      ...completedActivities,
+      ...hostedActivities.where((activity) => activity.isCompleted),
+      ...joinedActivities.where((activity) => activity.isCompleted),
+    ]) {
+      completedById.putIfAbsent(activity.id, () => activity);
+    }
+    return completedById.values.toList();
+  }
 
   List<HomeActivity> get chatActivities {
     final activitiesById = <String, HomeActivity>{};
     for (final activity in [
-      ...hostedActivities,
-      ...joinedActivities,
-      ...completedActivities,
+      ...activeHostedActivities,
+      ...activeJoinedActivities,
+      ...uniqueCompletedActivities,
     ]) {
       activitiesById.putIfAbsent(activity.id, () => activity);
     }
-    return activitiesById.values.toList();
+    final activities = activitiesById.values.toList();
+    if (!activities.any(
+      (activity) =>
+          activity.chatUnreadCount > 0 || activity.chatLastMessageAt != null,
+    )) {
+      return activities;
+    }
+    return activities..sort((left, right) {
+      final unreadCompare = right.chatUnreadCount.compareTo(
+        left.chatUnreadCount,
+      );
+      if (unreadCompare != 0) {
+        return unreadCompare;
+      }
+      final leftTime = left.chatLastMessageAt;
+      final rightTime = right.chatLastMessageAt;
+      if (leftTime != null && rightTime != null) {
+        return rightTime.compareTo(leftTime);
+      }
+      if (leftTime == null && rightTime != null) {
+        return 1;
+      }
+      if (leftTime != null && rightTime == null) {
+        return -1;
+      }
+      return 0;
+    });
   }
 
   @override
@@ -36,4 +99,15 @@ class ActivityAgenda extends Equatable {
     joinedActivities,
     completedActivities,
   ];
+
+  Set<String> get _completedActivityIds =>
+      uniqueCompletedActivities.map((activity) => activity.id).toSet();
+}
+
+List<HomeActivity> _uniqueActivities(Iterable<HomeActivity> activities) {
+  final activitiesById = <String, HomeActivity>{};
+  for (final activity in activities) {
+    activitiesById.putIfAbsent(activity.id, () => activity);
+  }
+  return activitiesById.values.toList();
 }

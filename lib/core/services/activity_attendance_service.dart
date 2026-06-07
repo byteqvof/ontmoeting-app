@@ -29,7 +29,8 @@ class ActivityAttendanceService {
 
 enum ActivityAttendanceStatus {
   present('present'),
-  absent('absent');
+  absent('absent'),
+  unknown('unknown');
 
   const ActivityAttendanceStatus(this.backendValue);
 

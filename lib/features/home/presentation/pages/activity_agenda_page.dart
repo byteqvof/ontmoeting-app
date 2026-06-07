@@ -146,21 +146,21 @@ class _AgendaBody extends StatelessWidget {
       children: [
         _ActivitySection(
           title: 'Ik organiseer',
-          activities: currentAgenda.hostedActivities,
+          activities: currentAgenda.activeHostedActivities,
           emptyMessage: 'Je organiseert nog geen activiteiten.',
           onActivityPressed: onActivityPressed,
         ),
         const SizedBox(height: TochSpacing.md),
         _ActivitySection(
           title: 'Ik ga mee',
-          activities: currentAgenda.joinedActivities,
+          activities: currentAgenda.activeJoinedActivities,
           emptyMessage: 'Je bent nog nergens aangemeld.',
           onActivityPressed: onActivityPressed,
         ),
         const SizedBox(height: TochSpacing.md),
         _ActivitySection(
           title: 'Afgerond',
-          activities: currentAgenda.completedActivities,
+          activities: currentAgenda.uniqueCompletedActivities,
           emptyMessage: 'Afgeronde activiteiten verschijnen hier.',
           onActivityPressed: onActivityPressed,
         ),
@@ -317,6 +317,7 @@ class _MessagesBody extends StatelessWidget {
             child: _ActivityTile(
               activity: activity,
               trailingIcon: Icons.chat_bubble_rounded,
+              showChatSummary: true,
               onPressed: () => onActivityPressed(activity),
             ),
           ),
@@ -385,16 +386,34 @@ class _ActivityTile extends StatelessWidget {
     required this.activity,
     required this.trailingIcon,
     required this.onPressed,
+    this.showChatSummary = false,
   });
 
   final HomeActivity activity;
   final IconData trailingIcon;
   final VoidCallback onPressed;
+  final bool showChatSummary;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.toch;
     final borderRadius = BorderRadius.circular(TochRadius.md);
+    final hasUnread = showChatSummary && activity.chatUnreadCount > 0;
+    final lastMessage = activity.chatLastMessage?.trim();
+    final lastSender = activity.chatLastSenderName?.trim();
+    final preview =
+        showChatSummary && lastMessage != null && lastMessage.isNotEmpty
+        ? [
+            if (lastSender != null && lastSender.isNotEmpty) '$lastSender:',
+            lastMessage,
+          ].join(' ')
+        : [
+            activity.locationName,
+            if (activity.isOwnedByCurrentUser)
+              'jij organiseert'
+            else if (activity.isJoined)
+              'jij gaat mee',
+          ].where((part) => part.isNotEmpty).join(' Â· ');
 
     return Material(
       color: colors.card,
@@ -437,6 +456,9 @@ class _ActivityTile extends StatelessWidget {
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           color: colors.ink,
                           height: 1.12,
+                          fontWeight: hasUnread
+                              ? FontWeight.w900
+                              : FontWeight.w800,
                         ),
                       ),
                       const SizedBox(height: 5),
@@ -453,29 +475,57 @@ class _ActivityTile extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        [
-                          activity.locationName,
-                          if (activity.isOwnedByCurrentUser)
-                            'jij organiseert'
-                          else if (activity.isJoined)
-                            'jij gaat mee',
-                        ].where((part) => part.isNotEmpty).join(' · '),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: colors.green700.withValues(alpha: .72),
-                          fontWeight: FontWeight.w700,
+                      if (showChatSummary)
+                        Text(
+                          preview,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(
+                                color: hasUnread
+                                    ? colors.ink
+                                    : colors.green700.withValues(alpha: .72),
+                                fontWeight: hasUnread
+                                    ? FontWeight.w900
+                                    : FontWeight.w700,
+                              ),
+                        )
+                      else
+                        Text(
+                          [
+                            activity.locationName,
+                            if (activity.isOwnedByCurrentUser)
+                              'jij organiseert'
+                            else if (activity.isJoined)
+                              'jij gaat mee',
+                          ].where((part) => part.isNotEmpty).join(' · '),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(
+                                color: colors.green700.withValues(alpha: .72),
+                                fontWeight: FontWeight.w700,
+                              ),
                         ),
-                      ),
                     ],
                   ),
                 ),
                 const SizedBox(width: TochSpacing.xs),
-                Icon(
-                  trailingIcon,
-                  color: colors.green700.withValues(alpha: .45),
-                ),
+                if (hasUnread)
+                  _UnreadBadge(count: activity.chatUnreadCount)
+                else if (showChatSummary && activity.chatLastMessageAt != null)
+                  Text(
+                    _formatInboxTime(activity.chatLastMessageAt!),
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: colors.green700.withValues(alpha: .62),
+                      fontWeight: FontWeight.w800,
+                    ),
+                  )
+                else
+                  Icon(
+                    trailingIcon,
+                    color: colors.green700.withValues(alpha: .45),
+                  ),
               ],
             ),
           ),
@@ -483,6 +533,50 @@ class _ActivityTile extends StatelessWidget {
       ),
     );
   }
+}
+
+class _UnreadBadge extends StatelessWidget {
+  const _UnreadBadge({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.toch;
+    final label = count > 99 ? '99+' : count.toString();
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.orange,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Text(
+          label,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+String _formatInboxTime(DateTime value) {
+  final local = value.toLocal();
+  final now = DateTime.now();
+  final isToday =
+      local.year == now.year &&
+      local.month == now.month &&
+      local.day == now.day;
+  if (isToday) {
+    return '${local.hour.toString().padLeft(2, '0')}:'
+        '${local.minute.toString().padLeft(2, '0')}';
+  }
+  return '${local.day.toString().padLeft(2, '0')}/'
+      '${local.month.toString().padLeft(2, '0')}';
 }
 
 class _PageHeader extends StatelessWidget {

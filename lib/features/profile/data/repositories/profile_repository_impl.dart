@@ -134,6 +134,8 @@ class ProfileRepositoryImpl implements ProfileRepository {
       displayName: profile.displayName,
       initials: profile.initials,
       cityName: profile.cityName,
+      ageBand: profile.ageBand,
+      gender: profile.gender,
       memberSince: profile.memberSince,
       avatarUrl: profile.avatarUrl,
       attendanceScore: profile.attendanceScore,
