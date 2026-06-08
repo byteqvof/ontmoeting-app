@@ -34,23 +34,29 @@ class ProfilePage extends StatelessWidget {
     return BlocProvider(
       create: (_) =>
           sl<ProfileBloc>()..add(ProfileStarted(profileId: profileId)),
-      child: _ProfileView(isOwnProfile: profileId == null),
+      child: _ProfileView(profileId: profileId),
     );
   }
 }
 
 class _ProfileView extends StatelessWidget {
-  const _ProfileView({required this.isOwnProfile});
+  const _ProfileView({required this.profileId});
 
-  final bool isOwnProfile;
+  final String? profileId;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.toch;
+    final currentUserId = _currentUserId(context);
+    final requestedOwnProfile =
+        profileId == null ||
+        (currentUserId != null &&
+            currentUserId.isNotEmpty &&
+            profileId == currentUserId);
 
     return Scaffold(
       backgroundColor: colors.cream,
-      bottomNavigationBar: isOwnProfile
+      bottomNavigationBar: requestedOwnProfile
           ? const HomeBottomNav(selected: HomeNavDestination.profile)
           : null,
       body: Center(
@@ -70,7 +76,8 @@ class _ProfileView extends StatelessWidget {
                     profile: profile,
                     activities: activities,
                     activitiesErrorMessage: activitiesErrorMessage,
-                    isOwnProfile: isOwnProfile,
+                    isOwnProfile:
+                        requestedOwnProfile || profile.id == currentUserId,
                   ),
               };
             },
@@ -79,6 +86,11 @@ class _ProfileView extends StatelessWidget {
       ),
     );
   }
+}
+
+String? _currentUserId(BuildContext context) {
+  final authState = context.watch<AuthBloc>().state;
+  return authState is AuthAuthenticated ? authState.user.id : null;
 }
 
 class _ProfileContent extends StatelessWidget {
