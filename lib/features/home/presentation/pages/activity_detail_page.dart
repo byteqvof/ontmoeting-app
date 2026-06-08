@@ -294,91 +294,108 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
   Widget build(BuildContext context) {
     final colors = context.toch;
 
-    return Scaffold(
-      backgroundColor: colors.cream,
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 480),
-          child: Stack(
-            children: [
-              CustomScrollView(
-                slivers: [
-                  SliverToBoxAdapter(
-                    child: ActivityDetailHero(
-                      activity: _activity,
-                      onBackPressed: () => context.pop(_activity),
-                      onEditPressed:
-                          _activity.isOwnedByCurrentUser &&
-                              !_activity.isCompleted
-                          ? _editActivity
-                          : null,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) {
+          return;
+        }
+        _goBack(context);
+      },
+      child: Scaffold(
+        backgroundColor: colors.cream,
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: Stack(
+              children: [
+                CustomScrollView(
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: ActivityDetailHero(
+                        activity: _activity,
+                        onBackPressed: () => _goBack(context),
+                        onEditPressed:
+                            _activity.isOwnedByCurrentUser &&
+                                !_activity.isCompleted
+                            ? _editActivity
+                            : null,
+                      ),
                     ),
-                  ),
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(18, 16, 18, 126),
-                    sliver: SliverList.list(
-                      children: [
-                        ActivityDetailInfoCard(activity: _activity),
-                        const SizedBox(height: TochSpacing.md),
-                        ActivityDetailHostCard(
-                          activity: _activity,
-                          onProfilePressed: (profileId) {
-                            context.push(AppRoutes.profilePath(profileId));
-                          },
-                        ),
-                        const SizedBox(height: TochSpacing.md),
-                        _DescriptionCard(activity: _activity),
-                        const SizedBox(height: TochSpacing.md),
-                        ActivityDetailParticipantsCard(
-                          activity: _activity,
-                          onProfilePressed: (profileId) {
-                            context.push(AppRoutes.profilePath(profileId));
-                          },
-                        ),
-                        if (_activity.isCompleted) ...[
-                          if (_activity.isOwnedByCurrentUser) ...[
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(18, 16, 18, 126),
+                      sliver: SliverList.list(
+                        children: [
+                          ActivityDetailInfoCard(activity: _activity),
+                          const SizedBox(height: TochSpacing.md),
+                          ActivityDetailHostCard(
+                            activity: _activity,
+                            onProfilePressed: (profileId) {
+                              context.push(AppRoutes.profilePath(profileId));
+                            },
+                          ),
+                          const SizedBox(height: TochSpacing.md),
+                          _DescriptionCard(activity: _activity),
+                          const SizedBox(height: TochSpacing.md),
+                          ActivityDetailParticipantsCard(
+                            activity: _activity,
+                            onProfilePressed: (profileId) {
+                              context.push(AppRoutes.profilePath(profileId));
+                            },
+                          ),
+                          if (_activity.isCompleted) ...[
+                            if (_activity.isOwnedByCurrentUser) ...[
+                              const SizedBox(height: TochSpacing.md),
+                              _AttendanceCard(
+                                activity: _activity,
+                                pendingProfileIds: _attendancePendingIds,
+                                onMarkAttendance: _markAttendance,
+                              ),
+                            ],
                             const SizedBox(height: TochSpacing.md),
-                            _AttendanceCard(
+                            _FeedbackCard(
                               activity: _activity,
-                              pendingProfileIds: _attendancePendingIds,
-                              onMarkAttendance: _markAttendance,
+                              isSubmitting: _isFeedbackPending,
+                              onSubmit: _submitFeedback,
                             ),
                           ],
                           const SizedBox(height: TochSpacing.md),
-                          _FeedbackCard(
-                            activity: _activity,
-                            isSubmitting: _isFeedbackPending,
-                            onSubmit: _submitFeedback,
+                          _SafetyCard(
+                            canReport: !_activity.isOwnedByCurrentUser,
+                            onReportPressed: _reportActivity,
                           ),
                         ],
-                        const SizedBox(height: TochSpacing.md),
-                        _SafetyCard(
-                          canReport: !_activity.isOwnedByCurrentUser,
-                          onReportPressed: _reportActivity,
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: ActivityDetailActionBar(
-                  activity: _activity,
-                  isParticipationPending: _isParticipationPending,
-                  isCompletionPending: _isCompletionPending,
-                  onParticipationPressed: _toggleParticipation,
-                  onCompletePressed: _completeActivity,
-                  onChatPressed: _openChat,
+                  ],
                 ),
-              ),
-            ],
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: ActivityDetailActionBar(
+                    activity: _activity,
+                    isParticipationPending: _isParticipationPending,
+                    isCompletionPending: _isCompletionPending,
+                    onParticipationPressed: _toggleParticipation,
+                    onCompletePressed: _completeActivity,
+                    onChatPressed: _openChat,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
+  }
+
+  void _goBack(BuildContext context) {
+    if (context.canPop()) {
+      context.pop(_activity);
+      return;
+    }
+    context.go(AppRoutes.home);
   }
 }
 

@@ -12,6 +12,7 @@ class HomeActivity extends Equatable {
     required this.distanceKm,
     required this.distanceLabel,
     required this.title,
+    this.isFeatured = false,
     required this.dateLabel,
     required this.timeLabel,
     this.startsAt,
@@ -55,6 +56,7 @@ class HomeActivity extends Equatable {
   final double distanceKm;
   final String distanceLabel;
   final String title;
+  final bool isFeatured;
   final String dateLabel;
   final String timeLabel;
   final DateTime? startsAt;
@@ -104,6 +106,7 @@ class HomeActivity extends Equatable {
     int? availableSpots,
     String? spotsLabel,
     String? status,
+    bool? isFeatured,
     String? groupType,
     String? minReputationLevel,
     bool? requiresIdentityVerified,
@@ -127,6 +130,7 @@ class HomeActivity extends Equatable {
       distanceKm: distanceKm,
       distanceLabel: distanceLabel,
       title: title,
+      isFeatured: isFeatured ?? this.isFeatured,
       dateLabel: dateLabel,
       timeLabel: timeLabel,
       startsAt: startsAt,
@@ -198,6 +202,7 @@ class HomeActivity extends Equatable {
     distanceKm,
     distanceLabel,
     title,
+    isFeatured,
     dateLabel,
     timeLabel,
     startsAt,

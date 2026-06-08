@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../../../app/router/app_router.dart';
 import '../../../../app/theme/toch_theme.dart';
@@ -144,8 +145,45 @@ class _ProfileContent extends StatelessWidget {
                 ? null
                 : () => _blockProfile(context, profile),
           ),
+          if (isOwnProfile) ...[
+            const SizedBox(height: TochSpacing.lg),
+            const _AppVersionFooter(),
+          ],
         ],
       ),
+    );
+  }
+}
+
+class _AppVersionFooter extends StatelessWidget {
+  const _AppVersionFooter();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.toch;
+
+    return FutureBuilder<PackageInfo>(
+      future: PackageInfo.fromPlatform(),
+      builder: (context, snapshot) {
+        final info = snapshot.data;
+        final version = info == null
+            ? null
+            : info.buildNumber.isEmpty
+            ? info.version
+            : '${info.version} (${info.buildNumber})';
+        if (version == null || version.trim().isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        return Text(
+          'Versie $version',
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+            color: colors.green700.withValues(alpha: .48),
+            fontWeight: FontWeight.w800,
+          ),
+        );
+      },
     );
   }
 }

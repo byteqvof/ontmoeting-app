@@ -85,6 +85,16 @@ void main() {
 
     expect(updated, activity);
   });
+
+  test('preserves featured flag through copyWith', () {
+    final activity = _activity();
+
+    expect(activity.isFeatured, isFalse);
+
+    final featured = activity.copyWith(isFeatured: true);
+
+    expect(featured.isFeatured, isTrue);
+  });
 }
 
 HomeActivity _activity() {

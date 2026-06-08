@@ -176,7 +176,8 @@ class ActivityMessagesPage extends StatefulWidget {
   State<ActivityMessagesPage> createState() => _ActivityMessagesPageState();
 }
 
-class _ActivityMessagesPageState extends State<ActivityMessagesPage> {
+class _ActivityMessagesPageState extends State<ActivityMessagesPage>
+    with WidgetsBindingObserver {
   final GetActivityAgenda _getActivityAgenda = sl();
   final ActivityChatNoticeController _chatNotices = sl();
 
@@ -188,24 +189,36 @@ class _ActivityMessagesPageState extends State<ActivityMessagesPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _chatNotices.clearUnread();
-    _noticeSubscription = _chatNotices.notices.listen((_) {
+    _noticeSubscription = _chatNotices.notices.listen((notice) {
       _chatNotices.clearUnread();
+      _applyChatNotice(notice);
     });
     _loadAgenda();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _noticeSubscription?.cancel();
     super.dispose();
   }
 
-  Future<void> _loadAgenda() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      unawaited(_loadAgenda(showLoading: false));
+    }
+  }
+
+  Future<void> _loadAgenda({bool showLoading = true}) async {
+    if (showLoading) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
 
     final result = await _getActivityAgenda(const NoParams());
     if (!mounted) {
@@ -215,7 +228,9 @@ class _ActivityMessagesPageState extends State<ActivityMessagesPage> {
     result.fold(
       (failure) {
         setState(() {
-          _isLoading = false;
+          if (showLoading) {
+            _isLoading = false;
+          }
           _errorMessage = failure.message;
         });
       },
@@ -226,6 +241,27 @@ class _ActivityMessagesPageState extends State<ActivityMessagesPage> {
         });
       },
     );
+  }
+
+  void _applyChatNotice(ActivityChatNotice notice) {
+    final currentAgenda = _agenda;
+    if (currentAgenda == null) {
+      unawaited(_loadAgenda(showLoading: false));
+      return;
+    }
+
+    final update = _agendaWithChatNotice(currentAgenda, notice);
+    if (!update.didUpdate) {
+      unawaited(_loadAgenda(showLoading: false));
+      return;
+    }
+
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _agenda = update.agenda;
+    });
   }
 
   void _openChat(HomeActivity activity) {
@@ -270,6 +306,54 @@ class _ActivityMessagesPageState extends State<ActivityMessagesPage> {
         ),
       ),
     );
+  }
+}
+
+({ActivityAgenda agenda, bool didUpdate}) _agendaWithChatNotice(
+  ActivityAgenda agenda,
+  ActivityChatNotice notice,
+) {
+  var didUpdate = false;
+
+  List<HomeActivity> updateActivities(List<HomeActivity> activities) {
+    return [
+      for (final activity in activities)
+        if (activity.id == notice.activityId)
+          _activityWithChatNotice(activity, notice).also((_) {
+            didUpdate = true;
+          })
+        else
+          activity,
+    ];
+  }
+
+  return (
+    agenda: ActivityAgenda(
+      hostedActivities: updateActivities(agenda.hostedActivities),
+      joinedActivities: updateActivities(agenda.joinedActivities),
+      completedActivities: updateActivities(agenda.completedActivities),
+    ),
+    didUpdate: didUpdate,
+  );
+}
+
+HomeActivity _activityWithChatNotice(
+  HomeActivity activity,
+  ActivityChatNotice notice,
+) {
+  return activity.copyWith(
+    chatLastMessage: notice.body,
+    chatLastMessageAt: notice.createdAt,
+    chatLastSenderName: notice.senderName,
+    chatLastMessageType: 'user',
+    chatUnreadCount: activity.chatUnreadCount + 1,
+  );
+}
+
+extension _Also<T> on T {
+  T also(void Function(T value) action) {
+    action(this);
+    return this;
   }
 }
 

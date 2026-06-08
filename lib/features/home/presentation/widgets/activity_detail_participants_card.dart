@@ -1,9 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/toch_theme.dart';
+import '../../../../core/di/injection_container.dart';
+import '../../../profile/domain/entities/profile.dart';
+import '../../../profile/domain/usecases/get_profile.dart';
 import '../../domain/entities/home_activity.dart';
 
-class ActivityDetailParticipantsCard extends StatelessWidget {
+class ActivityDetailParticipantsCard extends StatefulWidget {
   const ActivityDetailParticipantsCard({
     required this.activity,
     this.onProfilePressed,
@@ -14,9 +19,54 @@ class ActivityDetailParticipantsCard extends StatelessWidget {
   final ValueChanged<String>? onProfilePressed;
 
   @override
+  State<ActivityDetailParticipantsCard> createState() =>
+      _ActivityDetailParticipantsCardState();
+}
+
+class _ActivityDetailParticipantsCardState
+    extends State<ActivityDetailParticipantsCard> {
+  final GetProfile _getProfile = sl();
+
+  Profile? _currentProfile;
+  bool _didLoadCurrentProfile = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.activity.isJoined) {
+      unawaited(_loadCurrentProfile());
+    }
+  }
+
+  @override
+  void didUpdateWidget(ActivityDetailParticipantsCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.activity.isJoined && !_didLoadCurrentProfile) {
+      unawaited(_loadCurrentProfile());
+    }
+  }
+
+  Future<void> _loadCurrentProfile() async {
+    _didLoadCurrentProfile = true;
+    final result = await _getProfile(const GetProfileParams());
+    if (!mounted) {
+      return;
+    }
+
+    result.fold((_) {}, (profile) {
+      setState(() {
+        _currentProfile = profile;
+      });
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final colors = context.toch;
-    final participants = _participantsFor(activity);
+    final participants = _participantsFor(
+      widget.activity,
+      currentProfile: _currentProfile,
+    );
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -38,7 +88,9 @@ class ActivityDetailParticipantsCard extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  activity.isJoined ? 'jij gaat ook' : activity.spotsLabel,
+                  widget.activity.isJoined
+                      ? 'jij gaat ook'
+                      : widget.activity.spotsLabel,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     color: colors.green700.withValues(alpha: .72),
                     fontWeight: FontWeight.w900,
@@ -54,7 +106,7 @@ class ActivityDetailParticipantsCard extends StatelessWidget {
                   .map(
                     (participant) => _ParticipantPill(
                       participant,
-                      onProfilePressed: onProfilePressed,
+                      onProfilePressed: widget.onProfilePressed,
                     ),
                   )
                   .toList(),
@@ -143,7 +195,10 @@ class _ParticipantPill extends StatelessWidget {
   }
 }
 
-List<_ActivityParticipant> _participantsFor(HomeActivity activity) {
+List<_ActivityParticipant> _participantsFor(
+  HomeActivity activity, {
+  Profile? currentProfile,
+}) {
   final participants = <_ActivityParticipant>[
     for (final participant in activity.participants)
       _ActivityParticipant(
@@ -154,13 +209,19 @@ List<_ActivityParticipant> _participantsFor(HomeActivity activity) {
       ),
   ];
 
-  if (activity.isJoined) {
+  final currentProfileId = currentProfile?.id.trim() ?? '';
+  final hasCurrentProfile =
+      currentProfileId.isNotEmpty &&
+      activity.participants.any(
+        (participant) => participant.id == currentProfileId,
+      );
+  if (activity.isJoined && !hasCurrentProfile) {
     participants.add(
-      const _ActivityParticipant(
-        profileId: '',
-        initials: 'JIJ',
+      _ActivityParticipant(
+        profileId: currentProfile?.id ?? '',
+        initials: _safeInitials(currentProfile?.initials),
         label: 'jij',
-        avatarUrl: null,
+        avatarUrl: currentProfile?.avatarUrl,
         isCurrentUser: true,
       ),
     );
@@ -180,6 +241,14 @@ List<_ActivityParticipant> _participantsFor(HomeActivity activity) {
   );
 
   return participants;
+}
+
+String _safeInitials(String? initials) {
+  final normalized = initials?.trim();
+  if (normalized == null || normalized.isEmpty) {
+    return 'IK';
+  }
+  return normalized;
 }
 
 class _ActivityParticipant {

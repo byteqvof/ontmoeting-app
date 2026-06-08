@@ -43,6 +43,7 @@ class _ActivityChatPageState extends State<ActivityChatPage>
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
+  late HomeActivity _activity = widget.activity;
   List<ActivityChatMessage> _messages = const [];
   StreamSubscription<ActivityChatMessage>? _messageSubscription;
   bool _isLoading = true;
@@ -56,16 +57,24 @@ class _ActivityChatPageState extends State<ActivityChatPage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _chatNotices.markActivityOpen(widget.activity.id);
+    _chatNotices.markActivityOpen(_activity.id);
     _messageSubscription = _realtime.messages.listen(_handleRealtimeMessage);
     AnalyticsService.instance.track('chat_opened');
     unawaited(_initializeChat());
   }
 
   @override
+  void didUpdateWidget(covariant ActivityChatPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.activity != oldWidget.activity) {
+      _applyActivityUpdate(widget.activity);
+    }
+  }
+
+  @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _chatNotices.markActivityClosed(widget.activity.id);
+    _chatNotices.markActivityClosed(_activity.id);
     _messageSubscription?.cancel();
     _messageController.dispose();
     _scrollController.dispose();
@@ -81,7 +90,7 @@ class _ActivityChatPageState extends State<ActivityChatPage>
 
   Future<void> _initializeChat() async {
     await _loadMessages();
-    await _realtime.subscribeToActivity(widget.activity.id);
+    await _realtime.subscribeToActivity(_activity.id);
     await _catchUpMessages();
   }
 
@@ -103,7 +112,7 @@ class _ActivityChatPageState extends State<ActivityChatPage>
 
     final result = await _getMessages(
       GetActivityChatMessagesParams(
-        activityId: widget.activity.id,
+        activityId: _activity.id,
         afterCreatedAt: afterCreatedAt,
         afterId: afterId,
       ),
@@ -164,7 +173,7 @@ class _ActivityChatPageState extends State<ActivityChatPage>
   }
 
   void _handleRealtimeMessage(ActivityChatMessage message) {
-    if (!mounted || message.activityId != widget.activity.id) {
+    if (!mounted || message.activityId != _activity.id) {
       return;
     }
 
@@ -204,7 +213,7 @@ class _ActivityChatPageState extends State<ActivityChatPage>
 
     final result = await _sendMessage(
       SendActivityChatMessageParams(
-        activityId: widget.activity.id,
+        activityId: _activity.id,
         body: body,
         clientMessageId: createActivityChatClientMessageId(),
       ),
@@ -246,7 +255,26 @@ class _ActivityChatPageState extends State<ActivityChatPage>
     return authState is AuthAuthenticated ? authState.user.id : null;
   }
 
-  bool get _canSendMessages => widget.activity.canSendChat && !_sendBlocked;
+  bool get _canSendMessages => _activity.canSendChat && !_sendBlocked;
+
+  void _applyActivityUpdate(HomeActivity activity) {
+    if (activity.id != _activity.id) {
+      return;
+    }
+    if (!mounted) {
+      _activity = activity;
+      return;
+    }
+
+    setState(() {
+      _activity = activity;
+      if (activity.canSendChat) {
+        _sendBlocked = false;
+      } else {
+        _sendBlocked = true;
+      }
+    });
+  }
 
   void _markLatestMessageRead() {
     if (!_isCurrentRoute || _messages.isEmpty) {
@@ -262,7 +290,7 @@ class _ActivityChatPageState extends State<ActivityChatPage>
     unawaited(
       _markChatRead(
         MarkActivityChatReadParams(
-          activityId: widget.activity.id,
+          activityId: _activity.id,
           messageId: latestMessageId,
         ),
       ).then((result) {
@@ -300,7 +328,7 @@ class _ActivityChatPageState extends State<ActivityChatPage>
         : null;
 
     return PopScope(
-      canPop: widget.backFallbackRoute == null,
+      canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) {
           return;
@@ -316,15 +344,10 @@ class _ActivityChatPageState extends State<ActivityChatPage>
               child: Column(
                 children: [
                   _ChatHeader(
-                    activity: widget.activity,
+                    activity: _activity,
                     currentUserId: currentUserId,
                     onBackPressed: () => _goBack(context),
-                    onMembersPressed: () {
-                      context.push(
-                        AppRoutes.activityChatMembersPath(widget.activity.id),
-                        extra: widget.activity,
-                      );
-                    },
+                    onMembersPressed: _openMembers,
                   ),
                   Expanded(
                     child: _ChatBody(
@@ -360,10 +383,23 @@ class _ActivityChatPageState extends State<ActivityChatPage>
       return;
     }
     if (context.canPop()) {
-      context.pop();
+      context.pop(_activity);
       return;
     }
     context.go(AppRoutes.activityMessages);
+  }
+
+  Future<void> _openMembers() async {
+    final updatedActivity = await context.push<HomeActivity>(
+      AppRoutes.activityChatMembersPath(_activity.id),
+      extra: _activity,
+    );
+    if (!mounted || updatedActivity == null) {
+      return;
+    }
+
+    _applyActivityUpdate(updatedActivity);
+    await _loadMessages(showLoading: false);
   }
 }
 

@@ -648,6 +648,9 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
         fallback: distanceLabelFallback ?? _formatDistance(distanceKm),
       ),
       title: _stringValue(json['title']),
+      isFeatured: _boolValue(
+        json['featured'] ?? json['is_featured'] ?? json['isFeatured'],
+      ),
       dateLabel: _stringValue(
         json['dateLabel'] ?? json['date_label'],
         fallback: startAt == null ? '' : _formatDateLabel(startAt),

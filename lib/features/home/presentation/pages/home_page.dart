@@ -5,7 +5,9 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/app_router.dart';
 import '../../../../app/theme/toch_theme.dart';
 import '../../../../core/di/injection_container.dart';
+import '../../../../core/usecases/usecase.dart';
 import '../../domain/entities/home_activity.dart';
+import '../../domain/usecases/get_activity_agenda.dart';
 import '../bloc/home_bloc.dart';
 import '../widgets/home_activity_card.dart';
 import '../widgets/home_bottom_nav.dart';
@@ -192,6 +194,7 @@ class _HomeFeed extends StatelessWidget {
                   activities: activities,
                   filters: state.filters,
                 ),
+                const _HostedActivitiesOverview(),
                 HomeFeedSummary(activityCount: activities.length),
                 if (activities.isEmpty)
                   const _EmptyActivities()
@@ -242,6 +245,251 @@ class _HomeFeed extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _HostedActivitiesOverview extends StatefulWidget {
+  const _HostedActivitiesOverview();
+
+  @override
+  State<_HostedActivitiesOverview> createState() =>
+      _HostedActivitiesOverviewState();
+}
+
+class _HostedActivitiesOverviewState extends State<_HostedActivitiesOverview> {
+  final GetActivityAgenda _getActivityAgenda = sl();
+
+  List<HomeActivity> _hostedActivities = const [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadHostedActivities();
+  }
+
+  Future<void> _loadHostedActivities() async {
+    final result = await _getActivityAgenda(const NoParams());
+    if (!mounted) {
+      return;
+    }
+
+    result.fold(
+      (_) {
+        setState(() {
+          _hostedActivities = const [];
+          _isLoading = false;
+        });
+      },
+      (agenda) {
+        setState(() {
+          _hostedActivities = _sortHostedActivities(
+            agenda.activeHostedActivities,
+          );
+          _isLoading = false;
+        });
+      },
+    );
+  }
+
+  Future<void> _openActivity(HomeActivity activity) async {
+    final updatedActivity = await context.push<HomeActivity>(
+      AppRoutes.activityDetailPath(activity.id),
+      extra: activity,
+    );
+    if (!mounted || updatedActivity == null) {
+      return;
+    }
+
+    setState(() {
+      _hostedActivities = _sortHostedActivities([
+        for (final hosted in _hostedActivities)
+          if (hosted.id == updatedActivity.id) updatedActivity else hosted,
+      ]);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading || _hostedActivities.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return _HostedActivitiesSection(
+      activities: _hostedActivities,
+      onActivityPressed: _openActivity,
+      onAgendaPressed: () => context.push(AppRoutes.activityAgenda),
+    );
+  }
+}
+
+List<HomeActivity> _sortHostedActivities(Iterable<HomeActivity> activities) {
+  return activities.where((activity) => !activity.isCompleted).toList()
+    ..sort((left, right) {
+      final leftStart = left.startsAt;
+      final rightStart = right.startsAt;
+      if (leftStart == null && rightStart == null) {
+        return 0;
+      }
+      if (leftStart == null) {
+        return 1;
+      }
+      if (rightStart == null) {
+        return -1;
+      }
+      return leftStart.compareTo(rightStart);
+    });
+}
+
+class _HostedActivitiesSection extends StatelessWidget {
+  const _HostedActivitiesSection({
+    required this.activities,
+    required this.onActivityPressed,
+    required this.onAgendaPressed,
+  });
+
+  final List<HomeActivity> activities;
+  final ValueChanged<HomeActivity> onActivityPressed;
+  final VoidCallback onAgendaPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final visibleActivities = activities.take(2).toList();
+    final remainingCount = activities.length - visibleActivities.length;
+    final colors = context.toch;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 6, 20, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Jij organiseert',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: colors.ink,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: onAgendaPressed,
+                style: TextButton.styleFrom(
+                  foregroundColor: colors.green,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  minimumSize: const Size(0, 36),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: const Text('Agenda'),
+              ),
+            ],
+          ),
+          const SizedBox(height: TochSpacing.xs),
+          for (final activity in visibleActivities)
+            Padding(
+              padding: const EdgeInsets.only(bottom: TochSpacing.xs),
+              child: _HostedActivityTile(
+                activity: activity,
+                onPressed: () => onActivityPressed(activity),
+              ),
+            ),
+          if (remainingCount > 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                '+$remainingCount meer in je agenda',
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: colors.green700.withValues(alpha: .72),
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HostedActivityTile extends StatelessWidget {
+  const _HostedActivityTile({required this.activity, required this.onPressed});
+
+  final HomeActivity activity;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.toch;
+    final borderRadius = BorderRadius.circular(TochRadius.md);
+
+    return Material(
+      color: colors.card,
+      borderRadius: borderRadius,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onPressed,
+        child: Ink(
+          decoration: BoxDecoration(
+            borderRadius: borderRadius,
+            border: Border.all(color: colors.line),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: activity.category.backgroundColor,
+                    borderRadius: BorderRadius.circular(TochRadius.sm),
+                  ),
+                  child: SizedBox.square(
+                    dimension: 38,
+                    child: Icon(
+                      activity.category.icon,
+                      color: activity.category.color,
+                      size: 20,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: TochSpacing.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        activity.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: colors.ink,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${activity.dateLabel} · ${activity.timeLabel}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: colors.green700.withValues(alpha: .72),
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: TochSpacing.xs),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: colors.green700.withValues(alpha: .68),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

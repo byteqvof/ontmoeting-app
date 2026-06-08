@@ -14,11 +14,69 @@ class PushNotificationService {
 
   final SupabaseClient _client;
   StreamSubscription<String>? _tokenRefreshSubscription;
-  bool _initialized = false;
+  StreamSubscription<RemoteMessage>? _messageOpenedSubscription;
+  final StreamController<String> _chatNotificationOpens =
+      StreamController<String>.broadcast();
+  bool _interactionHandlersStarted = false;
   String? _lastRegisteredToken;
+
+  Stream<String> get chatNotificationOpens => _chatNotificationOpens.stream;
+
+  static Future<void> initializeFirebaseMessaging() {
+    if (!_canUsePush) {
+      return Future<void>.value();
+    }
+    return _firebaseInitialization ??= _initializeFirebaseMessaging()
+        .catchError((Object error, StackTrace stackTrace) {
+          _firebaseInitialization = null;
+          AppLogger.debug(
+            'Push Firebase initialization skipped',
+            error: error,
+            stackTrace: stackTrace,
+          );
+        });
+  }
+
+  Future<void> startInteractionHandlers() async {
+    if (!_canUsePush || _interactionHandlersStarted) {
+      return;
+    }
+    _interactionHandlersStarted = true;
+
+    try {
+      await _ensureInitialized();
+      final initialMessage = await FirebaseMessaging.instance
+          .getInitialMessage();
+      _handleOpenedMessage(initialMessage);
+      _messageOpenedSubscription ??= FirebaseMessaging.onMessageOpenedApp
+          .listen(_handleOpenedMessage);
+    } catch (error, stackTrace) {
+      AppLogger.debug(
+        'Push interaction handlers skipped',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  static String? activityChatIdFromRemoteMessage(RemoteMessage? message) {
+    if (message == null) {
+      return null;
+    }
+    final data = message.data;
+    if (data['type'] != 'activity_chat') {
+      return null;
+    }
+    final activityId = data['activity_id']?.toString().trim();
+    if (activityId == null || activityId.isEmpty) {
+      return null;
+    }
+    return activityId;
+  }
 
   Future<void> registerForCurrentUser() async {
     if (!_canUsePush) {
+      AppLogger.debug('Push registration disabled by config or platform');
       return;
     }
 
@@ -29,9 +87,16 @@ class PushNotificationService {
         return;
       }
 
+      final apnsReady = await _waitForAppleApnsToken();
+      if (!apnsReady) {
+        return;
+      }
+
       final token = await FirebaseMessaging.instance.getToken();
       if (token != null && token.isNotEmpty) {
         await _registerToken(token);
+      } else {
+        AppLogger.debug('Push registration skipped: empty FCM token');
       }
 
       _tokenRefreshSubscription ??= FirebaseMessaging.instance.onTokenRefresh
@@ -48,6 +113,9 @@ class PushNotificationService {
   }
 
   Future<void> unregisterCurrentToken() async {
+    await _tokenRefreshSubscription?.cancel();
+    _tokenRefreshSubscription = null;
+
     final token = _lastRegisteredToken;
     if (!_canUsePush || token == null || token.isEmpty) {
       return;
@@ -71,12 +139,7 @@ class PushNotificationService {
   }
 
   Future<void> _ensureInitialized() async {
-    if (_initialized) {
-      return;
-    }
-
-    await Firebase.initializeApp(options: _firebaseOptions);
-    _initialized = true;
+    await initializeFirebaseMessaging();
   }
 
   Future<void> _registerToken(String token) async {
@@ -90,16 +153,48 @@ class PushNotificationService {
       body: {'token': token, 'platform': _pushPlatform},
     );
     _lastRegisteredToken = token;
+    AppLogger.debug('Push token registered for $_pushPlatform');
   }
 
-  bool get _canUsePush {
-    return tochPushEnabled &&
-        !kIsWeb &&
-        _pushPlatform.isNotEmpty &&
-        firebaseApiKey.isNotEmpty &&
-        firebaseAppId.isNotEmpty &&
-        firebaseMessagingSenderId.isNotEmpty &&
-        firebaseProjectId.isNotEmpty;
+  Future<bool> _waitForAppleApnsToken() async {
+    if (defaultTargetPlatform != TargetPlatform.iOS) {
+      return true;
+    }
+
+    for (var attempt = 0; attempt < 10; attempt++) {
+      final token = await FirebaseMessaging.instance.getAPNSToken();
+      if (token != null && token.isNotEmpty) {
+        return true;
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+    }
+
+    AppLogger.debug('Push registration skipped: APNs token unavailable');
+    return false;
+  }
+
+  void _handleOpenedMessage(RemoteMessage? message) {
+    final activityId = activityChatIdFromRemoteMessage(message);
+    if (activityId == null) {
+      return;
+    }
+    _chatNotificationOpens.add(activityId);
+  }
+}
+
+Future<void>? _firebaseInitialization;
+
+Future<void> _initializeFirebaseMessaging() async {
+  if (Firebase.apps.isEmpty) {
+    await Firebase.initializeApp(options: _firebaseOptions);
+  }
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+}
+
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  if (Firebase.apps.isEmpty) {
+    await Firebase.initializeApp(options: _firebaseOptions);
   }
 }
 
@@ -118,4 +213,14 @@ String get _pushPlatform {
     TargetPlatform.iOS => 'ios',
     _ => '',
   };
+}
+
+bool get _canUsePush {
+  return tochPushEnabled &&
+      !kIsWeb &&
+      _pushPlatform.isNotEmpty &&
+      firebaseApiKey.isNotEmpty &&
+      firebaseAppId.isNotEmpty &&
+      firebaseMessagingSenderId.isNotEmpty &&
+      firebaseProjectId.isNotEmpty;
 }

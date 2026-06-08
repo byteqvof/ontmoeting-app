@@ -84,12 +84,21 @@ class ActivityDetailHero extends StatelessWidget {
                   ),
                   const SizedBox(width: TochSpacing.sm),
                   Expanded(
-                    child: Text(
-                      '${activity.category.label} · ${activity.distanceLabel}',
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: colors.green700.withValues(alpha: .72),
-                        fontWeight: FontWeight.w900,
-                      ),
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(
+                          '${activity.category.label} · ${activity.distanceLabel}',
+                          style: Theme.of(context).textTheme.labelMedium
+                              ?.copyWith(
+                                color: colors.green700.withValues(alpha: .72),
+                                fontWeight: FontWeight.w900,
+                              ),
+                        ),
+                        if (activity.isFeatured) const _FeaturedBadge(),
+                      ],
                     ),
                   ),
                 ],
@@ -106,6 +115,40 @@ class ActivityDetailHero extends StatelessWidget {
               _MapPreview(activity: activity),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FeaturedBadge extends StatelessWidget {
+  const _FeaturedBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.toch;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF3C4),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0xFFE1B53A)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.star_rounded, size: 12, color: colors.ink),
+            const SizedBox(width: 3),
+            Text(
+              'Uitgelicht',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: colors.ink,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
         ),
       ),
     );

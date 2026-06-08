@@ -8,10 +8,26 @@ import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../domain/entities/home_activity.dart';
 import '../../domain/entities/home_participant.dart';
 
-class ActivityChatMembersPage extends StatelessWidget {
+class ActivityChatMembersPage extends StatefulWidget {
   const ActivityChatMembersPage({required this.activity, super.key});
 
   final HomeActivity activity;
+
+  @override
+  State<ActivityChatMembersPage> createState() =>
+      _ActivityChatMembersPageState();
+}
+
+class _ActivityChatMembersPageState extends State<ActivityChatMembersPage> {
+  late HomeActivity _activity = widget.activity;
+
+  @override
+  void didUpdateWidget(covariant ActivityChatMembersPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.activity != oldWidget.activity) {
+      _activity = widget.activity;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,50 +36,81 @@ class ActivityChatMembersPage extends StatelessWidget {
     final currentUserId = authState is AuthAuthenticated
         ? authState.user.id
         : null;
-    final members = _chatMembersFor(activity, currentUserId: currentUserId);
+    final members = _chatMembersFor(_activity, currentUserId: currentUserId);
 
-    return Scaffold(
-      backgroundColor: colors.cream,
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 480),
-          child: SafeArea(
-            child: CustomScrollView(
-              slivers: [
-                SliverToBoxAdapter(
-                  child: _MembersHeader(
-                    activity: activity,
-                    memberCount: members.length,
-                    onBackPressed: () => context.pop(),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) {
+          return;
+        }
+        _goBack(context);
+      },
+      child: Scaffold(
+        backgroundColor: colors.cream,
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: SafeArea(
+              child: CustomScrollView(
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: _MembersHeader(
+                      activity: _activity,
+                      memberCount: members.length,
+                      onBackPressed: () => _goBack(context),
+                    ),
                   ),
-                ),
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
-                  sliver: SliverList.list(
-                    children: [
-                      _ActivitySummary(activity: activity),
-                      const SizedBox(height: TochSpacing.md),
-                      _ViewActivityButton(activity: activity),
-                      const SizedBox(height: TochSpacing.md),
-                      _MembersList(
-                        members: members,
-                        onMemberPressed: (member) {
-                          if (member.isCurrentUser) {
-                            context.push(AppRoutes.profile);
-                            return;
-                          }
-                          context.push(AppRoutes.profilePath(member.profileId));
-                        },
-                      ),
-                    ],
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
+                    sliver: SliverList.list(
+                      children: [
+                        _ActivitySummary(activity: _activity),
+                        const SizedBox(height: TochSpacing.md),
+                        _ViewActivityButton(
+                          activity: _activity,
+                          onActivityUpdated: _applyActivityUpdate,
+                        ),
+                        const SizedBox(height: TochSpacing.md),
+                        _MembersList(
+                          members: members,
+                          onMemberPressed: (member) {
+                            if (member.isCurrentUser) {
+                              context.push(AppRoutes.profile);
+                              return;
+                            }
+                            context.push(
+                              AppRoutes.profilePath(member.profileId),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
       ),
     );
+  }
+
+  void _applyActivityUpdate(HomeActivity activity) {
+    if (activity.id != _activity.id || !mounted) {
+      return;
+    }
+    setState(() {
+      _activity = activity;
+    });
+  }
+
+  void _goBack(BuildContext context) {
+    if (context.canPop()) {
+      context.pop(_activity);
+      return;
+    }
+    context.go(AppRoutes.activityMessages);
   }
 }
 
@@ -186,9 +233,13 @@ class _ActivitySummary extends StatelessWidget {
 }
 
 class _ViewActivityButton extends StatelessWidget {
-  const _ViewActivityButton({required this.activity});
+  const _ViewActivityButton({
+    required this.activity,
+    required this.onActivityUpdated,
+  });
 
   final HomeActivity activity;
+  final ValueChanged<HomeActivity> onActivityUpdated;
 
   @override
   Widget build(BuildContext context) {
@@ -197,11 +248,14 @@ class _ViewActivityButton extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       child: FilledButton.icon(
-        onPressed: () {
-          context.push(
+        onPressed: () async {
+          final updatedActivity = await context.push<HomeActivity>(
             AppRoutes.activityDetailPath(activity.id),
             extra: activity,
           );
+          if (updatedActivity != null) {
+            onActivityUpdated(updatedActivity);
+          }
         },
         style: FilledButton.styleFrom(
           backgroundColor: colors.green,

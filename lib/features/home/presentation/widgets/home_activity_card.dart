@@ -62,6 +62,8 @@ class HomeActivityCard extends StatelessWidget {
                               Expanded(
                                 child: Text(
                                   activity.category.label,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                   style: Theme.of(context).textTheme.labelSmall
                                       ?.copyWith(
                                         color: activity.category.color,
@@ -69,6 +71,11 @@ class HomeActivityCard extends StatelessWidget {
                                       ),
                                 ),
                               ),
+                              if (activity.isFeatured) ...[
+                                const SizedBox(width: 8),
+                                const _FeaturedBadge(),
+                              ],
+                              const SizedBox(width: 8),
                               Icon(
                                 Icons.location_on_outlined,
                                 size: 14,
@@ -198,6 +205,40 @@ class HomeActivityCard extends StatelessWidget {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FeaturedBadge extends StatelessWidget {
+  const _FeaturedBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.toch;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF3C4),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0xFFE1B53A)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.star_rounded, size: 12, color: colors.ink),
+            const SizedBox(width: 3),
+            Text(
+              'Uitgelicht',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: colors.ink,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
         ),
       ),
     );
