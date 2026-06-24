@@ -180,7 +180,7 @@ class _ActivityChatPageState extends State<ActivityChatPage>
 
   Future<void> _sendCurrentMessage() async {
     final body = _messageController.text.trim();
-    if (body.isEmpty || _isSending) {
+    if (body.isEmpty || _isSending || widget.activity.isChatClosed) {
       return;
     }
 
@@ -300,11 +300,14 @@ class _ActivityChatPageState extends State<ActivityChatPage>
                       onRetry: _loadMessages,
                     ),
                   ),
-                  _MessageComposer(
-                    controller: _messageController,
-                    isSending: _isSending,
-                    onSendPressed: _sendCurrentMessage,
-                  ),
+                  if (widget.activity.isChatClosed)
+                    const _ClosedChatNotice()
+                  else
+                    _MessageComposer(
+                      controller: _messageController,
+                      isSending: _isSending,
+                      onSendPressed: _sendCurrentMessage,
+                    ),
                 ],
               ),
             ),
@@ -349,6 +352,56 @@ List<ActivityChatMessage> _mergeMessages(
     }
     return left.id.compareTo(right.id);
   });
+}
+
+class _ClosedChatNotice extends StatelessWidget {
+  const _ClosedChatNotice();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.toch;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.card,
+        border: Border(top: BorderSide(color: colors.line)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: colors.green100,
+              borderRadius: BorderRadius.circular(TochRadius.lg),
+              border: Border.all(color: colors.green.withValues(alpha: .16)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: TochSpacing.md,
+                vertical: TochSpacing.sm,
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.lock_clock_rounded, color: colors.green, size: 20),
+                  const SizedBox(width: TochSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      'Deze activiteit is voorbij. De chat is gesloten.',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: colors.green700,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class MissingActivityChatPage extends StatelessWidget {

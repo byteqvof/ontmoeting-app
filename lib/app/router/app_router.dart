@@ -20,11 +20,15 @@ import '../../features/onboarding/presentation/pages/onboarding_page.dart';
 import '../../features/onboarding/presentation/pages/splash_page.dart';
 import '../../features/profile/domain/entities/profile.dart';
 import '../../features/profile/presentation/pages/account_verification_page.dart';
+import '../../features/profile/presentation/pages/app_info_page.dart';
 import '../../features/profile/presentation/pages/edit_profile_page.dart';
 import '../../features/profile/presentation/pages/account_gate.dart';
+import '../../features/profile/presentation/pages/friends_page.dart';
+import '../../features/profile/presentation/pages/notifications_page.dart';
 import '../../features/profile/presentation/pages/profile_completion_gate.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/profile/presentation/pages/profile_setup_page.dart';
+import '../../features/profile/presentation/pages/privacy_location_page.dart';
 
 class AppRoutes {
   const AppRoutes._();
@@ -41,6 +45,10 @@ class AppRoutes {
   static const activityAgenda = '/agenda';
   static const activityMap = '/map';
   static const profile = '/profile';
+  static const friends = '/friends';
+  static const appInfo = '/info';
+  static const notifications = '/notifications';
+  static const privacyLocation = '/privacy-location';
   static const accountVerification = '/account/verification';
   static const profileSetup = '/profile/setup';
   static const profileDetail = '/profile/:profileId';
@@ -211,6 +219,30 @@ GoRouter createRouter(AuthBloc authBloc) {
         path: AppRoutes.accountVerification,
         builder: (context, state) {
           return _phoneProtected(const AccountVerificationPage());
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.friends,
+        builder: (context, state) {
+          return _protected(const FriendsPage());
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.appInfo,
+        builder: (context, state) {
+          return _protected(const AppInfoPage());
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.notifications,
+        builder: (context, state) {
+          return _protected(const NotificationsPage());
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.privacyLocation,
+        builder: (context, state) {
+          return _protected(const PrivacyLocationPage());
         },
       ),
       GoRoute(

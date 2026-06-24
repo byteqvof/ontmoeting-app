@@ -5,11 +5,15 @@ import 'package:meetings_app/features/home/domain/entities/home_activity.dart';
 import 'package:meetings_app/features/home/domain/entities/home_category.dart';
 
 void main() {
-  test('chat activities combines hosted and joined without duplicates', () {
+  test('chat activities combines active hosted and joined without duplicates', () {
     final hosted = _activity('activity-1', title: 'Vissen');
     final joined = _activity('activity-2', title: 'Koffie');
     final duplicate = _activity('activity-1', title: 'Vissen later');
-    final completed = _activity('activity-3', title: 'Wandelen');
+    final completed = _activity(
+      'activity-3',
+      title: 'Wandelen',
+      status: 'completed',
+    );
 
     final agenda = ActivityAgenda(
       hostedActivities: [hosted],
@@ -17,7 +21,7 @@ void main() {
       completedActivities: [completed],
     );
 
-    expect(agenda.chatActivities, [hosted, joined, completed]);
+    expect(agenda.chatActivities, [hosted, joined]);
     expect(agenda.totalCount, 3);
   });
 
@@ -75,6 +79,35 @@ void main() {
     );
 
     expect(agenda.chatActivities, [unread, recent, quiet]);
+  });
+
+  test('marking a chat read clears unread count in all agenda sections', () {
+    final hosted = _activity(
+      'activity-1',
+      title: 'Vissen',
+      chatUnreadCount: 1,
+    );
+    final joined = _activity(
+      'activity-1',
+      title: 'Vissen',
+      chatUnreadCount: 1,
+    );
+    final other = _activity(
+      'activity-2',
+      title: 'Koffie',
+      chatUnreadCount: 2,
+    );
+
+    final agenda = ActivityAgenda(
+      hostedActivities: [hosted],
+      joinedActivities: [joined, other],
+    );
+
+    final updated = agenda.withChatMarkedRead('activity-1');
+
+    expect(updated.hostedActivities.first.chatUnreadCount, 0);
+    expect(updated.joinedActivities.first.chatUnreadCount, 0);
+    expect(updated.joinedActivities.last.chatUnreadCount, 2);
   });
 }
 

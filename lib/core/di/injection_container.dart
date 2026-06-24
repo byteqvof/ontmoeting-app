@@ -51,6 +51,7 @@ import '../services/activity_attendance_service.dart';
 import '../services/analytics_service.dart';
 import '../services/push_notification_service.dart';
 import '../services/safety_service.dart';
+import '../services/friendship_service.dart';
 import '../utils/app_preferences.dart';
 
 final sl = GetIt.instance;
@@ -67,6 +68,7 @@ Future<void> configureDependencies() async {
     ..registerLazySingleton(() => AccountTrustService(sl(), sl()))
     ..registerLazySingleton(() => ActivityAttendanceService(sl()))
     ..registerLazySingleton(() => SafetyService(sl()))
+    ..registerLazySingleton(() => FriendshipService(sl()))
     ..registerLazySingleton<AuthRemoteDataSource>(
       () => AuthRemoteDataSourceImpl(sl()),
     )

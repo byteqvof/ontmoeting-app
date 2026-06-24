@@ -90,6 +90,12 @@ class HomeActivity extends Equatable {
 
   bool get isCompleted => status == 'completed';
 
+  bool get isChatClosed => isCompleted;
+
+  bool get hasStarted => startsAt == null || !startsAt!.isAfter(DateTime.now());
+
+  bool get canBeCompletedNow => isOwnedByCurrentUser && !isCompleted && hasStarted;
+
   bool get isApprovalRequired => groupType == 'approval';
 
   bool get isParticipationPending => participationStatus == 'pending';

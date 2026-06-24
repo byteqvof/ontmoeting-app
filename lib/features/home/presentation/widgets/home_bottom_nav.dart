@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/app_router.dart';
 import '../../../../app/theme/toch_theme.dart';
 import '../../../../core/di/injection_container.dart';
+import '../../../../core/services/friendship_service.dart';
 import '../../domain/entities/home_category.dart';
 import '../../domain/entities/home_location.dart';
 import '../controllers/activity_chat_notice_controller.dart';
@@ -95,9 +96,7 @@ class HomeBottomNav extends StatelessWidget {
                         ? null
                         : () => context.go(AppRoutes.activityAgenda),
                   ),
-                  _HomeNavItem(
-                    icon: Icons.person_rounded,
-                    label: 'Profiel',
+                  _ProfileHomeNavItem(
                     selected: selected == HomeNavDestination.profile,
                     onTap: selected == HomeNavDestination.profile
                         ? null
@@ -132,48 +131,103 @@ class _HomeNavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return Expanded(
+      child: _HomeNavItemButton(
+        icon: icon,
+        label: label,
+        selected: selected,
+        badgeCount: badgeCount,
+        onTap: onTap,
+      ),
+    );
+  }
+}
+
+class _ProfileHomeNavItem extends StatelessWidget {
+  const _ProfileHomeNavItem({required this.selected, this.onTap});
+
+  final bool selected;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: FutureBuilder<List<FriendshipListItem>>(
+        future: sl<FriendshipService>().listFriends(),
+        builder: (context, snapshot) {
+          final friendRequestCount = snapshot.hasData
+              ? countIncomingFriendRequests(snapshot.data!)
+              : 0;
+          return _HomeNavItemButton(
+            icon: Icons.person_rounded,
+            label: 'Profiel',
+            selected: selected,
+            badgeCount: friendRequestCount,
+            onTap: onTap,
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _HomeNavItemButton extends StatelessWidget {
+  const _HomeNavItemButton({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.badgeCount,
+    this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final int badgeCount;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
     final colors = context.toch;
 
-    return Expanded(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(TochRadius.md),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Icon(
-                  icon,
-                  size: 23,
-                  color: selected
-                      ? colors.green
-                      : colors.green700.withValues(alpha: .45),
-                ),
-                if (badgeCount > 0)
-                  Positioned(
-                    right: -10,
-                    top: -8,
-                    child: _UnreadBadge(count: badgeCount),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 3),
-            Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(TochRadius.md),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Icon(
+                icon,
+                size: 23,
                 color: selected
                     ? colors.green
                     : colors.green700.withValues(alpha: .45),
-                fontSize: 10,
-                fontWeight: FontWeight.w900,
               ),
+              if (badgeCount > 0)
+                Positioned(
+                  right: -10,
+                  top: -8,
+                  child: _UnreadBadge(count: badgeCount),
+                ),
+            ],
+          ),
+          const SizedBox(height: 3),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: selected
+                  ? colors.green
+                  : colors.green700.withValues(alpha: .45),
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

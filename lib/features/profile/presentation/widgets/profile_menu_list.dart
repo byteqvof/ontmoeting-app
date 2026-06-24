@@ -7,18 +7,28 @@ class ProfileMenuList extends StatelessWidget {
     required this.isOwnProfile,
     required this.onSignOutPressed,
     this.onAccountVerificationPressed,
+    this.onFriendsPressed,
+    this.onPrivacyPressed,
+    this.onNotificationsPressed,
+    this.onHelpPressed,
     this.onDeleteAccountPressed,
     this.onReportProfilePressed,
     this.onBlockProfilePressed,
+    this.friendsBadgeCount = 0,
     super.key,
   });
 
   final bool isOwnProfile;
   final VoidCallback onSignOutPressed;
   final VoidCallback? onAccountVerificationPressed;
+  final VoidCallback? onFriendsPressed;
+  final VoidCallback? onPrivacyPressed;
+  final VoidCallback? onNotificationsPressed;
+  final VoidCallback? onHelpPressed;
   final VoidCallback? onDeleteAccountPressed;
   final VoidCallback? onReportProfilePressed;
   final VoidCallback? onBlockProfilePressed;
+  final int friendsBadgeCount;
 
   @override
   Widget build(BuildContext context) {
@@ -30,9 +40,28 @@ class ProfileMenuList extends StatelessWidget {
             icon: Icons.verified_user_outlined,
             onTap: onAccountVerificationPressed,
           ),
-        const _MenuItem(label: 'Privacy en locatie'),
-        const _MenuItem(label: 'Meldingen'),
-        const _MenuItem(label: 'Help & contact'),
+        if (isOwnProfile)
+          _MenuItem(
+            label: 'Vrienden',
+            icon: Icons.group_outlined,
+            onTap: onFriendsPressed,
+            badgeCount: friendsBadgeCount,
+          ),
+        _MenuItem(
+          label: 'Privacy en locatie',
+          icon: Icons.lock_outline_rounded,
+          onTap: onPrivacyPressed,
+        ),
+        _MenuItem(
+          label: 'Meldingen',
+          icon: Icons.notifications_outlined,
+          onTap: onNotificationsPressed,
+        ),
+        _MenuItem(
+          label: 'Info over TOCH',
+          icon: Icons.info_outline_rounded,
+          onTap: onHelpPressed,
+        ),
         if (isOwnProfile) ...[
           const SizedBox(height: TochSpacing.sm),
           _MenuItem(
@@ -71,12 +100,14 @@ class _MenuItem extends StatelessWidget {
     required this.label,
     this.icon,
     this.isDestructive = false,
+    this.badgeCount = 0,
     this.onTap,
   });
 
   final String label;
   final IconData? icon;
   final bool isDestructive;
+  final int badgeCount;
   final VoidCallback? onTap;
 
   @override
@@ -109,12 +140,52 @@ class _MenuItem extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (badgeCount > 0) ...[
+                  const SizedBox(width: TochSpacing.sm),
+                  _MenuBadge(count: badgeCount),
+                ],
                 if (!isDestructive)
                   Icon(
                     Icons.chevron_right_rounded,
                     color: colors.green700.withValues(alpha: .5),
                   ),
               ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MenuBadge extends StatelessWidget {
+  const _MenuBadge({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.toch;
+    final label = count > 9 ? '9+' : count.toString();
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.orange,
+        borderRadius: BorderRadius.circular(TochRadius.pill),
+      ),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minWidth: 22, minHeight: 22),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 7),
+          child: Center(
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.w900,
+                height: 1,
+              ),
             ),
           ),
         ),

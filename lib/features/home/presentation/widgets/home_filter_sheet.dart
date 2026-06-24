@@ -122,6 +122,9 @@ class _HomeFilterSheetState extends State<HomeFilterSheet> {
                       padding: const EdgeInsets.fromLTRB(20, 4, 20, 18),
                       children: [
                         _SectionTitle('Datum'),
+                        const _SectionHelper(
+                          'Gebruik datumfilters om alleen activiteiten te zien die echt binnen jouw planning vallen.',
+                        ),
                         _DateChoices(
                           filters: _draft,
                           onChanged: (filters) {
@@ -130,6 +133,9 @@ class _HomeFilterSheetState extends State<HomeFilterSheet> {
                         ),
                         const SizedBox(height: TochSpacing.lg),
                         _SectionTitle('Categorie'),
+                        const _SectionHelper(
+                          'Categorieen combineren met afstand werkt het best: kies eerst dichtbij, verfijn daarna op type activiteit.',
+                        ),
                         _CategoryChoices(
                           categories: widget.categories,
                           selectedIds: _draft.categoryIds,
@@ -141,6 +147,9 @@ class _HomeFilterSheetState extends State<HomeFilterSheet> {
                         ),
                         const SizedBox(height: TochSpacing.lg),
                         _SectionTitle('Doelgroep'),
+                        const _SectionHelper(
+                          'Doelgroep betekent: de host zoekt expliciet deze leeftijdsband of gendergroep. Leeg betekent iedereen.',
+                        ),
                         _ChoiceWrap(
                           values: tochAgeBands,
                           selectedValues: _draft.targetAgeBands,
@@ -168,6 +177,9 @@ class _HomeFilterSheetState extends State<HomeFilterSheet> {
                         ),
                         const SizedBox(height: TochSpacing.lg),
                         _SectionTitle('Beschikbaarheid'),
+                        const _SectionHelper(
+                          'Gebruik deze opties als je alleen direct beschikbare of specifieker ingestelde activiteiten wilt zien.',
+                        ),
                         SwitchListTile(
                           value: _draft.availableOnly,
                           contentPadding: EdgeInsets.zero,
@@ -212,6 +224,9 @@ class _HomeFilterSheetState extends State<HomeFilterSheet> {
                         ),
                         const SizedBox(height: TochSpacing.lg),
                         _SectionTitle('Sortering'),
+                        const _SectionHelper(
+                          'Dichtbij is handig voor spontaan afspreken; binnenkort is handig als je vandaag nog iets zoekt.',
+                        ),
                         DropdownButtonFormField<String>(
                           initialValue: _draft.sort,
                           decoration: const InputDecoration(
@@ -567,6 +582,27 @@ class _SectionTitle extends StatelessWidget {
           color: context.toch.green700.withValues(alpha: .62),
           fontWeight: FontWeight.w900,
           fontSize: 11,
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionHelper extends StatelessWidget {
+  const _SectionHelper(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: TochSpacing.sm),
+      child: Text(
+        text,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: context.toch.green700.withValues(alpha: .66),
+          fontWeight: FontWeight.w700,
+          height: 1.32,
         ),
       ),
     );

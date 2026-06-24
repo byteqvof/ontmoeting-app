@@ -6,15 +6,17 @@ import '../../../../app/router/app_router.dart';
 import '../../../../app/theme/toch_theme.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../domain/entities/home_activity.dart';
+import '../../domain/entities/home_category.dart';
+import '../../domain/entities/home_location.dart';
 import '../bloc/home_bloc.dart';
+import 'create_activity_page.dart';
 import '../widgets/home_activity_card.dart';
 import '../widgets/home_bottom_nav.dart';
-import '../widgets/home_distance_filter.dart';
+import '../widgets/home_discovery_controls.dart';
 import '../widgets/home_feed_summary.dart';
 import '../widgets/home_filter_sheet.dart';
 import '../widgets/home_header.dart';
 import '../widgets/home_map_preview.dart';
-import '../widgets/home_time_filters.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -155,27 +157,30 @@ class _HomeFeed extends StatelessWidget {
                     );
                   },
                 ),
-                HomeTimeFilters(
-                  filters: state.feed.timeFilters,
-                  selectedFilter: state.selectedTimeFilter,
-                  onSelected: (filter) {
+                HomeDiscoveryControls(
+                  timeFilters: state.feed.timeFilters,
+                  selectedTimeFilter: state.selectedTimeFilter,
+                  onTimeSelected: (filter) {
                     context.read<HomeBloc>().add(
                       HomeTimeFilterSelected(filter),
                     );
                   },
-                ),
-                HomeDistanceFilter(
                   distances: state.feed.distanceFilters,
                   selectedDistanceKm: state.selectedDistanceKm,
-                  onSelected: (distanceKm) {
+                  onDistanceSelected: (distanceKm) {
                     context.read<HomeBloc>().add(
                       HomeDistanceSelected(distanceKm),
                     );
                   },
-                ),
-                HomeFilterButton(
+                  categories: state.feed.categories,
+                  selectedCategoryIds: state.filters.categoryIds,
+                  onCategorySelected: (categoryId) {
+                    context.read<HomeBloc>().add(
+                      HomeCategorySelected(categoryId),
+                    );
+                  },
                   hasActiveFilters: state.filters.hasAdvancedFilters,
-                  onPressed: () async {
+                  onAdvancedFiltersPressed: () async {
                     final filters = await showHomeFilterSheet(
                       context: context,
                       filters: state.filters,
@@ -194,7 +199,10 @@ class _HomeFeed extends StatelessWidget {
                 ),
                 HomeFeedSummary(activityCount: activities.length),
                 if (activities.isEmpty)
-                  const _EmptyActivities()
+                  _EmptyActivities(
+                    location: state.location,
+                    categories: state.feed.categories,
+                  )
                 else
                   ...activities.map(
                     (activity) => Padding(
@@ -419,33 +427,85 @@ class _HomeError extends StatelessWidget {
 }
 
 class _EmptyActivities extends StatelessWidget {
-  const _EmptyActivities();
+  const _EmptyActivities({required this.location, required this.categories});
+
+  final HomeLocation location;
+  final List<HomeCategory> categories;
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.toch;
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: context.toch.card,
-          borderRadius: BorderRadius.circular(TochRadius.lg),
-          border: Border.all(color: context.toch.line),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [colors.green, const Color(0xFF163D2C)],
+          ),
+          borderRadius: BorderRadius.circular(22),
+          boxShadow: [
+            BoxShadow(
+              color: colors.ink.withValues(alpha: .10),
+              blurRadius: 26,
+              offset: const Offset(0, 10),
+            ),
+          ],
         ),
         child: Padding(
-          padding: const EdgeInsets.all(TochSpacing.lg),
+          padding: const EdgeInsets.all(24),
           child: Column(
             children: [
-              Icon(Icons.search_off_rounded, color: context.toch.green),
-              const SizedBox(height: TochSpacing.sm),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: colors.orange,
+                  shape: BoxShape.circle,
+                ),
+                child: const SizedBox.square(dimension: 14),
+              ),
+              const SizedBox(height: TochSpacing.md),
               Text(
-                'Geen activiteiten gevonden',
-                style: Theme.of(context).textTheme.titleMedium,
+                'Rustig in de buurt?',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
               const SizedBox(height: TochSpacing.xs),
               Text(
-                'Probeer een andere categorie of periode.',
+                'Soms gebeurt er nog niet veel vlakbij. Plaats zelf iets - koffie, wandelen of iets kleins. Grote kans dat iemand toch meegaat.',
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.white.withValues(alpha: .82),
+                  height: 1.45,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: TochSpacing.md),
+              ElevatedButton(
+                onPressed: categories.isEmpty
+                    ? null
+                    : () {
+                        context.push(
+                          AppRoutes.createActivity,
+                          extra: CreateActivityPageArgs(
+                            location: location,
+                            categories: categories,
+                          ),
+                        );
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colors.orange,
+                  foregroundColor: const Color(0xFF163D2C),
+                  textStyle: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 14,
+                  ),
+                ),
+                child: const Text('Plaats een activiteit'),
               ),
             ],
           ),

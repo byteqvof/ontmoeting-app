@@ -28,7 +28,7 @@ class HomeHeader extends StatelessWidget {
               Text(
                 'Wat is er te doen in',
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: colors.green700.withValues(alpha: .74),
+              color: colors.green700.withValues(alpha: .70),
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -53,9 +53,9 @@ class HomeHeader extends StatelessWidget {
                       locationName,
                       style: Theme.of(context).textTheme.headlineSmall
                           ?.copyWith(
-                            color: colors.ink,
-                            fontWeight: FontWeight.w900,
-                            height: 1,
+                          color: colors.ink,
+                          fontWeight: FontWeight.w900,
+                          height: 1,
                           ),
                     ),
                     const SizedBox(width: 3),
@@ -74,7 +74,7 @@ class HomeHeader extends StatelessWidget {
             onPressed: () {},
             style: IconButton.styleFrom(
               backgroundColor: colors.card,
-              foregroundColor: colors.ink,
+              foregroundColor: colors.green,
               side: BorderSide(color: colors.line),
               fixedSize: const Size.square(42),
             ),

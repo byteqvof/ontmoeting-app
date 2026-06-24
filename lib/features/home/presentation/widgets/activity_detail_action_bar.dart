@@ -33,6 +33,7 @@ class ActivityDetailActionBar extends StatelessWidget {
         activity.isCompleted ||
         activity.isParticipationPending ||
         isPrimaryPending ||
+        (isOwnActivity && !activity.canBeCompletedNow) ||
         (!isOwnActivity && isFull);
 
     return DecoratedBox(
@@ -109,6 +110,9 @@ IconData _primaryIconFor(HomeActivity activity) {
     return Icons.verified_rounded;
   }
   if (activity.isOwnedByCurrentUser) {
+    if (!activity.hasStarted) {
+      return Icons.schedule_rounded;
+    }
     return Icons.event_available_rounded;
   }
   if (activity.isParticipationPending) {
@@ -125,6 +129,9 @@ String _primaryLabelFor(HomeActivity activity) {
     return 'Afgerond';
   }
   if (activity.isOwnedByCurrentUser) {
+    if (!activity.hasStarted) {
+      return 'Nog niet begonnen';
+    }
     return 'Afronden';
   }
   if (activity.isParticipationPending) {

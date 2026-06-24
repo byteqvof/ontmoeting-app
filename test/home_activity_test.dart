@@ -62,10 +62,16 @@ void main() {
 
     expect(updated, activity);
   });
+
+  test('marks completed activities as closed for chat', () {
+    final activity = _activity(status: 'completed');
+
+    expect(activity.isChatClosed, isTrue);
+  });
 }
 
-HomeActivity _activity() {
-  return const HomeActivity(
+HomeActivity _activity({String status = 'published'}) {
+  return HomeActivity(
     id: 'activity-1',
     category: HomeCategory(
       id: 'category-1',
@@ -90,5 +96,6 @@ HomeActivity _activity() {
     participants: [],
     availableSpots: 3,
     spotsLabel: 'nog 3 plekken',
+    status: status,
   );
 }

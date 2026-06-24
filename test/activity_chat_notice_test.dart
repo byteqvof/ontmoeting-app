@@ -61,6 +61,29 @@ void main() {
     expect(tracker.unreadCount, 0);
   });
 
+  test('notice tracker clears unread count for opened activity', () {
+    final tracker = ActivityChatNoticeTracker(currentUserId: 'profile-1');
+
+    tracker.trackRealtimeRecord(const {
+      'id': 'message-6',
+      'activity_id': 'activity-1',
+      'sender_id': 'profile-2',
+      'body': 'Nieuw bericht',
+      'created_at': '2026-06-05T18:25:00Z',
+    });
+    tracker.trackRealtimeRecord(const {
+      'id': 'message-7',
+      'activity_id': 'activity-2',
+      'sender_id': 'profile-2',
+      'body': 'Andere chat',
+      'created_at': '2026-06-05T18:26:00Z',
+    });
+
+    tracker.markActivityRead('activity-1');
+
+    expect(tracker.unreadCount, 1);
+  });
+
   test('notice tracker can prime existing messages without notifying', () {
     final tracker = ActivityChatNoticeTracker(currentUserId: 'profile-1');
 

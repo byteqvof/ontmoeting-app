@@ -218,7 +218,7 @@ class HomeRepositoryImpl implements HomeRepository {
       _clearFeedCache();
       return right(update);
     } catch (error) {
-      return left(_mapRemoteError(error));
+      return left(_mapCompletionError(error));
     }
   }
 
@@ -427,6 +427,47 @@ class HomeRepositoryImpl implements HomeRepository {
         if (message.contains('profile')) {
           return const ServerFailure('Maak je profiel af om mee te doen.');
         }
+        return const ServerFailure(
+          'Aanmelden voor deze activiteit lukt nu niet. Vernieuw het overzicht en probeer opnieuw.',
+        );
+      }
+    }
+
+    return _mapRemoteError(error);
+  }
+
+  Failure _mapCompletionError(Object error) {
+    if (error is FunctionException) {
+      final message = _functionErrorMessage(error).toLowerCase();
+      if (error.status == 403) {
+        if (message.contains('organizer') ||
+            message.contains('completion_forbidden')) {
+          return const PermissionFailure(
+            'Alleen de organisator kan deze activiteit afronden.',
+          );
+        }
+        return const PermissionFailure('Je kunt deze activiteit niet afronden.');
+      }
+      if (error.status == 404) {
+        return const ServerFailure(
+          'Deze activiteit bestaat niet meer. Vernieuw het overzicht.',
+        );
+      }
+      if (error.status == 409) {
+        if (message.contains('started') ||
+            message.contains('not_started')) {
+          return const ServerFailure(
+            'Je kunt deze activiteit pas afronden nadat die begonnen is.',
+          );
+        }
+        return const ServerFailure(
+          'Afronden lukt nu niet. Vernieuw de activiteit en probeer opnieuw.',
+        );
+      }
+      if (error.status >= 500) {
+        return const ServerFailure(
+          'De activiteitenservice is tijdelijk niet beschikbaar.',
+        );
       }
     }
 
@@ -436,6 +477,21 @@ class HomeRepositoryImpl implements HomeRepository {
   Failure _mapChatError(Object error) {
     if (error is FunctionException && error.status == 403) {
       return const PermissionFailure('Meld je eerst aan om de chat te openen.');
+    }
+
+    if (error is FunctionException && error.status == 409) {
+      final message = _functionErrorMessage(error).toLowerCase();
+      if (message.contains('closed')) {
+        return const ServerFailure(
+          'Deze activiteit is voorbij. De chat is gesloten.',
+        );
+      }
+    }
+
+    if (error is FunctionException && error.status >= 500) {
+      return const ServerFailure(
+        'De chatservice is tijdelijk niet beschikbaar.',
+      );
     }
 
     return _mapRemoteError(error);

@@ -20,6 +20,7 @@ class ActivityChatNoticeTracker {
   String? _currentUserId;
   String? _activeActivityId;
   int _unreadCount = 0;
+  final Map<String, int> _unreadByActivityId = <String, int>{};
   final Set<String> _seenMessageIds = <String>{};
 
   int get unreadCount => _unreadCount;
@@ -45,6 +46,11 @@ class ActivityChatNoticeTracker {
 
     if (!isActivityOpen(notice.activityId)) {
       _unreadCount++;
+      _unreadByActivityId.update(
+        notice.activityId,
+        (count) => count + 1,
+        ifAbsent: () => 1,
+      );
     }
     return notice;
   }
@@ -74,6 +80,11 @@ class ActivityChatNoticeTracker {
 
     if (!isActivityOpen(notice.activityId)) {
       _unreadCount++;
+      _unreadByActivityId.update(
+        notice.activityId,
+        (count) => count + 1,
+        ifAbsent: () => 1,
+      );
     }
     return notice;
   }
@@ -91,6 +102,16 @@ class ActivityChatNoticeTracker {
 
   void clearUnread() {
     _unreadCount = 0;
+    _unreadByActivityId.clear();
+  }
+
+  void markActivityRead(String activityId) {
+    final count = _unreadByActivityId.remove(activityId) ?? 0;
+    if (count <= 0) {
+      return;
+    }
+    final nextCount = _unreadCount - count;
+    _unreadCount = nextCount < 0 ? 0 : nextCount;
   }
 }
 
@@ -156,6 +177,7 @@ class ActivityChatNoticeController {
 
   void markActivityOpen(String activityId) {
     _tracker.activeActivityId = activityId;
+    markActivityRead(activityId);
   }
 
   void markActivityClosed(String activityId) {
@@ -166,6 +188,11 @@ class ActivityChatNoticeController {
 
   void clearUnread() {
     _tracker.clearUnread();
+    _unreadCount.value = _tracker.unreadCount;
+  }
+
+  void markActivityRead(String activityId) {
+    _tracker.markActivityRead(activityId);
     _unreadCount.value = _tracker.unreadCount;
   }
 

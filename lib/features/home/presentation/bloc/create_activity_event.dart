@@ -34,6 +34,25 @@ final class CreateActivityLocationChanged extends CreateActivityEvent {
   List<Object?> get props => [location];
 }
 
+final class CreateActivityMeetingLocationSearchRequested
+    extends CreateActivityEvent {
+  const CreateActivityMeetingLocationSearchRequested(this.query);
+
+  final String query;
+
+  @override
+  List<Object?> get props => [query];
+}
+
+final class CreateActivityMeetingLocationSelected extends CreateActivityEvent {
+  const CreateActivityMeetingLocationSelected(this.location);
+
+  final ResolvedMeetingLocation location;
+
+  @override
+  List<Object?> get props => [location];
+}
+
 final class CreateActivityDateShortcutSelected extends CreateActivityEvent {
   const CreateActivityDateShortcutSelected(this.shortcut);
 

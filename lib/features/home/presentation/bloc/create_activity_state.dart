@@ -8,12 +8,23 @@ enum CreateActivitySubmissionStatus {
   failure,
 }
 
+enum CreateActivityLocationSearchStatus {
+  idle,
+  searching,
+  success,
+  failure,
+}
+
 class CreateActivityState extends Equatable {
   CreateActivityState({
     this.categories = const [],
     this.categoryId = 'fishing',
+    this.cityName = '',
     this.title = '',
     this.location = '',
+    this.locationResults = const [],
+    this.locationSearchStatus = CreateActivityLocationSearchStatus.idle,
+    this.selectedMeetingLocation,
     DateTime? selectedDate,
     this.selectedHour = 19,
     this.selectedMinute = 0,
@@ -31,8 +42,12 @@ class CreateActivityState extends Equatable {
 
   final List<HomeCategory> categories;
   final String categoryId;
+  final String cityName;
   final String title;
   final String location;
+  final List<ResolvedMeetingLocation> locationResults;
+  final CreateActivityLocationSearchStatus locationSearchStatus;
+  final ResolvedMeetingLocation? selectedMeetingLocation;
   final DateTime selectedDate;
   final int selectedHour;
   final int selectedMinute;
@@ -49,6 +64,14 @@ class CreateActivityState extends Equatable {
 
   bool get hasBackendCategoryId => _uuidPattern.hasMatch(categoryId);
 
+  bool get hasSelectedMeetingLocation {
+    final selected = selectedMeetingLocation;
+    if (selected == null) {
+      return false;
+    }
+    return selected.addressLine.trim() == location.trim();
+  }
+
   DateTime get startsAt => DateTime(
     selectedDate.year,
     selectedDate.month,
@@ -61,6 +84,7 @@ class CreateActivityState extends Equatable {
     return hasBackendCategoryId &&
         title.trim().isNotEmpty &&
         location.trim().isNotEmpty &&
+        hasSelectedMeetingLocation &&
         capacity >= 2;
   }
 
@@ -76,11 +100,20 @@ class CreateActivityState extends Equatable {
     return hasRequiredFields && hasFutureStart;
   }
 
+  List<String> get locationSuggestions {
+    return locationResults.map((location) => location.addressLine).toList();
+  }
+
   CreateActivityState copyWith({
     List<HomeCategory>? categories,
     String? categoryId,
+    String? cityName,
     String? title,
     String? location,
+    List<ResolvedMeetingLocation>? locationResults,
+    CreateActivityLocationSearchStatus? locationSearchStatus,
+    ResolvedMeetingLocation? selectedMeetingLocation,
+    bool clearSelectedMeetingLocation = false,
     DateTime? selectedDate,
     int? selectedHour,
     int? selectedMinute,
@@ -98,8 +131,14 @@ class CreateActivityState extends Equatable {
     return CreateActivityState(
       categories: categories ?? this.categories,
       categoryId: categoryId ?? this.categoryId,
+      cityName: cityName ?? this.cityName,
       title: title ?? this.title,
       location: location ?? this.location,
+      locationResults: locationResults ?? this.locationResults,
+      locationSearchStatus: locationSearchStatus ?? this.locationSearchStatus,
+      selectedMeetingLocation: clearSelectedMeetingLocation
+          ? null
+          : selectedMeetingLocation ?? this.selectedMeetingLocation,
       selectedDate: selectedDate ?? this.selectedDate,
       selectedHour: selectedHour ?? this.selectedHour,
       selectedMinute: selectedMinute ?? this.selectedMinute,
@@ -120,8 +159,12 @@ class CreateActivityState extends Equatable {
   List<Object?> get props => [
     categories,
     categoryId,
+    cityName,
     title,
     location,
+    locationResults,
+    locationSearchStatus,
+    selectedMeetingLocation,
     selectedDate,
     selectedHour,
     selectedMinute,

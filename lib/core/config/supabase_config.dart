@@ -42,6 +42,7 @@ const supabaseActivityAttendanceFunctionName = 'activity-attendance';
 const supabasePushTokenFunctionName = 'push-token';
 const supabaseProfilesFunctionName = 'profiles';
 const supabaseSafetyActionsFunctionName = 'safety-actions';
+const supabaseFriendsFunctionName = 'friends';
 const supabaseAccountTrustFunctionName = 'account-trust';
 const supabaseUserActivitiesFunctionName = 'activities-for-user';
 

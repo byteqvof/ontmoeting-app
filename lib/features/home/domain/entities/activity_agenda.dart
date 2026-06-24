@@ -60,7 +60,6 @@ class ActivityAgenda extends Equatable {
     for (final activity in [
       ...activeHostedActivities,
       ...activeJoinedActivities,
-      ...uniqueCompletedActivities,
     ]) {
       activitiesById.putIfAbsent(activity.id, () => activity);
     }
@@ -91,6 +90,24 @@ class ActivityAgenda extends Equatable {
       }
       return 0;
     });
+  }
+
+  ActivityAgenda withChatMarkedRead(String activityId) {
+    List<HomeActivity> clearUnread(List<HomeActivity> activities) {
+      return activities
+          .map(
+            (activity) => activity.id == activityId
+                ? activity.copyWith(chatUnreadCount: 0)
+                : activity,
+          )
+          .toList();
+    }
+
+    return ActivityAgenda(
+      hostedActivities: clearUnread(hostedActivities),
+      joinedActivities: clearUnread(joinedActivities),
+      completedActivities: clearUnread(completedActivities),
+    );
   }
 
   @override
