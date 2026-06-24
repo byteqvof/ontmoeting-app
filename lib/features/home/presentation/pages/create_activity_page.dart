@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -8,7 +10,9 @@ import '../../../../core/widgets/always_24_hour_media_query.dart';
 import '../../domain/entities/home_category.dart';
 import '../../domain/entities/home_feed_filters.dart';
 import '../../domain/entities/home_location.dart';
+import '../../domain/entities/meeting_location_suggestion.dart';
 import '../../domain/usecases/create_activity.dart';
+import '../../domain/usecases/search_meeting_locations.dart';
 import '../bloc/create_activity_bloc.dart';
 import '../widgets/create_activity_action_bar.dart';
 import '../widgets/create_activity_capacity_stepper.dart';
@@ -29,6 +33,7 @@ class CreateActivityPage extends StatelessWidget {
     return BlocProvider(
       create: (_) => CreateActivityBloc(
         sl<CreateActivity>(),
+        sl<SearchMeetingLocations>(),
         location: location,
         categories: categories
             .where((category) => category.id != 'all')
@@ -111,7 +116,7 @@ class _CreateActivityView extends StatelessWidget {
         final status = state.submissionStatus;
         if (status == CreateActivitySubmissionStatus.invalid) {
           final message = state.hasFutureStart
-              ? 'Vul titel en locatie nog even in.'
+              ? 'Vul een titel in en kies een gevonden meetingplek.'
               : 'Kies een datum en tijd in de toekomst.';
           ScaffoldMessenger.of(
             context,
@@ -328,17 +333,327 @@ class _CreateActivityTextFields extends StatelessWidget {
           },
         ),
         const SizedBox(height: TochSpacing.md),
-        _LabeledField(
-          label: 'Waar',
-          hintText: 'Locatie of plek',
-          leadingIcon: Icons.location_on_rounded,
-          onChanged: (value) {
-            context.read<CreateActivityBloc>().add(
-              CreateActivityLocationChanged(value),
-            );
-          },
-        ),
+        const _CreateActivityLocationField(),
       ],
+    );
+  }
+}
+
+class _CreateActivityLocationField extends StatefulWidget {
+  const _CreateActivityLocationField();
+
+  @override
+  State<_CreateActivityLocationField> createState() =>
+      _CreateActivityLocationFieldState();
+}
+
+class _CreateActivityLocationFieldState
+    extends State<_CreateActivityLocationField> {
+  final TextEditingController _controller = TextEditingController();
+  Timer? _searchDebounce;
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onLocationChanged(String value) {
+    context.read<CreateActivityBloc>().add(
+      CreateActivityLocationChanged(value),
+    );
+    _searchDebounce?.cancel();
+    final query = value.trim();
+    if (query.length < 3) {
+      return;
+    }
+    _searchDebounce = Timer(const Duration(milliseconds: 450), () {
+      if (!mounted) {
+        return;
+      }
+      context.read<CreateActivityBloc>().add(
+        CreateActivityMeetingLocationSearchRequested(query),
+      );
+    });
+  }
+
+  void _searchNow() {
+    _searchDebounce?.cancel();
+    final query = _controller.text.trim();
+    if (query.length < 3) {
+      return;
+    }
+    context.read<CreateActivityBloc>().add(
+      CreateActivityMeetingLocationSearchRequested(query),
+    );
+  }
+
+  void _selectLocation(MeetingLocationSuggestion location) {
+    _searchDebounce?.cancel();
+    _controller.text = location.addressLine;
+    context.read<CreateActivityBloc>().add(
+      CreateActivityMeetingLocationSelected(location),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.toch;
+
+    return BlocBuilder<CreateActivityBloc, CreateActivityState>(
+      buildWhen: (previous, current) =>
+          previous.location != current.location ||
+          previous.locationResults != current.locationResults ||
+          previous.locationSearchStatus != current.locationSearchStatus ||
+          previous.selectedMeetingLocation != current.selectedMeetingLocation,
+      builder: (context, state) {
+        final results = state.locationResults;
+        final isSearching =
+            state.locationSearchStatus ==
+            CreateActivityLocationSearchStatus.searching;
+        final hasSelectedLocation = state.hasSelectedMeetingLocation;
+        final canSearch = state.location.trim().length >= 3 && !isSearching;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const _SectionLabel('Waar'),
+            const SizedBox(height: TochSpacing.xs),
+            TextField(
+              controller: _controller,
+              textInputAction: TextInputAction.next,
+              onChanged: _onLocationChanged,
+              decoration: InputDecoration(
+                hintText: 'Typ naam of adres, bijv. Markeweg 23',
+                prefixIcon: Icon(
+                  Icons.location_on_rounded,
+                  color: colors.green,
+                ),
+                suffixIcon: isSearching
+                    ? Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(
+                            color: colors.green,
+                            strokeWidth: 2,
+                          ),
+                        ),
+                      )
+                    : hasSelectedLocation
+                    ? Icon(Icons.check_circle_rounded, color: colors.green)
+                    : IconButton(
+                        tooltip: 'Zoek locatie',
+                        onPressed: canSearch ? _searchNow : null,
+                        icon: const Icon(Icons.search_rounded),
+                      ),
+              ),
+              onSubmitted: (_) => _searchNow(),
+            ),
+            const SizedBox(height: TochSpacing.xs),
+            Text(
+              hasSelectedLocation
+                  ? 'Gekozen meetingplek. Deze locatie wordt op de kaart gebruikt.'
+                  : 'Typ minimaal 3 tekens, tik op zoeken en kies daarna 1 locatie.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: colors.green700.withValues(alpha: .66),
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            if (!hasSelectedLocation) ...[
+              const SizedBox(height: TochSpacing.sm),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: canSearch ? _searchNow : null,
+                  icon: isSearching
+                      ? const SizedBox.square(
+                          dimension: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.search_rounded),
+                  label: Text(isSearching ? 'Locaties zoeken' : 'Zoek locatie'),
+                ),
+              ),
+            ],
+            if (results.isNotEmpty) ...[
+              const SizedBox(height: TochSpacing.sm),
+              _LocationResultsCard(
+                results: results,
+                onSelected: _selectLocation,
+              ),
+            ] else if (state.locationSearchStatus ==
+                    CreateActivityLocationSearchStatus.failure ||
+                (state.locationSearchStatus ==
+                        CreateActivityLocationSearchStatus.success &&
+                    state.location.trim().length >= 3 &&
+                    !hasSelectedLocation)) ...[
+              const SizedBox(height: TochSpacing.sm),
+              _LocationSearchEmptyState(
+                isFailure:
+                    state.locationSearchStatus ==
+                    CreateActivityLocationSearchStatus.failure,
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _LocationResultsCard extends StatelessWidget {
+  const _LocationResultsCard({required this.results, required this.onSelected});
+
+  final List<MeetingLocationSuggestion> results;
+  final ValueChanged<MeetingLocationSuggestion> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.toch;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.card,
+        borderRadius: BorderRadius.circular(TochRadius.md),
+        border: Border.all(color: colors.line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              TochSpacing.md,
+              TochSpacing.md,
+              TochSpacing.md,
+              TochSpacing.xs,
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.location_searching_rounded, color: colors.green),
+                const SizedBox(width: TochSpacing.sm),
+                Expanded(
+                  child: Text(
+                    'Kies de juiste locatie',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: colors.ink,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          for (final result in results.take(5)) ...[
+            Divider(height: 1, color: colors.line),
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => onSelected(result),
+                child: Padding(
+                  padding: const EdgeInsets.all(TochSpacing.md),
+                  child: Row(
+                    children: [
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: colors.green100,
+                          borderRadius: BorderRadius.circular(TochRadius.sm),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Icon(
+                            Icons.place_outlined,
+                            color: colors.green,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: TochSpacing.sm),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              result.addressLine,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
+                                    color: colors.ink,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                            ),
+                            Text(
+                              result.city,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: colors.green700.withValues(
+                                      alpha: .68,
+                                    ),
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: TochSpacing.sm),
+                      FilledButton(
+                        onPressed: () => onSelected(result),
+                        child: const Text('Kies'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _LocationSearchEmptyState extends StatelessWidget {
+  const _LocationSearchEmptyState({required this.isFailure});
+
+  final bool isFailure;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.toch;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.card,
+        borderRadius: BorderRadius.circular(TochRadius.md),
+        border: Border.all(color: colors.line),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(TochSpacing.md),
+        child: Row(
+          children: [
+            Icon(
+              isFailure ? Icons.wifi_off_rounded : Icons.search_off_rounded,
+              color: colors.orange,
+            ),
+            const SizedBox(width: TochSpacing.sm),
+            Expanded(
+              child: Text(
+                isFailure
+                    ? 'Locaties zoeken lukt nu niet. Probeer een exactere plek of later opnieuw.'
+                    : 'Geen plek gevonden. Probeer de naam met straat of plaatsnaam.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colors.green700.withValues(alpha: .72),
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -891,7 +1206,6 @@ class _LabeledField extends StatelessWidget {
     required this.label,
     required this.hintText,
     required this.onChanged,
-    this.leadingIcon,
     this.suffixLabel,
     this.minLines = 1,
     this.maxLines = 1,
@@ -900,7 +1214,6 @@ class _LabeledField extends StatelessWidget {
   final String label;
   final String hintText;
   final ValueChanged<String> onChanged;
-  final IconData? leadingIcon;
   final String? suffixLabel;
   final int minLines;
   final int maxLines;
@@ -935,12 +1248,7 @@ class _LabeledField extends StatelessWidget {
           textInputAction: maxLines == 1
               ? TextInputAction.next
               : TextInputAction.newline,
-          decoration: InputDecoration(
-            hintText: hintText,
-            prefixIcon: leadingIcon == null
-                ? null
-                : Icon(leadingIcon, color: colors.green),
-          ),
+          decoration: InputDecoration(hintText: hintText),
         ),
       ],
     );

@@ -1,13 +1,15 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:geocoding/geocoding.dart';
 
 import '../../../../core/services/analytics_service.dart';
+import '../../../../core/utils/app_logger.dart';
 import '../../domain/entities/create_activity_draft.dart';
 import '../../domain/entities/home_category.dart';
 import '../../domain/entities/home_feed_filters.dart';
 import '../../domain/entities/home_location.dart';
+import '../../domain/entities/meeting_location_suggestion.dart';
 import '../../domain/usecases/create_activity.dart';
+import '../../domain/usecases/search_meeting_locations.dart';
 
 part 'create_activity_event.dart';
 part 'create_activity_state.dart';
@@ -15,16 +17,21 @@ part 'create_activity_state.dart';
 class CreateActivityBloc
     extends Bloc<CreateActivityEvent, CreateActivityState> {
   CreateActivityBloc(
-    this._createActivity, {
+    this._createActivity,
+    this._searchMeetingLocations, {
     required HomeLocation location,
     required List<HomeCategory> categories,
-    MeetingPlaceGeocoder geocodeMeetingPlace = _defaultGeocodeMeetingPlace,
+    MeetingPlaceSearcher? searchMeetingPlaces,
   }) : _location = location,
-       _geocodeMeetingPlace = geocodeMeetingPlace,
-       super(_initialState(categories)) {
+       _searchMeetingPlaces = searchMeetingPlaces,
+       super(_initialState(categories, location)) {
     on<CreateActivityCategorySelected>(_onCategorySelected);
     on<CreateActivityTitleChanged>(_onTitleChanged);
     on<CreateActivityLocationChanged>(_onLocationChanged);
+    on<CreateActivityMeetingLocationSearchRequested>(
+      _onMeetingLocationSearchRequested,
+    );
+    on<CreateActivityMeetingLocationSelected>(_onMeetingLocationSelected);
     on<CreateActivityDateShortcutSelected>(_onDateShortcutSelected);
     on<CreateActivityDateSelected>(_onDateSelected);
     on<CreateActivityTimeSelected>(_onTimeSelected);
@@ -42,11 +49,15 @@ class CreateActivityBloc
   static const _minCapacity = 2;
   static const _maxCapacity = 20;
 
-  static CreateActivityState _initialState(List<HomeCategory> categories) {
+  static CreateActivityState _initialState(
+    List<HomeCategory> categories,
+    HomeLocation location,
+  ) {
     final defaultStart = _defaultStart();
     return CreateActivityState(
       categories: categories,
       categoryId: categories.isEmpty ? '' : categories.first.id,
+      cityName: location.cityName,
       selectedDate: defaultStart,
       selectedHour: defaultStart.hour,
       selectedMinute: defaultStart.minute,
@@ -59,8 +70,9 @@ class CreateActivityBloc
   }
 
   final CreateActivity _createActivity;
+  final SearchMeetingLocations _searchMeetingLocations;
   final HomeLocation _location;
-  final MeetingPlaceGeocoder _geocodeMeetingPlace;
+  final MeetingPlaceSearcher? _searchMeetingPlaces;
 
   void _onCategorySelected(
     CreateActivityCategorySelected event,
@@ -93,6 +105,107 @@ class CreateActivityBloc
     emit(
       state.copyWith(
         location: event.location,
+        locationResults: const [],
+        locationSearchStatus: CreateActivityLocationSearchStatus.idle,
+        clearSelectedMeetingLocation: true,
+        submissionStatus: CreateActivitySubmissionStatus.idle,
+      ),
+    );
+  }
+
+  Future<void> _onMeetingLocationSearchRequested(
+    CreateActivityMeetingLocationSearchRequested event,
+    Emitter<CreateActivityState> emit,
+  ) async {
+    final query = event.query.trim();
+    if (query.length < 3) {
+      emit(
+        state.copyWith(
+          locationResults: const [],
+          locationSearchStatus: CreateActivityLocationSearchStatus.idle,
+        ),
+      );
+      return;
+    }
+
+    emit(
+      state.copyWith(
+        locationSearchStatus: CreateActivityLocationSearchStatus.searching,
+        locationResults: const [],
+      ),
+    );
+
+    try {
+      final results = await _searchPlaces(query);
+      if (state.location.trim() != query) {
+        AppLogger.debug(
+          'Ignoring stale meeting location search response '
+          'query="$query" current="${state.location.trim()}"',
+        );
+        return;
+      }
+      AppLogger.debug(
+        'Meeting location search succeeded '
+        'query="$query" results=${results.length}',
+      );
+      emit(
+        state.copyWith(
+          locationResults: results,
+          locationSearchStatus: CreateActivityLocationSearchStatus.success,
+        ),
+      );
+    } catch (error, stackTrace) {
+      if (state.location.trim() != query) {
+        AppLogger.debug(
+          'Ignoring stale meeting location search failure '
+          'query="$query" current="${state.location.trim()}"',
+          error: error,
+          stackTrace: stackTrace,
+        );
+        return;
+      }
+      AppLogger.debug(
+        'Meeting location search failed in bloc query="$query"',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      emit(
+        state.copyWith(
+          locationResults: const [],
+          locationSearchStatus: CreateActivityLocationSearchStatus.failure,
+        ),
+      );
+    }
+  }
+
+  Future<List<MeetingLocationSuggestion>> _searchPlaces(String query) async {
+    final injectedSearcher = _searchMeetingPlaces;
+    if (injectedSearcher != null) {
+      return injectedSearcher(query, _location);
+    }
+
+    final result = await _searchMeetingLocations(
+      SearchMeetingLocationsParams(query: query, nearLocation: _location),
+    );
+    return result.fold((failure) {
+      AppLogger.debug(
+        'Meeting location search usecase returned failure '
+        'type=${failure.runtimeType} message="${failure.message}"',
+      );
+      throw failure;
+    }, (locations) => locations);
+  }
+
+  void _onMeetingLocationSelected(
+    CreateActivityMeetingLocationSelected event,
+    Emitter<CreateActivityState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        location: event.location.addressLine,
+        locationResults: const [],
+        locationSearchStatus: CreateActivityLocationSearchStatus.success,
+        selectedMeetingLocation: event.location,
         submissionStatus: CreateActivitySubmissionStatus.idle,
       ),
     );
@@ -275,10 +388,26 @@ class CreateActivityBloc
     CreateActivitySubmitted event,
     Emitter<CreateActivityState> emit,
   ) async {
-    if (!state.isValid) {
+    final hasBasicFields =
+        state.hasBackendCategoryId &&
+        state.title.trim().isNotEmpty &&
+        state.location.trim().isNotEmpty &&
+        state.capacity >= _minCapacity &&
+        state.hasFutureStart;
+    if (!hasBasicFields) {
       emit(
         state.copyWith(
           submissionStatus: CreateActivitySubmissionStatus.invalid,
+        ),
+      );
+      return;
+    }
+    if (!state.hasSelectedMeetingLocation) {
+      emit(
+        state.copyWith(
+          submissionStatus: CreateActivitySubmissionStatus.failure,
+          errorMessage:
+              'Kies een gevonden meetingplek uit de lijst voordat je plaatst.',
         ),
       );
       return;
@@ -325,11 +454,17 @@ class CreateActivityBloc
     );
   }
 
-  Future<ResolvedMeetingLocation?> _resolveMeetingPlace(
+  Future<MeetingLocationSuggestion?> _resolveMeetingPlace(
     CreateActivityState state,
     Emitter<CreateActivityState> emit,
   ) async {
     final query = state.location.trim();
+
+    final selected = state.selectedMeetingLocation;
+    if (selected != null && selected.addressLine.trim() == query) {
+      return selected;
+    }
+
     if (_looksLikeOnlyCity(query, _location.cityName)) {
       emit(
         state.copyWith(
@@ -341,14 +476,12 @@ class CreateActivityBloc
       return null;
     }
 
-    try {
-      return await _geocodeMeetingPlace(query, _location);
-    } catch (_) {
+    {
       emit(
         state.copyWith(
           submissionStatus: CreateActivitySubmissionStatus.failure,
           errorMessage:
-              'We kunnen deze meetingplek niet vinden. Vul een exactere plek of adres in.',
+              'Kies een gevonden meetingplek uit de lijst voordat je plaatst.',
         ),
       );
       return null;
@@ -357,7 +490,7 @@ class CreateActivityBloc
 
   CreateActivityDraft _draftFromState(
     CreateActivityState state,
-    ResolvedMeetingLocation meetingLocation,
+    MeetingLocationSuggestion meetingLocation,
   ) {
     final title = state.title.trim();
     final notes = state.notes.trim();
@@ -411,81 +544,11 @@ String _descriptionFor({required String title, required String notes}) {
   return 'Ik ga $title. Sluit gezellig aan.';
 }
 
-typedef MeetingPlaceGeocoder =
-    Future<ResolvedMeetingLocation> Function(
+typedef MeetingPlaceSearcher =
+    Future<List<MeetingLocationSuggestion>> Function(
       String query,
       HomeLocation fallbackLocation,
     );
-
-class ResolvedMeetingLocation extends Equatable {
-  const ResolvedMeetingLocation({
-    required this.addressLine,
-    required this.city,
-    required this.latitude,
-    required this.longitude,
-  });
-
-  final String addressLine;
-  final String city;
-  final double latitude;
-  final double longitude;
-
-  @override
-  List<Object?> get props => [addressLine, city, latitude, longitude];
-}
-
-Future<ResolvedMeetingLocation> _defaultGeocodeMeetingPlace(
-  String query,
-  HomeLocation fallbackLocation,
-) async {
-  final searchQuery = _queryWithFallbackCity(query, fallbackLocation.cityName);
-  final locations = await locationFromAddress(
-    searchQuery,
-  ).timeout(const Duration(seconds: 6));
-  if (locations.isEmpty) {
-    throw StateError('No geocoding result for meeting place.');
-  }
-
-  final location = locations.first;
-  final placemarks = await placemarkFromCoordinates(
-    location.latitude,
-    location.longitude,
-  ).timeout(const Duration(seconds: 4), onTimeout: () => const <Placemark>[]);
-  final placemark = placemarks.isEmpty ? null : placemarks.first;
-  final city = _cityFromPlacemark(placemark) ?? fallbackLocation.cityName;
-
-  return ResolvedMeetingLocation(
-    addressLine: query.trim(),
-    city: city,
-    latitude: location.latitude,
-    longitude: location.longitude,
-  );
-}
-
-String _queryWithFallbackCity(String query, String city) {
-  final trimmed = query.trim();
-  if (trimmed.toLowerCase().contains(city.trim().toLowerCase())) {
-    return '$trimmed, Nederland';
-  }
-  return '$trimmed, $city, Nederland';
-}
-
-String? _cityFromPlacemark(Placemark? placemark) {
-  if (placemark == null) {
-    return null;
-  }
-  for (final value in [
-    placemark.locality,
-    placemark.subAdministrativeArea,
-    placemark.administrativeArea,
-  ]) {
-    final trimmed = value?.trim();
-    if (trimmed != null && trimmed.isNotEmpty) {
-      return trimmed;
-    }
-  }
-  return null;
-}
 
 bool _looksLikeOnlyCity(String query, String city) {
   final normalizedQuery = query.trim().toLowerCase();

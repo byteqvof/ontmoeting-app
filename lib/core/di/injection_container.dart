@@ -28,6 +28,7 @@ import '../../features/home/domain/usecases/get_home_feed.dart';
 import '../../features/home/domain/usecases/mark_activity_chat_read.dart';
 import '../../features/home/domain/usecases/send_activity_chat_message.dart';
 import '../../features/home/domain/usecases/set_activity_participation.dart';
+import '../../features/home/domain/usecases/search_meeting_locations.dart';
 import '../../features/home/domain/usecases/submit_activity_feedback.dart';
 import '../../features/home/domain/usecases/update_activity.dart';
 import '../../features/home/domain/usecases/watch_current_location.dart';
@@ -52,6 +53,7 @@ import '../services/activity_attendance_service.dart';
 import '../services/analytics_service.dart';
 import '../services/push_notification_service.dart';
 import '../services/safety_service.dart';
+import '../services/friendship_service.dart';
 import '../utils/app_preferences.dart';
 
 final sl = GetIt.instance;
@@ -68,6 +70,7 @@ Future<void> configureDependencies() async {
     ..registerLazySingleton(() => AccountTrustService(sl(), sl()))
     ..registerLazySingleton(() => ActivityAttendanceService(sl()))
     ..registerLazySingleton(() => SafetyService(sl()))
+    ..registerLazySingleton(() => FriendshipService(sl()))
     ..registerLazySingleton<AuthRemoteDataSource>(
       () => AuthRemoteDataSourceImpl(sl()),
     )
@@ -102,6 +105,7 @@ Future<void> configureDependencies() async {
     ..registerLazySingleton(() => MarkActivityChatRead(sl()))
     ..registerLazySingleton(() => SendActivityChatMessage(sl()))
     ..registerLazySingleton(() => SetActivityParticipation(sl()))
+    ..registerLazySingleton(() => SearchMeetingLocations(sl()))
     ..registerLazySingleton(() => SubmitActivityFeedback(sl()))
     ..registerLazySingleton(() => UpdateActivity(sl()))
     ..registerLazySingleton(() => WatchCurrentCityName(sl()))

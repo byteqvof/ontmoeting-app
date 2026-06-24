@@ -243,6 +243,7 @@ class _ActivityMessagesPageState extends State<ActivityMessagesPage>
     );
   }
 
+<<<<<<< HEAD
   void _applyChatNotice(ActivityChatNotice notice) {
     final currentAgenda = _agenda;
     if (currentAgenda == null) {
@@ -266,6 +267,18 @@ class _ActivityMessagesPageState extends State<ActivityMessagesPage>
 
   void _openChat(HomeActivity activity) {
     context.push(AppRoutes.activityChatPath(activity.id), extra: activity);
+=======
+  Future<void> _openChat(HomeActivity activity) async {
+    _chatNotices.markActivityRead(activity.id);
+    setState(() {
+      _agenda = _agenda?.withChatMarkedRead(activity.id);
+    });
+    await context.push(AppRoutes.activityChatPath(activity.id), extra: activity);
+    if (!mounted) {
+      return;
+    }
+    await _loadAgenda();
+>>>>>>> codex/beta-round-2-polish
   }
 
   @override

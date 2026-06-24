@@ -23,8 +23,7 @@ class HomeActivityCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.toch;
-
-    final borderRadius = BorderRadius.circular(TochRadius.lg);
+    final borderRadius = BorderRadius.circular(22);
 
     return Material(
       color: colors.card,
@@ -34,25 +33,26 @@ class HomeActivityCard extends StatelessWidget {
         onTap: onPressed,
         child: Ink(
           decoration: BoxDecoration(
+            color: colors.card,
             borderRadius: borderRadius,
             border: Border.all(color: colors.line),
             boxShadow: [
               BoxShadow(
-                color: colors.ink.withValues(alpha: .045),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
+                color: colors.ink.withValues(alpha: .06),
+                blurRadius: 26,
+                offset: const Offset(0, 10),
               ),
             ],
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
+                child: Row(
                   children: [
                     _CategoryTile(activity: activity),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 14),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -62,7 +62,10 @@ class HomeActivityCard extends StatelessWidget {
                               Expanded(
                                 child: Text(
                                   activity.category.label,
+<<<<<<< HEAD
                                   maxLines: 1,
+=======
+>>>>>>> codex/beta-round-2-polish
                                   overflow: TextOverflow.ellipsis,
                                   style: Theme.of(context).textTheme.labelSmall
                                       ?.copyWith(
@@ -95,18 +98,44 @@ class HomeActivityCard extends StatelessWidget {
                             ],
                           ),
                           const SizedBox(height: 4),
-                          Text(
-                            activity.title,
-                            style: Theme.of(context).textTheme.titleMedium
-                                ?.copyWith(color: colors.ink, height: 1.12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  activity.title,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.titleMedium
+                                      ?.copyWith(
+                                        color: colors.ink,
+                                        height: 1.12,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                ),
+                              ),
+                              if (activity.hostIdentityVerified) ...[
+                                const SizedBox(width: 6),
+                                Tooltip(
+                                  message:
+                                      'Deze gebruiker heeft zijn identiteit geverifieerd.',
+                                  child: Icon(
+                                    Icons.verified_rounded,
+                                    color: const Color(0xFF2E7E5C),
+                                    size: 16,
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                         ],
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 14),
-                Row(
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 0, 18, 14),
+                child: Row(
                   children: [
                     Icon(
                       Icons.calendar_today_rounded,
@@ -114,16 +143,18 @@ class HomeActivityCard extends StatelessWidget {
                       color: colors.green700,
                     ),
                     const SizedBox(width: 6),
-                    Text(
-                      activity.dateLabel,
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: colors.green700,
-                        fontWeight: FontWeight.w800,
+                    Flexible(
+                      child: Text(
+                        activity.dateLabel,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelMedium
+                            ?.copyWith(
+                              color: colors.green700,
+                              fontWeight: FontWeight.w800,
+                            ),
                       ),
                     ),
-                    const SizedBox(width: 6),
-                    Text('·', style: TextStyle(color: colors.green700)),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 14),
                     Icon(
                       Icons.schedule_rounded,
                       size: 16,
@@ -139,60 +170,30 @@ class HomeActivityCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 14),
-                Divider(height: 1, color: colors.line),
-                const SizedBox(height: 12),
-                Row(
+              ),
+              Container(
+                padding: const EdgeInsets.fromLTRB(18, 13, 18, 13),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFCFBF8),
+                  border: Border(top: BorderSide(color: colors.line)),
+                ),
+                child: Row(
                   children: [
                     HomeAvatarStack(
                       participants: activity.participants,
                       maxVisibleAvatars: 3,
                       onProfilePressed: onProfilePressed,
                     ),
-                    const SizedBox(width: 9),
+                    const SizedBox(width: 10),
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  activity.hostName,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(context).textTheme.labelMedium
-                                      ?.copyWith(
-                                        color: colors.ink,
-                                        fontWeight: FontWeight.w900,
-                                      ),
-                                ),
-                              ),
-                              if (activity.hostIdentityVerified) ...[
-                                const SizedBox(width: 4),
-                                Tooltip(
-                                  message:
-                                      'Deze gebruiker heeft zijn identiteit geverifieerd.',
-                                  child: Icon(
-                                    Icons.verified_rounded,
-                                    color: const Color(0xFF2E7E5C),
-                                    size: 14,
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                          const SizedBox(height: 1),
-                          Text(
-                            activity.spotsLabel,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.labelSmall
-                                ?.copyWith(
-                                  color: colors.green700.withValues(alpha: .72),
-                                  fontWeight: FontWeight.w700,
-                                ),
-                          ),
-                        ],
+                      child: Text(
+                        activity.spotsLabel,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelMedium
+                            ?.copyWith(
+                              color: colors.green700.withValues(alpha: .72),
+                              fontWeight: FontWeight.w800,
+                            ),
                       ),
                     ),
                     _JoinButton(
@@ -202,8 +203,8 @@ class HomeActivityCard extends StatelessWidget {
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -261,24 +262,25 @@ class _JoinButton extends StatelessWidget {
     final colors = context.toch;
     final isOwnActivity = activity.isOwnedByCurrentUser;
     final isFull = !activity.isJoined && activity.availableSpots <= 0;
+    final disabled =
+        isOwnActivity || isFull || isPending || activity.isParticipationPending;
+    final filled = !disabled && !activity.isJoined;
 
     return TextButton.icon(
-      onPressed:
-          isOwnActivity ||
-              isFull ||
-              isPending ||
-              activity.isParticipationPending
-          ? null
-          : onPressed,
+      onPressed: disabled ? null : onPressed,
       style: TextButton.styleFrom(
-        foregroundColor: isOwnActivity || isFull
+        foregroundColor: disabled
             ? colors.green700.withValues(alpha: .55)
+            : filled
+            ? Colors.white
             : colors.green,
-        backgroundColor: isOwnActivity || isFull
+        backgroundColor: disabled
             ? colors.cream
+            : filled
+            ? colors.green
             : colors.green100,
         minimumSize: const Size(0, 40),
-        padding: const EdgeInsets.symmetric(horizontal: 15),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         shape: const StadiumBorder(),
         textStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14.5),
       ),
@@ -287,7 +289,7 @@ class _JoinButton extends StatelessWidget {
               dimension: 17,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: colors.green,
+                color: filled ? Colors.white : colors.green,
               ),
             )
           : Icon(_joinIconFor(activity), size: 17),
@@ -331,16 +333,12 @@ class _CategoryTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: activity.category.backgroundColor,
-        borderRadius: BorderRadius.circular(TochRadius.md),
+        color: activity.category.color,
+        borderRadius: BorderRadius.circular(15),
       ),
       child: SizedBox.square(
-        dimension: 48,
-        child: Icon(
-          activity.category.icon,
-          color: activity.category.color,
-          size: 25,
-        ),
+        dimension: 52,
+        child: Icon(activity.category.icon, color: Colors.white, size: 26),
       ),
     );
   }

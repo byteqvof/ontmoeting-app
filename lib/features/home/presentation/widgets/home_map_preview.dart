@@ -29,7 +29,7 @@ class HomeMapPreview extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(18, 14, 18, 2),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(TochRadius.lg),
+        borderRadius: BorderRadius.circular(18),
         child: Material(
           color: const Color(0xFFEAEDE4),
           child: InkWell(
@@ -52,7 +52,7 @@ class HomeMapPreview extends StatelessWidget {
               );
             },
             child: SizedBox(
-              height: 198,
+              height: 88,
               child: Stack(
                 children: [
                   Positioned.fill(
@@ -64,7 +64,7 @@ class HomeMapPreview extends StatelessWidget {
                   ),
                   Positioned(
                     left: 12,
-                    top: 12,
+                    top: 26,
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: .92),
@@ -106,7 +106,7 @@ class HomeMapPreview extends StatelessWidget {
                   ),
                   Positioned(
                     right: 12,
-                    top: 12,
+                    top: 26,
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         color: colors.green,
@@ -120,59 +120,11 @@ class HomeMapPreview extends StatelessWidget {
                         ],
                       ),
                       child: const SizedBox.square(
-                        dimension: 42,
+                        dimension: 36,
                         child: Icon(
-                          Icons.open_in_full_rounded,
+                          Icons.chevron_right_rounded,
                           color: Colors.white,
-                          size: 19,
-                        ),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    left: 12,
-                    right: 12,
-                    bottom: 12,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: colors.card.withValues(alpha: .94),
-                        borderRadius: BorderRadius.circular(TochRadius.pill),
-                        boxShadow: [
-                          BoxShadow(
-                            color: colors.ink.withValues(alpha: .10),
-                            blurRadius: 14,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 10,
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.travel_explore_rounded,
-                              color: colors.green,
-                              size: 18,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'Bekijk op kaart',
-                                style: Theme.of(context).textTheme.labelLarge
-                                    ?.copyWith(
-                                      color: colors.ink,
-                                      fontWeight: FontWeight.w900,
-                                    ),
-                              ),
-                            ),
-                            Icon(
-                              Icons.chevron_right_rounded,
-                              color: colors.green,
-                            ),
-                          ],
+                          size: 22,
                         ),
                       ),
                     ),

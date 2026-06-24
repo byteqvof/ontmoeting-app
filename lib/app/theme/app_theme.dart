@@ -153,6 +153,21 @@ class AppTheme {
           backgroundColor: TochColors.green100,
         ),
       ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: TochColors.card,
+        contentTextStyle: textTheme.bodyMedium?.copyWith(
+          color: TochColors.ink,
+          fontWeight: FontWeight.w800,
+          height: 1.25,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(TochRadius.md),
+          side: const BorderSide(color: TochColors.line),
+        ),
+        elevation: 8,
+        insetPadding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
+      ),
     );
   }
 }

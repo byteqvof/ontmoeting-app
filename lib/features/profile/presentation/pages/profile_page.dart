@@ -7,6 +7,7 @@ import '../../../../app/router/app_router.dart';
 import '../../../../app/theme/toch_theme.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../../../core/services/analytics_service.dart';
+import '../../../../core/services/friendship_service.dart';
 import '../../../../core/services/safety_service.dart';
 import '../../../../core/widgets/safety_report_dialog.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
@@ -116,6 +117,10 @@ class _ProfileContent extends StatelessWidget {
           _ProfileTopBar(profile: profile, isOwnProfile: isOwnProfile),
           const SizedBox(height: TochSpacing.md),
           ProfileHeader(profile: profile),
+          if (!isOwnProfile) ...[
+            const SizedBox(height: TochSpacing.md),
+            _FriendshipActionCard(profile: profile),
+          ],
           const SizedBox(height: TochSpacing.md),
           ProfileScoreCard(profile: profile),
           const SizedBox(height: TochSpacing.md),
@@ -141,21 +146,9 @@ class _ProfileContent extends StatelessWidget {
           const SizedBox(height: TochSpacing.md),
           ProfilePremiumCard(isPremium: profile.isPremium),
           const SizedBox(height: TochSpacing.md),
-          ProfileMenuList(
+          _ProfileMenu(
             isOwnProfile: isOwnProfile,
-            onSignOutPressed: () => _confirmSignOut(context),
-            onAccountVerificationPressed: isOwnProfile
-                ? () => context.push(AppRoutes.accountVerification)
-                : null,
-            onDeleteAccountPressed: isOwnProfile
-                ? () => _confirmDeleteAccount(context)
-                : null,
-            onReportProfilePressed: isOwnProfile
-                ? null
-                : () => _reportProfile(context, profile),
-            onBlockProfilePressed: isOwnProfile
-                ? null
-                : () => _blockProfile(context, profile),
+            profile: profile,
           ),
           if (isOwnProfile) ...[
             const SizedBox(height: TochSpacing.lg),
@@ -167,6 +160,7 @@ class _ProfileContent extends StatelessWidget {
   }
 }
 
+<<<<<<< HEAD
 class _AppVersionFooter extends StatelessWidget {
   const _AppVersionFooter();
 
@@ -194,12 +188,416 @@ class _AppVersionFooter extends StatelessWidget {
             color: colors.green700.withValues(alpha: .48),
             fontWeight: FontWeight.w800,
           ),
+=======
+class _ProfileMenu extends StatelessWidget {
+  const _ProfileMenu({required this.isOwnProfile, required this.profile});
+
+  final bool isOwnProfile;
+  final Profile profile;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!isOwnProfile) {
+      return _buildMenu(context, friendsBadgeCount: 0);
+    }
+
+    return FutureBuilder<List<FriendshipListItem>>(
+      future: sl<FriendshipService>().listFriends(),
+      builder: (context, snapshot) {
+        final friendsBadgeCount = snapshot.hasData
+            ? countIncomingFriendRequests(snapshot.data!)
+            : 0;
+        return _buildMenu(context, friendsBadgeCount: friendsBadgeCount);
+      },
+    );
+  }
+
+  ProfileMenuList _buildMenu(
+    BuildContext context, {
+    required int friendsBadgeCount,
+  }) {
+    return ProfileMenuList(
+      isOwnProfile: isOwnProfile,
+      friendsBadgeCount: friendsBadgeCount,
+      onSignOutPressed: () => _confirmSignOut(context),
+      onAccountVerificationPressed: isOwnProfile
+          ? () => context.push(AppRoutes.accountVerification)
+          : null,
+      onFriendsPressed: isOwnProfile ? () => context.push(AppRoutes.friends) : null,
+      onPrivacyPressed: () => context.push(AppRoutes.privacyLocation),
+      onNotificationsPressed: () => context.push(AppRoutes.notifications),
+      onHelpPressed: () => context.push(AppRoutes.appInfo),
+      onDeleteAccountPressed: isOwnProfile
+          ? () => _confirmDeleteAccount(context)
+          : null,
+      onReportProfilePressed: isOwnProfile
+          ? null
+          : () => _reportProfile(context, profile),
+      onBlockProfilePressed: isOwnProfile
+          ? null
+          : () => _blockProfile(context, profile),
+    );
+  }
+}
+
+class _FriendshipActionCard extends StatefulWidget {
+  const _FriendshipActionCard({required this.profile});
+
+  final Profile profile;
+
+  @override
+  State<_FriendshipActionCard> createState() => _FriendshipActionCardState();
+}
+
+class _FriendshipActionCardState extends State<_FriendshipActionCard> {
+  late Future<FriendshipSummary> _statusFuture = _loadStatus();
+  bool _isUpdating = false;
+
+  Future<FriendshipSummary> _loadStatus() {
+    return sl<FriendshipService>().getStatus(widget.profile.id);
+  }
+
+  void _refresh() {
+    setState(() {
+      _statusFuture = _loadStatus();
+    });
+  }
+
+  Future<void> _runAction(
+    Future<FriendshipSummary> Function(FriendshipService service) action,
+    String successMessage,
+  ) async {
+    setState(() => _isUpdating = true);
+    try {
+      final result = await action(sl<FriendshipService>());
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _statusFuture = Future.value(result);
+        _isUpdating = false;
+      });
+      _showProfileMessage(context, successMessage);
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _isUpdating = false);
+      _showProfileMessage(context, 'Vriendschap bijwerken lukt nu niet.');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<FriendshipSummary>(
+      future: _statusFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const _FriendshipCardShell(child: _FriendshipLoading());
+        }
+
+        if (snapshot.hasError || snapshot.data == null) {
+          return _FriendshipCardShell(
+            child: _FriendshipStatusError(onRetry: _refresh),
+          );
+        }
+
+        final status = snapshot.data!.status;
+        return _FriendshipCardShell(
+          child: switch (status) {
+            FriendshipStatus.accepted => _FriendshipAcceptedActions(
+              isUpdating: _isUpdating,
+              onRemove: () => _runAction(
+                (service) => service.remove(widget.profile.id),
+                'Vriend verwijderd.',
+              ),
+            ),
+            FriendshipStatus.pendingSent => _FriendshipPendingSentActions(
+              isUpdating: _isUpdating,
+              onCancel: () => _runAction(
+                (service) => service.remove(widget.profile.id),
+                'Verzoek ingetrokken.',
+              ),
+            ),
+            FriendshipStatus.pendingReceived => _FriendshipPendingReceivedActions(
+              isUpdating: _isUpdating,
+              onAccept: () => _runAction(
+                (service) => service.accept(widget.profile.id),
+                'Vriend toegevoegd.',
+              ),
+              onDecline: () => _runAction(
+                (service) => service.decline(widget.profile.id),
+                'Verzoek geweigerd.',
+              ),
+            ),
+            FriendshipStatus.blocked => _FriendshipUnavailable(),
+            FriendshipStatus.self => const SizedBox.shrink(),
+            _ => _FriendshipRequestActions(
+              isUpdating: _isUpdating,
+              onRequest: () => _runAction(
+                (service) => service.request(widget.profile.id),
+                'Vriendschapsverzoek verstuurd.',
+              ),
+            ),
+          },
+>>>>>>> codex/beta-round-2-polish
         );
       },
     );
   }
 }
 
+<<<<<<< HEAD
+=======
+class _FriendshipCardShell extends StatelessWidget {
+  const _FriendshipCardShell({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.toch;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.card,
+        borderRadius: BorderRadius.circular(TochRadius.lg),
+        border: Border.all(color: colors.line),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(TochSpacing.md),
+        child: child,
+      ),
+    );
+  }
+}
+
+class _FriendshipStatusError extends StatelessWidget {
+  const _FriendshipStatusError({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.toch;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.group_off_outlined, color: colors.green),
+            const SizedBox(width: TochSpacing.sm),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Vriendenfunctie niet bereikbaar',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: colors.ink,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'We kunnen de vriendschapstatus nu niet ophalen. Probeer opnieuw na de backend-update.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: colors.green700.withValues(alpha: .72),
+                      fontWeight: FontWeight.w700,
+                      height: 1.3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: TochSpacing.sm),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh_rounded),
+            label: const Text('Opnieuw proberen'),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _FriendshipLoading extends StatelessWidget {
+  const _FriendshipLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.toch;
+
+    return Row(
+      children: [
+        SizedBox.square(
+          dimension: 22,
+          child: CircularProgressIndicator(
+            color: colors.green,
+            strokeWidth: 2,
+          ),
+        ),
+        const SizedBox(width: TochSpacing.sm),
+        Expanded(
+          child: Text(
+            'Vriendschap laden',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: colors.green700,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _FriendshipRequestActions extends StatelessWidget {
+  const _FriendshipRequestActions({
+    required this.isUpdating,
+    required this.onRequest,
+  });
+
+  final bool isUpdating;
+  final VoidCallback onRequest;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        const Icon(Icons.person_add_alt_1_rounded),
+        const SizedBox(width: TochSpacing.sm),
+        Expanded(
+          child: Text(
+            'Leuk gehad? Voeg toe als vriend om elkaar later sneller terug te vinden.',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              height: 1.3,
+            ),
+          ),
+        ),
+        const SizedBox(width: TochSpacing.sm),
+        FilledButton(
+          onPressed: isUpdating ? null : onRequest,
+          child: const Text('Toevoegen'),
+        ),
+      ],
+    );
+  }
+}
+
+class _FriendshipPendingSentActions extends StatelessWidget {
+  const _FriendshipPendingSentActions({
+    required this.isUpdating,
+    required this.onCancel,
+  });
+
+  final bool isUpdating;
+  final VoidCallback onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        const Icon(Icons.schedule_rounded),
+        const SizedBox(width: TochSpacing.sm),
+        const Expanded(child: Text('Vriendschapsverzoek verstuurd.')),
+        TextButton(
+          onPressed: isUpdating ? null : onCancel,
+          child: const Text('Intrekken'),
+        ),
+      ],
+    );
+  }
+}
+
+class _FriendshipPendingReceivedActions extends StatelessWidget {
+  const _FriendshipPendingReceivedActions({
+    required this.isUpdating,
+    required this.onAccept,
+    required this.onDecline,
+  });
+
+  final bool isUpdating;
+  final VoidCallback onAccept;
+  final VoidCallback onDecline;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Deze gebruiker wil vrienden worden.'),
+        const SizedBox(height: TochSpacing.sm),
+        Row(
+          children: [
+            Expanded(
+              child: ElevatedButton(
+                onPressed: isUpdating ? null : onAccept,
+                child: const Text('Accepteer'),
+              ),
+            ),
+            const SizedBox(width: TochSpacing.sm),
+            Expanded(
+              child: OutlinedButton(
+                onPressed: isUpdating ? null : onDecline,
+                child: const Text('Weiger'),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _FriendshipAcceptedActions extends StatelessWidget {
+  const _FriendshipAcceptedActions({
+    required this.isUpdating,
+    required this.onRemove,
+  });
+
+  final bool isUpdating;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.toch;
+    return Row(
+      children: [
+        Icon(Icons.check_circle_rounded, color: colors.green),
+        const SizedBox(width: TochSpacing.sm),
+        const Expanded(child: Text('Jullie zijn vrienden.')),
+        TextButton(
+          onPressed: isUpdating ? null : onRemove,
+          child: const Text('Verwijder'),
+        ),
+      ],
+    );
+  }
+}
+
+class _FriendshipUnavailable extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return const Row(
+      children: [
+        Icon(Icons.block_rounded),
+        SizedBox(width: TochSpacing.sm),
+        Expanded(child: Text('Vriendschap is niet beschikbaar.')),
+      ],
+    );
+  }
+}
+
+>>>>>>> codex/beta-round-2-polish
 Future<void> _reportProfile(BuildContext context, Profile profile) async {
   final report = await _askForSafetyDetails(
     context,

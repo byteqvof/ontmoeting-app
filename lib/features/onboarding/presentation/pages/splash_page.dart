@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_router.dart';
 import '../../../../app/theme/toch_theme.dart';
-import '../../../../app/widgets/toch_mark.dart';
 import '../../../../app/widgets/toch_wordmark.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../../../core/utils/app_preferences.dart';
@@ -47,57 +46,23 @@ class _SplashPageState extends State<SplashPage> {
     final colors = context.toch;
 
     return Scaffold(
+      backgroundColor: colors.green,
       body: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: _continue,
         child: SizedBox.expand(
           child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [colors.green, const Color(0xFF163D2C)],
-              ),
-            ),
-            child: SafeArea(
-              child: Stack(
-                children: [
-                  Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: const [
-                        TochMark(size: 92),
-                        SizedBox(height: TochSpacing.lg),
-                        TochWordmark(fontSize: 56, onDark: true),
-                      ],
-                    ),
-                  ),
-                  Positioned(
-                    left: TochSpacing.xl,
-                    right: TochSpacing.xl,
-                    bottom: TochSpacing.xxl,
-                    child: Column(
-                      children: [
-                        Text(
-                          'Ik ga toch.',
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(color: colors.cream),
-                        ),
-                        const SizedBox(height: TochSpacing.xs),
-                        Text(
-                          'Sluit aan als je wilt.',
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(
-                                color: colors.cream.withValues(alpha: .64),
-                              ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+            decoration: BoxDecoration(color: colors.green),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final fontSize = (constraints.maxWidth * .23).clamp(
+                  72.0,
+                  118.0,
+                );
+                return Center(
+                  child: TochWordmark(fontSize: fontSize, onDark: true),
+                );
+              },
             ),
           ),
         ),

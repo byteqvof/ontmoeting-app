@@ -18,11 +18,16 @@ import 'package:meetings_app/features/home/domain/entities/home_feed.dart';
 import 'package:meetings_app/features/home/domain/entities/home_feed_filters.dart';
 import 'package:meetings_app/features/home/domain/entities/home_location.dart';
 import 'package:meetings_app/features/home/domain/entities/home_category.dart';
+import 'package:meetings_app/features/home/domain/entities/meeting_location_suggestion.dart';
 import 'package:meetings_app/features/profile/domain/entities/profile_trust.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+<<<<<<< HEAD
 const _testLocation = HomeLocation(
+=======
+const _sampleLocation = HomeLocation(
+>>>>>>> codex/beta-round-2-polish
   cityName: 'Winschoten',
   latitude: 53.144,
   longitude: 7.034,
@@ -41,11 +46,7 @@ void main() {
     );
 
     final result = await repository.getHomeFeed(
-      location: const HomeLocation(
-        cityName: 'Ter Apel',
-        latitude: 52.876,
-        longitude: 7.059,
-      ),
+      location: _sampleLocation,
       filters: const HomeFeedFilters(),
     );
 
@@ -55,7 +56,11 @@ void main() {
     }, (_) => fail('Expected a network failure.'));
   });
 
+<<<<<<< HEAD
   test('returns a location failure when device location times out', () async {
+=======
+  test('returns a failure when device location times out', () async {
+>>>>>>> codex/beta-round-2-polish
     final repository = HomeRepositoryImpl(
       _ThrowingHomeRemoteDataSource(Exception('unused')),
       _ThrowingLocationDataSource(
@@ -66,12 +71,21 @@ void main() {
     final result = await repository.getCurrentLocation();
 
     result.fold((failure) {
+<<<<<<< HEAD
       expect(failure, isA<ServerFailure>());
       expect(
         failure.message,
         'We kunnen je locatie niet bepalen. Controleer de locatie van je toestel en probeer opnieuw.',
       );
     }, (_) => fail('Expected location failure.'));
+=======
+      expect(failure, isA<NetworkFailure>());
+      expect(
+        failure.message,
+        'We konden je locatie niet ophalen. Probeer het opnieuw.',
+      );
+    }, (_) => fail('Expected a location failure.'));
+>>>>>>> codex/beta-round-2-polish
   });
 
   test('does not wait for a hanging device location lookup', () async {
@@ -84,8 +98,13 @@ void main() {
     final result = await repository.getCurrentLocation();
 
     result.fold(
+<<<<<<< HEAD
       (failure) => expect(failure, isA<ServerFailure>()),
       (_) => fail('Expected location failure.'),
+=======
+      (failure) => expect(failure, isA<NetworkFailure>()),
+      (_) => fail('Expected a location failure.'),
+>>>>>>> codex/beta-round-2-polish
     );
   });
 
@@ -109,8 +128,13 @@ void main() {
       final live = await repository.getCurrentLocation(forceRefresh: true);
 
       fallback.fold(
+<<<<<<< HEAD
         (failure) => expect(failure, isA<ServerFailure>()),
         (_) => fail('Expected first lookup to fail.'),
+=======
+        (failure) => expect(failure, isA<NetworkFailure>()),
+        (_) => fail('Expected first location lookup to fail.'),
+>>>>>>> codex/beta-round-2-polish
       );
       live.fold(
         (failure) => fail('Expected live location, got $failure'),
@@ -141,13 +165,7 @@ void main() {
   test(
     'reuses cached location on later requests and watcher startup',
     () async {
-      final locationDataSource = _CountingLocationDataSource(
-        const HomeLocation(
-          cityName: 'Ter Apel',
-          latitude: 52.876,
-          longitude: 7.059,
-        ),
-      );
+      final locationDataSource = _CountingLocationDataSource(_sampleLocation);
       final repository = HomeRepositoryImpl(
         _HomeRemoteDataSourceStub(feed: _feed()),
         locationDataSource,
@@ -173,7 +191,11 @@ void main() {
       feedCacheTtl: const Duration(seconds: 30),
     );
 
+<<<<<<< HEAD
     final location = _testLocation;
+=======
+    const location = _sampleLocation;
+>>>>>>> codex/beta-round-2-polish
     final first = await repository.getHomeFeed(
       location: location,
       filters: const HomeFeedFilters(),
@@ -196,7 +218,11 @@ void main() {
       feedCacheTtl: const Duration(seconds: 30),
     );
 
+<<<<<<< HEAD
     final location = _testLocation;
+=======
+    const location = _sampleLocation;
+>>>>>>> codex/beta-round-2-polish
     final first = await repository.getHomeFeed(
       location: location,
       filters: const HomeFeedFilters(),
@@ -219,7 +245,11 @@ void main() {
       const _FakeLocationDataSource(),
       feedCacheTtl: const Duration(seconds: 30),
     );
+<<<<<<< HEAD
     final location = _testLocation;
+=======
+    const location = _sampleLocation;
+>>>>>>> codex/beta-round-2-polish
 
     await repository.getHomeFeed(
       location: location,
@@ -270,6 +300,49 @@ void main() {
     }, (_) => fail('Expected leave failure.'));
   });
 
+  test('maps generic join conflict to user friendly copy', () async {
+    final repository = HomeRepositoryImpl(
+      _ThrowingHomeRemoteDataSource(
+        const FunctionException(status: 409, reasonPhrase: 'Conflict'),
+      ),
+      const _FakeLocationDataSource(),
+    );
+
+    final result = await repository.setActivityParticipation(
+      activityId: 'activity-1',
+      join: true,
+    );
+
+    result.fold((failure) {
+      expect(failure, isA<ServerFailure>());
+      expect(failure.message, isNot(contains('Conflict')));
+      expect(
+        failure.message,
+        'Aanmelden voor deze activiteit lukt nu niet. Vernieuw het overzicht en probeer opnieuw.',
+      );
+    }, (_) => fail('Expected join conflict failure.'));
+  });
+
+  test('maps generic completion conflict to user friendly copy', () async {
+    final repository = HomeRepositoryImpl(
+      _ThrowingHomeRemoteDataSource(
+        const FunctionException(status: 409, reasonPhrase: 'Conflict'),
+      ),
+      const _FakeLocationDataSource(),
+    );
+
+    final result = await repository.completeActivity(activityId: 'activity-1');
+
+    result.fold((failure) {
+      expect(failure, isA<ServerFailure>());
+      expect(failure.message, isNot(contains('Conflict')));
+      expect(
+        failure.message,
+        'Afronden lukt nu niet. Vernieuw de activiteit en probeer opnieuw.',
+      );
+    }, (_) => fail('Expected completion conflict failure.'));
+  });
+
   test('maps chat forbidden to chat access copy', () async {
     final repository = HomeRepositoryImpl(
       _ThrowingHomeRemoteDataSource(
@@ -291,6 +364,78 @@ void main() {
       expect(failure, isA<PermissionFailure>());
       expect(failure.message, 'Meld je eerst aan om de chat te openen.');
     }, (_) => fail('Expected chat permission failure.'));
+  });
+
+  test('maps closed chat to ended activity copy', () async {
+    final repository = HomeRepositoryImpl(
+      _ThrowingHomeRemoteDataSource(
+        const FunctionException(
+          status: 409,
+          details: {
+            'error': {'message': 'ACTIVITY_CHAT_CLOSED'},
+          },
+        ),
+      ),
+      const _FakeLocationDataSource(),
+    );
+
+    final result = await repository.sendActivityChatMessage(
+      activityId: 'activity-1',
+      body: 'Hoi',
+      clientMessageId: '11111111-1111-4111-8111-111111111111',
+    );
+
+    result.fold((failure) {
+      expect(failure, isA<ServerFailure>());
+      expect(
+        failure.message,
+        'Deze activiteit is voorbij. De chat is gesloten.',
+      );
+    }, (_) => fail('Expected closed chat failure.'));
+  });
+
+  test('maps chat server errors to chat service copy', () async {
+    final repository = HomeRepositoryImpl(
+      _ThrowingHomeRemoteDataSource(
+        const FunctionException(
+          status: 500,
+          details: {
+            'error': {'message': 'Could not update activity chat'},
+          },
+        ),
+      ),
+      const _FakeLocationDataSource(),
+    );
+
+    final result = await repository.sendActivityChatMessage(
+      activityId: 'activity-1',
+      body: 'Hoi',
+      clientMessageId: '11111111-1111-4111-8111-111111111111',
+    );
+
+    result.fold((failure) {
+      expect(failure, isA<ServerFailure>());
+      expect(failure.message, 'De chatservice is tijdelijk niet beschikbaar.');
+    }, (_) => fail('Expected chat service failure.'));
+  });
+
+  test('maps location search outage to address search copy', () async {
+    final repository = HomeRepositoryImpl(
+      _ThrowingHomeRemoteDataSource(
+        const FunctionException(status: 502, reasonPhrase: 'Bad Gateway'),
+      ),
+      const _FakeLocationDataSource(),
+    );
+
+    final result = await repository.searchMeetingLocations(
+      query: 'Markeweg',
+      nearLocation: _sampleLocation,
+    );
+
+    result.fold((failure) {
+      expect(failure, isA<ServerFailure>());
+      expect(failure.message, 'Adres zoeken is tijdelijk niet beschikbaar.');
+    }, (_) => fail('Expected location search failure.'));
   });
 
   test('syncs account trust before joining an activity', () async {
@@ -400,6 +545,14 @@ class _ThrowingHomeRemoteDataSource implements HomeRemoteDataSource {
   }) async {
     throw error;
   }
+
+  @override
+  Future<List<MeetingLocationSuggestion>> searchMeetingLocations({
+    required String query,
+    required HomeLocation nearLocation,
+  }) async {
+    throw error;
+  }
 }
 
 class _FakeLocationDataSource implements HomeLocationDataSource {
@@ -407,11 +560,7 @@ class _FakeLocationDataSource implements HomeLocationDataSource {
 
   @override
   Future<HomeLocation> getCurrentLocation({bool forceRefresh = false}) async {
-    return const HomeLocation(
-      cityName: 'Ter Apel',
-      latitude: 52.876,
-      longitude: 7.059,
-    );
+    return _sampleLocation;
   }
 
   @override
@@ -609,6 +758,14 @@ class _HomeRemoteDataSourceStub implements HomeRemoteDataSource {
   }) async {
     throw UnimplementedError();
   }
+
+  @override
+  Future<List<MeetingLocationSuggestion>> searchMeetingLocations({
+    required String query,
+    required HomeLocation nearLocation,
+  }) async {
+    return const [];
+  }
 }
 
 class _CountingAccountTrustService extends AccountTrustService {
@@ -638,7 +795,7 @@ class _CountingAccountTrustService extends AccountTrustService {
 
 HomeFeed _feed() {
   return const HomeFeed(
-    locationName: 'Ter Apel',
+    locationName: 'Winschoten',
     selectedTimeFilter: 'Alles',
     selectedDistanceKm: 10,
     timeFilters: ['Alles'],

@@ -52,7 +52,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   StreamSubscription? _locationSubscription;
 
   Future<void> _onStarted(HomeStarted event, Emitter<HomeState> emit) async {
-    add(const HomeLocationRequested(forceRefresh: true));
+    add(const HomeLocationRequested());
   }
 
   Future<void> _onLocationRequested(

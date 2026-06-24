@@ -31,6 +31,7 @@ class HomeActivity extends Equatable {
     this.hostAvatarUrl,
     this.hostFeedbackSubmitted = false,
     required this.participants,
+    this.participantCount = 0,
     required this.availableSpots,
     required this.spotsLabel,
     this.status = 'published',
@@ -75,6 +76,7 @@ class HomeActivity extends Equatable {
   final String? hostAvatarUrl;
   final bool hostFeedbackSubmitted;
   final List<HomeParticipant> participants;
+  final int participantCount;
   final int availableSpots;
   final String spotsLabel;
   final String status;
@@ -96,6 +98,13 @@ class HomeActivity extends Equatable {
 
   bool get isCompleted => status == 'completed';
 
+  bool get isChatClosed => isCompleted;
+
+  bool get hasStarted => startsAt == null || !startsAt!.isAfter(DateTime.now());
+
+  bool get canBeCompletedNow =>
+      isOwnedByCurrentUser && !isCompleted && hasStarted;
+
   bool get isApprovalRequired => groupType == 'approval';
 
   bool get isParticipationPending => participationStatus == 'pending';
@@ -103,6 +112,7 @@ class HomeActivity extends Equatable {
   HomeActivity copyWith({
     HomeCategory? category,
     List<HomeParticipant>? participants,
+    int? participantCount,
     int? availableSpots,
     String? spotsLabel,
     String? status,
@@ -150,6 +160,7 @@ class HomeActivity extends Equatable {
       hostFeedbackSubmitted:
           hostFeedbackSubmitted ?? this.hostFeedbackSubmitted,
       participants: participants ?? this.participants,
+      participantCount: participantCount ?? this.participantCount,
       availableSpots: availableSpots ?? this.availableSpots,
       spotsLabel: spotsLabel ?? this.spotsLabel,
       status: status ?? this.status,
@@ -179,6 +190,7 @@ class HomeActivity extends Equatable {
 
     return copyWith(
       participants: update.participants,
+      participantCount: update.participantsCount,
       availableSpots: update.availableSpots,
       spotsLabel: update.spotsLabel,
       isJoined: update.isJoined,
@@ -221,6 +233,7 @@ class HomeActivity extends Equatable {
     hostAvatarUrl,
     hostFeedbackSubmitted,
     participants,
+    participantCount,
     availableSpots,
     spotsLabel,
     status,

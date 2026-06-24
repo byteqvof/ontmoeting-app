@@ -16,6 +16,7 @@ import '../../domain/entities/home_activity.dart';
 import '../../domain/entities/home_feed.dart';
 import '../../domain/entities/home_feed_filters.dart';
 import '../../domain/entities/home_location.dart';
+import '../../domain/entities/meeting_location_suggestion.dart';
 import '../../domain/repositories/home_repository.dart';
 import '../datasources/home_location_data_source.dart';
 import '../datasources/home_remote_data_source.dart';
@@ -25,7 +26,7 @@ class HomeRepositoryImpl implements HomeRepository {
     this._dataSource,
     this._locationDataSource, {
     this.accountTrustService,
-    this.locationLookupTimeout = const Duration(seconds: 6),
+    this.locationLookupTimeout = const Duration(seconds: 12),
     this.feedCacheTtl = const Duration(seconds: 20),
   });
 
@@ -218,7 +219,7 @@ class HomeRepositoryImpl implements HomeRepository {
       _clearFeedCache();
       return right(update);
     } catch (error) {
-      return left(_mapRemoteError(error));
+      return left(_mapCompletionError(error));
     }
   }
 
@@ -240,6 +241,24 @@ class HomeRepositoryImpl implements HomeRepository {
       );
     } catch (error) {
       return left(_mapRemoteError(error));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<MeetingLocationSuggestion>>>
+  searchMeetingLocations({
+    required String query,
+    required HomeLocation nearLocation,
+  }) async {
+    try {
+      return right(
+        await _dataSource.searchMeetingLocations(
+          query: query,
+          nearLocation: nearLocation,
+        ),
+      );
+    } catch (error) {
+      return left(_mapLocationSearchError(error));
     }
   }
 
@@ -300,6 +319,7 @@ class HomeRepositoryImpl implements HomeRepository {
         message.contains('location timed out') ||
         message.contains('unable to get current location') ||
         message.contains('no location fix')) {
+<<<<<<< HEAD
       return const ServerFailure(
         'We kunnen je locatie niet bepalen. Controleer de locatie van je toestel en probeer opnieuw.',
       );
@@ -307,6 +327,23 @@ class HomeRepositoryImpl implements HomeRepository {
     return const ServerFailure(
       'We kunnen je locatie niet bepalen. Controleer de locatie van je toestel en probeer opnieuw.',
     );
+=======
+      return const NetworkFailure(
+        'We konden je locatie niet ophalen. Probeer het opnieuw.',
+      );
+    }
+    return UnknownFailure(error.toString());
+>>>>>>> codex/beta-round-2-polish
+  }
+
+  Failure _mapLocationSearchError(Object error) {
+    if (error is FunctionException && error.status == 400) {
+      return const ServerFailure('Typ minimaal 3 tekens om te zoeken.');
+    }
+    if (error is FunctionException && error.status >= 500) {
+      return const ServerFailure('Adres zoeken is tijdelijk niet beschikbaar.');
+    }
+    return _mapRemoteError(error);
   }
 
   Failure _mapRemoteError(Object error) {
@@ -431,6 +468,48 @@ class HomeRepositoryImpl implements HomeRepository {
         if (message.contains('profile')) {
           return const ServerFailure('Maak je profiel af om mee te doen.');
         }
+        return const ServerFailure(
+          'Aanmelden voor deze activiteit lukt nu niet. Vernieuw het overzicht en probeer opnieuw.',
+        );
+      }
+    }
+
+    return _mapRemoteError(error);
+  }
+
+  Failure _mapCompletionError(Object error) {
+    if (error is FunctionException) {
+      final message = _functionErrorMessage(error).toLowerCase();
+      if (error.status == 403) {
+        if (message.contains('organizer') ||
+            message.contains('completion_forbidden')) {
+          return const PermissionFailure(
+            'Alleen de organisator kan deze activiteit afronden.',
+          );
+        }
+        return const PermissionFailure(
+          'Je kunt deze activiteit niet afronden.',
+        );
+      }
+      if (error.status == 404) {
+        return const ServerFailure(
+          'Deze activiteit bestaat niet meer. Vernieuw het overzicht.',
+        );
+      }
+      if (error.status == 409) {
+        if (message.contains('started') || message.contains('not_started')) {
+          return const ServerFailure(
+            'Je kunt deze activiteit pas afronden nadat die begonnen is.',
+          );
+        }
+        return const ServerFailure(
+          'Afronden lukt nu niet. Vernieuw de activiteit en probeer opnieuw.',
+        );
+      }
+      if (error.status >= 500) {
+        return const ServerFailure(
+          'De activiteitenservice is tijdelijk niet beschikbaar.',
+        );
       }
     }
 
@@ -440,6 +519,21 @@ class HomeRepositoryImpl implements HomeRepository {
   Failure _mapChatError(Object error) {
     if (error is FunctionException && error.status == 403) {
       return const PermissionFailure('Meld je eerst aan om de chat te openen.');
+    }
+
+    if (error is FunctionException && error.status == 409) {
+      final message = _functionErrorMessage(error).toLowerCase();
+      if (message.contains('closed')) {
+        return const ServerFailure(
+          'Deze activiteit is voorbij. De chat is gesloten.',
+        );
+      }
+    }
+
+    if (error is FunctionException && error.status >= 500) {
+      return const ServerFailure(
+        'De chatservice is tijdelijk niet beschikbaar.',
+      );
     }
 
     return _mapRemoteError(error);

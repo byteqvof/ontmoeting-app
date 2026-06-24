@@ -12,15 +12,16 @@ class HomeFeedSummary extends StatelessWidget {
     final colors = context.toch;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+      padding: const EdgeInsets.fromLTRB(20, 22, 20, 12),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
             'Vlakbij',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
               color: colors.ink,
               fontWeight: FontWeight.w900,
+              letterSpacing: -0.2,
             ),
           ),
           Text(
