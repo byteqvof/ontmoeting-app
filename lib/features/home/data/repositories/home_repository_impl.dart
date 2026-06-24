@@ -16,6 +16,7 @@ import '../../domain/entities/home_activity.dart';
 import '../../domain/entities/home_feed.dart';
 import '../../domain/entities/home_feed_filters.dart';
 import '../../domain/entities/home_location.dart';
+import '../../domain/entities/meeting_location_suggestion.dart';
 import '../../domain/repositories/home_repository.dart';
 import '../datasources/home_location_data_source.dart';
 import '../datasources/home_remote_data_source.dart';
@@ -25,7 +26,7 @@ class HomeRepositoryImpl implements HomeRepository {
     this._dataSource,
     this._locationDataSource, {
     this.accountTrustService,
-    this.locationLookupTimeout = const Duration(seconds: 6),
+    this.locationLookupTimeout = const Duration(seconds: 12),
     this.feedCacheTtl = const Duration(seconds: 20),
   });
 
@@ -244,6 +245,24 @@ class HomeRepositoryImpl implements HomeRepository {
   }
 
   @override
+  Future<Either<Failure, List<MeetingLocationSuggestion>>>
+  searchMeetingLocations({
+    required String query,
+    required HomeLocation nearLocation,
+  }) async {
+    try {
+      return right(
+        await _dataSource.searchMeetingLocations(
+          query: query,
+          nearLocation: nearLocation,
+        ),
+      );
+    } catch (error) {
+      return left(_mapLocationSearchError(error));
+    }
+  }
+
+  @override
   Future<Either<Failure, HomeLocation>> getCurrentLocation({
     bool forceRefresh = false,
   }) async {
@@ -259,9 +278,6 @@ class HomeRepositoryImpl implements HomeRepository {
       _cachedLocation = location;
       return right(location);
     } catch (error) {
-      if (_shouldUseFallbackLocation(error)) {
-        return right(defaultHomeLocation);
-      }
       return left(_mapLocationError(error));
     }
   }
@@ -282,10 +298,6 @@ class HomeRepositoryImpl implements HomeRepository {
         yield right(location);
       }
     } catch (error) {
-      if (_shouldUseFallbackLocation(error)) {
-        yield right(defaultHomeLocation);
-        return;
-      }
       yield left(_mapLocationError(error));
     }
   }
@@ -302,7 +314,26 @@ class HomeRepositoryImpl implements HomeRepository {
         'Zet locatievoorzieningen aan om je plaats automatisch te vinden.',
       );
     }
+    if (error is TimeoutException ||
+        message.contains('future not completed') ||
+        message.contains('location timed out') ||
+        message.contains('unable to get current location') ||
+        message.contains('no location fix')) {
+      return const NetworkFailure(
+        'We konden je locatie niet ophalen. Probeer het opnieuw.',
+      );
+    }
     return UnknownFailure(error.toString());
+  }
+
+  Failure _mapLocationSearchError(Object error) {
+    if (error is FunctionException && error.status == 400) {
+      return const ServerFailure('Typ minimaal 3 tekens om te zoeken.');
+    }
+    if (error is FunctionException && error.status >= 500) {
+      return const ServerFailure('Adres zoeken is tijdelijk niet beschikbaar.');
+    }
+    return _mapRemoteError(error);
   }
 
   Failure _mapRemoteError(Object error) {
@@ -446,7 +477,9 @@ class HomeRepositoryImpl implements HomeRepository {
             'Alleen de organisator kan deze activiteit afronden.',
           );
         }
-        return const PermissionFailure('Je kunt deze activiteit niet afronden.');
+        return const PermissionFailure(
+          'Je kunt deze activiteit niet afronden.',
+        );
       }
       if (error.status == 404) {
         return const ServerFailure(
@@ -454,8 +487,7 @@ class HomeRepositoryImpl implements HomeRepository {
         );
       }
       if (error.status == 409) {
-        if (message.contains('started') ||
-            message.contains('not_started')) {
+        if (message.contains('started') || message.contains('not_started')) {
           return const ServerFailure(
             'Je kunt deze activiteit pas afronden nadat die begonnen is.',
           );
@@ -535,18 +567,6 @@ class HomeRepositoryImpl implements HomeRepository {
     _cachedFeedFilters = null;
     _cachedFeedFetchedAt = null;
   }
-}
-
-bool _shouldUseFallbackLocation(Object error) {
-  if (error is TimeoutException) {
-    return true;
-  }
-
-  final message = error.toString().toLowerCase();
-  return message.contains('future not completed') ||
-      message.contains('location timed out') ||
-      message.contains('unable to get current location') ||
-      message.contains('no location fix');
 }
 
 bool _looksLikeTransientNetworkError(Object error) {

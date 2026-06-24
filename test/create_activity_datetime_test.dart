@@ -1,7 +1,6 @@
 import 'package:dartz/dartz.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:geocoding/geocoding.dart';
 import 'package:meetings_app/core/errors/failures.dart';
 import 'package:meetings_app/features/home/domain/entities/activity_agenda.dart';
 import 'package:meetings_app/features/home/domain/entities/activity_chat_message.dart';
@@ -14,47 +13,26 @@ import 'package:meetings_app/features/home/domain/entities/home_category.dart';
 import 'package:meetings_app/features/home/domain/entities/home_feed.dart';
 import 'package:meetings_app/features/home/domain/entities/home_feed_filters.dart';
 import 'package:meetings_app/features/home/domain/entities/home_location.dart';
+import 'package:meetings_app/features/home/domain/entities/meeting_location_suggestion.dart';
 import 'package:meetings_app/features/home/domain/repositories/home_repository.dart';
 import 'package:meetings_app/features/home/domain/usecases/create_activity.dart';
+import 'package:meetings_app/features/home/domain/usecases/search_meeting_locations.dart';
 import 'package:meetings_app/features/home/presentation/bloc/create_activity_bloc.dart';
 
 void main() {
-  test('meeting place label keeps typed house number when geocoder omits it', () {
-    final label = formatMeetingPlaceAddressLine(
-      query: '9561 AB Markeweg 23',
-      city: 'Ter Apel',
-      placemark: const Placemark(
-        street: 'Markeweg',
-        thoroughfare: 'Markeweg',
-        locality: 'Ter Apel',
-      ),
-    );
-
-    expect(label, contains('Markeweg 23'));
-    expect(label, contains('Ter Apel'));
-  });
-
   test('submits the custom selected date and time', () async {
     final repository = _CapturingHomeRepository();
     final bloc = CreateActivityBloc(
       CreateActivity(repository),
-      location: defaultHomeLocation,
+      SearchMeetingLocations(repository),
+      location: _terApelLocation,
       categories: const [_category],
     );
 
     bloc
       ..add(const CreateActivityTitleChanged('rondje wandelen'))
       ..add(const CreateActivityLocationChanged('Centrum Ter Apel'))
-      ..add(
-        const CreateActivityMeetingLocationSelected(
-          ResolvedMeetingLocation(
-            addressLine: 'Centrum Ter Apel',
-            city: 'Ter Apel',
-            latitude: 52.876,
-            longitude: 7.059,
-          ),
-        ),
-      )
+      ..add(const CreateActivityMeetingLocationSelected(_terApelSuggestion))
       ..add(CreateActivityDateSelected(DateTime(2099, 7, 10)))
       ..add(const CreateActivityTimeSelected(hour: 14, minute: 35))
       ..add(const CreateActivitySubmitted());
@@ -75,12 +53,13 @@ void main() {
   });
 
   test(
-    'uses geocoded meeting place instead of current home location',
+    'uses selected meeting place instead of current home location',
     () async {
       final repository = _CapturingHomeRepository();
       final bloc = CreateActivityBloc(
         CreateActivity(repository),
-        location: defaultHomeLocation,
+        SearchMeetingLocations(repository),
+        location: _terApelLocation,
         categories: const [_category],
         searchMeetingPlaces: (_, _) async => const [],
       );
@@ -89,14 +68,7 @@ void main() {
         ..add(const CreateActivityTitleChanged('rondje wandelen'))
         ..add(const CreateActivityLocationChanged('Marktplein 1, Winschoten'))
         ..add(
-          const CreateActivityMeetingLocationSelected(
-            ResolvedMeetingLocation(
-              addressLine: 'Marktplein 1, Winschoten',
-              city: 'Winschoten',
-              latitude: 53.144,
-              longitude: 7.034,
-            ),
-          ),
+          const CreateActivityMeetingLocationSelected(_winschotenSuggestion),
         )
         ..add(CreateActivityDateSelected(DateTime(2099, 7, 10)))
         ..add(const CreateActivityTimeSelected(hour: 14, minute: 35))
@@ -125,28 +97,20 @@ void main() {
     'uses generated description when optional notes are too short',
     () async {
       final repository = _CapturingHomeRepository();
-    final bloc = CreateActivityBloc(
-      CreateActivity(repository),
-      location: defaultHomeLocation,
-      categories: const [_category],
-    );
+      final bloc = CreateActivityBloc(
+        CreateActivity(repository),
+        SearchMeetingLocations(repository),
+        location: _terApelLocation,
+        categories: const [_category],
+      );
 
-    bloc
-      ..add(const CreateActivityTitleChanged('Avond'))
-      ..add(const CreateActivityLocationChanged('Centrum Ter Apel'))
-      ..add(
-        const CreateActivityMeetingLocationSelected(
-          ResolvedMeetingLocation(
-            addressLine: 'Centrum Ter Apel',
-            city: 'Ter Apel',
-            latitude: 52.876,
-            longitude: 7.059,
-          ),
-        ),
-      )
-      ..add(CreateActivityDateSelected(DateTime(2099, 7, 10)))
-      ..add(const CreateActivityTimeSelected(hour: 14, minute: 35))
-      ..add(const CreateActivityNotesChanged('ok'))
+      bloc
+        ..add(const CreateActivityTitleChanged('Avond'))
+        ..add(const CreateActivityLocationChanged('Centrum Ter Apel'))
+        ..add(const CreateActivityMeetingLocationSelected(_terApelSuggestion))
+        ..add(CreateActivityDateSelected(DateTime(2099, 7, 10)))
+        ..add(const CreateActivityTimeSelected(hour: 14, minute: 35))
+        ..add(const CreateActivityNotesChanged('ok'))
         ..add(const CreateActivitySubmitted());
 
       await expectLater(
@@ -179,19 +143,13 @@ void main() {
     final repository = _CapturingHomeRepository();
     final bloc = CreateActivityBloc(
       CreateActivity(repository),
-      location: defaultHomeLocation,
+      SearchMeetingLocations(repository),
+      location: _terApelLocation,
       categories: const [_category],
       searchMeetingPlaces: (query, fallbackLocation) async {
         expect(query, 'bibliotheek');
         expect(fallbackLocation.cityName, 'Ter Apel');
-        return const [
-          ResolvedMeetingLocation(
-            addressLine: 'Bibliotheek Ter Apel, Hoofdstraat 66',
-            city: 'Ter Apel',
-            latitude: 52.8762,
-            longitude: 7.0594,
-          ),
-        ];
+        return const [_librarySuggestion];
       },
     );
 
@@ -213,16 +171,7 @@ void main() {
     );
 
     bloc
-      ..add(
-        const CreateActivityMeetingLocationSelected(
-          ResolvedMeetingLocation(
-            addressLine: 'Bibliotheek Ter Apel, Hoofdstraat 66',
-            city: 'Ter Apel',
-            latitude: 52.8762,
-            longitude: 7.0594,
-          ),
-        ),
-      )
+      ..add(const CreateActivityMeetingLocationSelected(_librarySuggestion))
       ..add(CreateActivityDateSelected(DateTime(2099, 7, 10)))
       ..add(const CreateActivityTimeSelected(hour: 14, minute: 35))
       ..add(const CreateActivitySubmitted());
@@ -245,6 +194,73 @@ void main() {
     expect(repository.createdDraft?.longitude, 7.0594);
     await bloc.close();
   });
+
+  test('searches meeting places through the usecase', () async {
+    final repository = _CapturingHomeRepository()
+      ..locationSearchResults = const [_librarySuggestion];
+    final bloc = CreateActivityBloc(
+      CreateActivity(repository),
+      SearchMeetingLocations(repository),
+      location: _terApelLocation,
+      categories: const [_category],
+    );
+
+    bloc
+      ..add(const CreateActivityLocationChanged('bibliotheek'))
+      ..add(const CreateActivityMeetingLocationSearchRequested('bibliotheek'));
+
+    await expectLater(
+      bloc.stream,
+      emitsThrough(
+        predicate<CreateActivityState>(
+          (state) =>
+              state.locationSearchStatus ==
+                  CreateActivityLocationSearchStatus.success &&
+              state.locationResults.single == _librarySuggestion,
+        ),
+      ),
+    );
+
+    expect(repository.lastLocationSearchQuery, 'bibliotheek');
+    expect(repository.lastLocationSearchNearLocation, _terApelLocation);
+    await bloc.close();
+  });
+
+  test(
+    'fails submit when typed location was not selected from suggestions',
+    () async {
+      final repository = _CapturingHomeRepository();
+      final bloc = CreateActivityBloc(
+        CreateActivity(repository),
+        SearchMeetingLocations(repository),
+        location: _terApelLocation,
+        categories: const [_category],
+      );
+
+      bloc
+        ..add(const CreateActivityTitleChanged('rondje wandelen'))
+        ..add(const CreateActivityLocationChanged('Bibliotheek Ter Apel'))
+        ..add(CreateActivityDateSelected(DateTime(2099, 7, 10)))
+        ..add(const CreateActivityTimeSelected(hour: 14, minute: 35))
+        ..add(const CreateActivitySubmitted());
+
+      await expectLater(
+        bloc.stream,
+        emitsThrough(
+          predicate<CreateActivityState>(
+            (state) =>
+                state.submissionStatus ==
+                    CreateActivitySubmissionStatus.failure &&
+                state.errorMessage ==
+                    'Kies een gevonden meetingplek uit de lijst voordat je plaatst.',
+          ),
+        ),
+      );
+
+      expect(repository.createdDraft, isNull);
+      await bloc.close();
+    },
+  );
 }
 
 const _category = HomeCategory(
@@ -255,8 +271,47 @@ const _category = HomeCategory(
   backgroundColor: Color(0xFFE6EFE9),
 );
 
+const _terApelLocation = HomeLocation(
+  cityName: 'Ter Apel',
+  latitude: 52.876,
+  longitude: 7.059,
+);
+
+const _terApelSuggestion = MeetingLocationSuggestion(
+  id: 'pdok-ter-apel',
+  label: 'Centrum Ter Apel',
+  addressLine: 'Centrum Ter Apel',
+  city: 'Ter Apel',
+  type: 'woonplaats',
+  latitude: 52.876,
+  longitude: 7.059,
+);
+
+const _winschotenSuggestion = MeetingLocationSuggestion(
+  id: 'pdok-winschoten',
+  label: 'Marktplein 1, Winschoten',
+  addressLine: 'Marktplein 1, Winschoten',
+  city: 'Winschoten',
+  type: 'adres',
+  latitude: 53.144,
+  longitude: 7.034,
+);
+
+const _librarySuggestion = MeetingLocationSuggestion(
+  id: 'pdok-library-ter-apel',
+  label: 'Bibliotheek Ter Apel, Hoofdstraat 66',
+  addressLine: 'Bibliotheek Ter Apel, Hoofdstraat 66',
+  city: 'Ter Apel',
+  type: 'adres',
+  latitude: 52.8762,
+  longitude: 7.0594,
+);
+
 class _CapturingHomeRepository implements HomeRepository {
   CreateActivityDraft? createdDraft;
+  List<MeetingLocationSuggestion> locationSearchResults = const [];
+  String? lastLocationSearchQuery;
+  HomeLocation? lastLocationSearchNearLocation;
 
   @override
   Future<Either<Failure, String>> createActivity(CreateActivityDraft draft) {
@@ -350,5 +405,16 @@ class _CapturingHomeRepository implements HomeRepository {
   @override
   Stream<Either<Failure, HomeLocation>> watchCurrentLocation() {
     throw UnimplementedError();
+  }
+
+  @override
+  Future<Either<Failure, List<MeetingLocationSuggestion>>>
+  searchMeetingLocations({
+    required String query,
+    required HomeLocation nearLocation,
+  }) async {
+    lastLocationSearchQuery = query;
+    lastLocationSearchNearLocation = nearLocation;
+    return right(locationSearchResults);
   }
 }

@@ -20,8 +20,10 @@ import '../../domain/entities/home_feed.dart';
 import '../../domain/entities/home_feed_filters.dart';
 import '../../domain/entities/home_location.dart';
 import '../../domain/entities/home_participant.dart';
+import '../../domain/entities/meeting_location_suggestion.dart';
 import '../models/activity_chat_message_model.dart';
 import '../models/activity_feedback_model.dart';
+import '../models/meeting_location_suggestion_model.dart';
 
 abstract interface class HomeRemoteDataSource {
   Future<String> createActivity(CreateActivityDraft draft);
@@ -71,6 +73,11 @@ abstract interface class HomeRemoteDataSource {
     required String targetProfileId,
     required int rating,
     required String comment,
+  });
+
+  Future<List<MeetingLocationSuggestion>> searchMeetingLocations({
+    required String query,
+    required HomeLocation nearLocation,
   });
 }
 
@@ -504,6 +511,99 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
     return feedback;
   }
 
+  @override
+  Future<List<MeetingLocationSuggestion>> searchMeetingLocations({
+    required String query,
+    required HomeLocation nearLocation,
+  }) async {
+    final stopwatch = Stopwatch()..start();
+    AppLogger.debug(
+      'Meeting location search request '
+      'function=$supabaseLocationsSearchFunctionName '
+      'query="$query" queryLength=${query.trim().length} '
+      'near="${nearLocation.cityName}" '
+      'lat=${nearLocation.latitude} lon=${nearLocation.longitude}',
+    );
+
+    try {
+      final response = await _client.functions
+          .invoke(
+            supabaseLocationsSearchFunctionName,
+            method: HttpMethod.get,
+            headers: authenticatedFunctionHeaders(_client),
+            queryParameters: {
+              'q': query,
+              'limit': '8',
+              'lat': nearLocation.latitude.toString(),
+              'lon': nearLocation.longitude.toString(),
+            },
+          )
+          .timeout(_functionTimeout);
+
+      final payload = _asMap(response.data);
+      final requestId = _stringValue(
+        payload['request_id'] ?? payload['requestId'],
+        fallback: '-',
+      );
+      final rawSuggestions = _asList(payload['suggestions']);
+      final mappedSuggestions = rawSuggestions.map((suggestion) {
+        return MeetingLocationSuggestionModel.fromJson(_asMap(suggestion));
+      }).toList();
+      final validSuggestions = mappedSuggestions.where((suggestion) {
+        return suggestion.id.isNotEmpty &&
+            suggestion.addressLine.isNotEmpty &&
+            suggestion.city.isNotEmpty &&
+            suggestion.latitude != 0 &&
+            suggestion.longitude != 0;
+      }).toList();
+      final droppedCount = mappedSuggestions.length - validSuggestions.length;
+
+      AppLogger.debug(
+        'Meeting location search response '
+        'status=${response.status} requestId=$requestId '
+        'raw=${rawSuggestions.length} mapped=${mappedSuggestions.length} '
+        'valid=${validSuggestions.length} dropped=$droppedCount '
+        'elapsedMs=${stopwatch.elapsedMilliseconds}',
+      );
+
+      if (droppedCount > 0) {
+        AppLogger.debug(
+          'Meeting location search dropped invalid suggestions '
+          'requestId=$requestId dropped=$droppedCount',
+        );
+      }
+
+      return validSuggestions;
+    } on FunctionException catch (error, stackTrace) {
+      AppLogger.debug(
+        'Meeting location search function failed '
+        'status=${error.status} reason=${error.reasonPhrase} '
+        'elapsedMs=${stopwatch.elapsedMilliseconds}',
+        error: error.details,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    } on TimeoutException catch (error, stackTrace) {
+      AppLogger.debug(
+        'Meeting location search timed out '
+        'afterMs=${stopwatch.elapsedMilliseconds}',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    } catch (error, stackTrace) {
+      AppLogger.debug(
+        'Meeting location search failed '
+        'elapsedMs=${stopwatch.elapsedMilliseconds}',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    } finally {
+      stopwatch.stop();
+    }
+  }
+
   Future<List<HomeCategory>> _categoriesFromPayload(
     Map<String, dynamic> payload,
     List<HomeActivity> activities,
@@ -688,6 +788,7 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
         host['feedback_submitted'] ?? host['feedbackSubmitted'],
       ),
       participants: participants.map(_participantFromJson).toList(),
+      participantCount: participantCount ?? participants.length,
       availableSpots: availableSpots,
       spotsLabel: _stringValue(
         json['spotsLabel'] ?? json['spots_label'],

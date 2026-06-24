@@ -27,6 +27,7 @@ import '../../features/home/domain/usecases/get_home_feed.dart';
 import '../../features/home/domain/usecases/mark_activity_chat_read.dart';
 import '../../features/home/domain/usecases/send_activity_chat_message.dart';
 import '../../features/home/domain/usecases/set_activity_participation.dart';
+import '../../features/home/domain/usecases/search_meeting_locations.dart';
 import '../../features/home/domain/usecases/submit_activity_feedback.dart';
 import '../../features/home/domain/usecases/update_activity.dart';
 import '../../features/home/domain/usecases/watch_current_location.dart';
@@ -102,6 +103,7 @@ Future<void> configureDependencies() async {
     ..registerLazySingleton(() => MarkActivityChatRead(sl()))
     ..registerLazySingleton(() => SendActivityChatMessage(sl()))
     ..registerLazySingleton(() => SetActivityParticipation(sl()))
+    ..registerLazySingleton(() => SearchMeetingLocations(sl()))
     ..registerLazySingleton(() => SubmitActivityFeedback(sl()))
     ..registerLazySingleton(() => UpdateActivity(sl()))
     ..registerLazySingleton(() => WatchCurrentCityName(sl()))

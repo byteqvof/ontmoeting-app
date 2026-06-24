@@ -11,6 +11,7 @@ import '../entities/home_activity.dart';
 import '../entities/home_feed.dart';
 import '../entities/home_feed_filters.dart';
 import '../entities/home_location.dart';
+import '../entities/meeting_location_suggestion.dart';
 
 abstract interface class HomeRepository {
   Future<Either<Failure, String>> createActivity(CreateActivityDraft draft);
@@ -59,6 +60,12 @@ abstract interface class HomeRepository {
     required String targetProfileId,
     required int rating,
     required String comment,
+  });
+
+  Future<Either<Failure, List<MeetingLocationSuggestion>>>
+  searchMeetingLocations({
+    required String query,
+    required HomeLocation nearLocation,
   });
 
   Future<Either<Failure, HomeLocation>> getCurrentLocation({

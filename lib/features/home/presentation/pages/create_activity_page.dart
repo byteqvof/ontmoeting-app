@@ -10,7 +10,9 @@ import '../../../../core/widgets/always_24_hour_media_query.dart';
 import '../../domain/entities/home_category.dart';
 import '../../domain/entities/home_feed_filters.dart';
 import '../../domain/entities/home_location.dart';
+import '../../domain/entities/meeting_location_suggestion.dart';
 import '../../domain/usecases/create_activity.dart';
+import '../../domain/usecases/search_meeting_locations.dart';
 import '../bloc/create_activity_bloc.dart';
 import '../widgets/create_activity_action_bar.dart';
 import '../widgets/create_activity_capacity_stepper.dart';
@@ -31,6 +33,7 @@ class CreateActivityPage extends StatelessWidget {
     return BlocProvider(
       create: (_) => CreateActivityBloc(
         sl<CreateActivity>(),
+        sl<SearchMeetingLocations>(),
         location: location,
         categories: categories
             .where((category) => category.id != 'all')
@@ -357,7 +360,9 @@ class _CreateActivityLocationFieldState
   }
 
   void _onLocationChanged(String value) {
-    context.read<CreateActivityBloc>().add(CreateActivityLocationChanged(value));
+    context.read<CreateActivityBloc>().add(
+      CreateActivityLocationChanged(value),
+    );
     _searchDebounce?.cancel();
     final query = value.trim();
     if (query.length < 3) {
@@ -384,7 +389,7 @@ class _CreateActivityLocationFieldState
     );
   }
 
-  void _selectLocation(ResolvedMeetingLocation location) {
+  void _selectLocation(MeetingLocationSuggestion location) {
     _searchDebounce?.cancel();
     _controller.text = location.addressLine;
     context.read<CreateActivityBloc>().add(
@@ -421,7 +426,10 @@ class _CreateActivityLocationFieldState
               onChanged: _onLocationChanged,
               decoration: InputDecoration(
                 hintText: 'Typ naam of adres, bijv. Markeweg 23',
-                prefixIcon: Icon(Icons.location_on_rounded, color: colors.green),
+                prefixIcon: Icon(
+                  Icons.location_on_rounded,
+                  color: colors.green,
+                ),
                 suffixIcon: isSearching
                     ? Padding(
                         padding: const EdgeInsets.all(14),
@@ -496,13 +504,10 @@ class _CreateActivityLocationFieldState
 }
 
 class _LocationResultsCard extends StatelessWidget {
-  const _LocationResultsCard({
-    required this.results,
-    required this.onSelected,
-  });
+  const _LocationResultsCard({required this.results, required this.onSelected});
 
-  final List<ResolvedMeetingLocation> results;
-  final ValueChanged<ResolvedMeetingLocation> onSelected;
+  final List<MeetingLocationSuggestion> results;
+  final ValueChanged<MeetingLocationSuggestion> onSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -1243,9 +1248,7 @@ class _LabeledField extends StatelessWidget {
           textInputAction: maxLines == 1
               ? TextInputAction.next
               : TextInputAction.newline,
-          decoration: InputDecoration(
-            hintText: hintText,
-          ),
+          decoration: InputDecoration(hintText: hintText),
         ),
       ],
     );

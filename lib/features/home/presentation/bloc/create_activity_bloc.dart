@@ -1,13 +1,15 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:geocoding/geocoding.dart';
 
 import '../../../../core/services/analytics_service.dart';
+import '../../../../core/utils/app_logger.dart';
 import '../../domain/entities/create_activity_draft.dart';
 import '../../domain/entities/home_category.dart';
 import '../../domain/entities/home_feed_filters.dart';
 import '../../domain/entities/home_location.dart';
+import '../../domain/entities/meeting_location_suggestion.dart';
 import '../../domain/usecases/create_activity.dart';
+import '../../domain/usecases/search_meeting_locations.dart';
 
 part 'create_activity_event.dart';
 part 'create_activity_state.dart';
@@ -15,13 +17,13 @@ part 'create_activity_state.dart';
 class CreateActivityBloc
     extends Bloc<CreateActivityEvent, CreateActivityState> {
   CreateActivityBloc(
-    this._createActivity, {
+    this._createActivity,
+    this._searchMeetingLocations, {
     required HomeLocation location,
     required List<HomeCategory> categories,
     MeetingPlaceSearcher? searchMeetingPlaces,
   }) : _location = location,
-       _searchMeetingPlaces =
-           searchMeetingPlaces ?? _defaultSearchMeetingPlaces,
+       _searchMeetingPlaces = searchMeetingPlaces,
        super(_initialState(categories, location)) {
     on<CreateActivityCategorySelected>(_onCategorySelected);
     on<CreateActivityTitleChanged>(_onTitleChanged);
@@ -68,8 +70,9 @@ class CreateActivityBloc
   }
 
   final CreateActivity _createActivity;
+  final SearchMeetingLocations _searchMeetingLocations;
   final HomeLocation _location;
-  final MeetingPlaceSearcher _searchMeetingPlaces;
+  final MeetingPlaceSearcher? _searchMeetingPlaces;
 
   void _onCategorySelected(
     CreateActivityCategorySelected event,
@@ -133,20 +136,39 @@ class CreateActivityBloc
     );
 
     try {
-      final results = await _searchMeetingPlaces(query, _location);
+      final results = await _searchPlaces(query);
       if (state.location.trim() != query) {
+        AppLogger.debug(
+          'Ignoring stale meeting location search response '
+          'query="$query" current="${state.location.trim()}"',
+        );
         return;
       }
+      AppLogger.debug(
+        'Meeting location search succeeded '
+        'query="$query" results=${results.length}',
+      );
       emit(
         state.copyWith(
           locationResults: results,
           locationSearchStatus: CreateActivityLocationSearchStatus.success,
         ),
       );
-    } catch (_) {
+    } catch (error, stackTrace) {
       if (state.location.trim() != query) {
+        AppLogger.debug(
+          'Ignoring stale meeting location search failure '
+          'query="$query" current="${state.location.trim()}"',
+          error: error,
+          stackTrace: stackTrace,
+        );
         return;
       }
+      AppLogger.debug(
+        'Meeting location search failed in bloc query="$query"',
+        error: error,
+        stackTrace: stackTrace,
+      );
       emit(
         state.copyWith(
           locationResults: const [],
@@ -154,6 +176,24 @@ class CreateActivityBloc
         ),
       );
     }
+  }
+
+  Future<List<MeetingLocationSuggestion>> _searchPlaces(String query) async {
+    final injectedSearcher = _searchMeetingPlaces;
+    if (injectedSearcher != null) {
+      return injectedSearcher(query, _location);
+    }
+
+    final result = await _searchMeetingLocations(
+      SearchMeetingLocationsParams(query: query, nearLocation: _location),
+    );
+    return result.fold((failure) {
+      AppLogger.debug(
+        'Meeting location search usecase returned failure '
+        'type=${failure.runtimeType} message="${failure.message}"',
+      );
+      throw failure;
+    }, (locations) => locations);
   }
 
   void _onMeetingLocationSelected(
@@ -348,10 +388,26 @@ class CreateActivityBloc
     CreateActivitySubmitted event,
     Emitter<CreateActivityState> emit,
   ) async {
-    if (!state.isValid) {
+    final hasBasicFields =
+        state.hasBackendCategoryId &&
+        state.title.trim().isNotEmpty &&
+        state.location.trim().isNotEmpty &&
+        state.capacity >= _minCapacity &&
+        state.hasFutureStart;
+    if (!hasBasicFields) {
       emit(
         state.copyWith(
           submissionStatus: CreateActivitySubmissionStatus.invalid,
+        ),
+      );
+      return;
+    }
+    if (!state.hasSelectedMeetingLocation) {
+      emit(
+        state.copyWith(
+          submissionStatus: CreateActivitySubmissionStatus.failure,
+          errorMessage:
+              'Kies een gevonden meetingplek uit de lijst voordat je plaatst.',
         ),
       );
       return;
@@ -398,11 +454,17 @@ class CreateActivityBloc
     );
   }
 
-  Future<ResolvedMeetingLocation?> _resolveMeetingPlace(
+  Future<MeetingLocationSuggestion?> _resolveMeetingPlace(
     CreateActivityState state,
     Emitter<CreateActivityState> emit,
   ) async {
     final query = state.location.trim();
+
+    final selected = state.selectedMeetingLocation;
+    if (selected != null && selected.addressLine.trim() == query) {
+      return selected;
+    }
+
     if (_looksLikeOnlyCity(query, _location.cityName)) {
       emit(
         state.copyWith(
@@ -412,11 +474,6 @@ class CreateActivityBloc
         ),
       );
       return null;
-    }
-
-    final selected = state.selectedMeetingLocation;
-    if (selected != null && selected.addressLine.trim() == query) {
-      return selected;
     }
 
     {
@@ -433,7 +490,7 @@ class CreateActivityBloc
 
   CreateActivityDraft _draftFromState(
     CreateActivityState state,
-    ResolvedMeetingLocation meetingLocation,
+    MeetingLocationSuggestion meetingLocation,
   ) {
     final title = state.title.trim();
     final notes = state.notes.trim();
@@ -488,224 +545,10 @@ String _descriptionFor({required String title, required String notes}) {
 }
 
 typedef MeetingPlaceSearcher =
-    Future<List<ResolvedMeetingLocation>> Function(
+    Future<List<MeetingLocationSuggestion>> Function(
       String query,
       HomeLocation fallbackLocation,
     );
-
-class ResolvedMeetingLocation extends Equatable {
-  const ResolvedMeetingLocation({
-    required this.addressLine,
-    required this.city,
-    required this.latitude,
-    required this.longitude,
-  });
-
-  final String addressLine;
-  final String city;
-  final double latitude;
-  final double longitude;
-
-  @override
-  List<Object?> get props => [addressLine, city, latitude, longitude];
-}
-
-Future<List<ResolvedMeetingLocation>> _defaultSearchMeetingPlaces(
-  String query,
-  HomeLocation fallbackLocation,
-) async {
-  final searchQuery = _queryWithFallbackCity(query, fallbackLocation.cityName);
-  final locations = await locationFromAddress(
-    searchQuery,
-  ).timeout(const Duration(seconds: 6));
-  if (locations.isEmpty) {
-    return const [];
-  }
-
-  final results = <ResolvedMeetingLocation>[];
-  final seen = <String>{};
-
-  for (final location in locations.take(5)) {
-    final placemarks = await placemarkFromCoordinates(
-      location.latitude,
-      location.longitude,
-    ).timeout(const Duration(seconds: 2), onTimeout: () => const <Placemark>[]);
-    final placemark = placemarks.isEmpty ? null : placemarks.first;
-    final city = _cityFromPlacemark(placemark) ?? fallbackLocation.cityName;
-    final addressLine = formatMeetingPlaceAddressLine(
-      query: query,
-      city: city,
-      placemark: placemark,
-    );
-    final key =
-        '${addressLine.toLowerCase()}|${location.latitude.toStringAsFixed(5)}|'
-        '${location.longitude.toStringAsFixed(5)}';
-    if (!seen.add(key)) {
-      continue;
-    }
-
-    results.add(
-      ResolvedMeetingLocation(
-        addressLine: addressLine,
-        city: city,
-        latitude: location.latitude,
-        longitude: location.longitude,
-      ),
-    );
-  }
-
-  return results;
-}
-
-String _queryWithFallbackCity(String query, String city) {
-  final trimmed = query.trim();
-  if (trimmed.toLowerCase().contains(city.trim().toLowerCase())) {
-    return '$trimmed, Nederland';
-  }
-  return '$trimmed, $city, Nederland';
-}
-
-String? _cityFromPlacemark(Placemark? placemark) {
-  if (placemark == null) {
-    return null;
-  }
-  for (final value in [
-    placemark.locality,
-    placemark.subAdministrativeArea,
-    placemark.administrativeArea,
-  ]) {
-    final trimmed = value?.trim();
-    if (trimmed != null && trimmed.isNotEmpty) {
-      return trimmed;
-    }
-  }
-  return null;
-}
-
-String formatMeetingPlaceAddressLine({
-  required String query,
-  required String city,
-  required Placemark? placemark,
-}) {
-  final parts = <String>[];
-  final typedAddress = _typedAddressWithHouseNumber(query, city);
-  final streetAddress = _streetAddressFromPlacemark(placemark);
-
-  for (final value in [typedAddress, placemark?.name, streetAddress, city]) {
-    final trimmed = value?.trim();
-    if (trimmed == null || trimmed.isEmpty) {
-      continue;
-    }
-    if (_looksLikeHouseNumberOnly(trimmed)) {
-      continue;
-    }
-    if (parts.any((part) => part.toLowerCase() == trimmed.toLowerCase())) {
-      continue;
-    }
-    if (_duplicatesStreetAddress(
-      existingParts: parts,
-      candidate: trimmed,
-    )) {
-      continue;
-    }
-    parts.add(trimmed);
-  }
-
-  if (parts.isEmpty) {
-    return query.trim();
-  }
-  return parts.take(3).join(', ');
-}
-
-String? _streetAddressFromPlacemark(Placemark? placemark) {
-  if (placemark == null) {
-    return null;
-  }
-
-  final street = _firstNonEmpty([
-    placemark.street,
-    placemark.thoroughfare,
-  ]);
-  final houseNumber = _firstNonEmpty([
-    placemark.subThoroughfare,
-    _houseNumberFromText(placemark.name),
-  ]);
-  if (street == null) {
-    return null;
-  }
-  if (_containsDigit(street) || houseNumber == null) {
-    return street;
-  }
-  return '$street $houseNumber';
-}
-
-String? _typedAddressWithHouseNumber(String query, String city) {
-  final withoutPostcode = query
-      .replaceAll(RegExp(r'\b\d{4}\s?[a-zA-Z]{2}\b'), ' ')
-      .replaceAll(RegExp(r'\s+'), ' ')
-      .trim();
-  final firstPart = withoutPostcode
-      .split(',')
-      .first
-      .replaceAll(
-        RegExp('\\b${RegExp.escape(city)}\\b', caseSensitive: false),
-        ' ',
-      )
-      .replaceAll(RegExp(r'\s+'), ' ')
-      .trim();
-  if (firstPart.isEmpty ||
-      !_containsDigit(firstPart) ||
-      !RegExp(r'[a-zA-Z]').hasMatch(firstPart)) {
-    return null;
-  }
-  return firstPart;
-}
-
-String? _houseNumberFromText(String? value) {
-  final text = value?.trim();
-  if (text == null || text.isEmpty) {
-    return null;
-  }
-  final match = RegExp(r'\b\d+[a-zA-Z]?\b').firstMatch(text);
-  return match?.group(0);
-}
-
-String? _firstNonEmpty(Iterable<String?> values) {
-  for (final value in values) {
-    final trimmed = value?.trim();
-    if (trimmed != null && trimmed.isNotEmpty) {
-      return trimmed;
-    }
-  }
-  return null;
-}
-
-bool _containsDigit(String value) => RegExp(r'\d').hasMatch(value);
-
-bool _looksLikeHouseNumberOnly(String value) {
-  return RegExp(r'^\d+[a-zA-Z]?$').hasMatch(value.trim());
-}
-
-bool _duplicatesStreetAddress({
-  required List<String> existingParts,
-  required String candidate,
-}) {
-  final candidateStreet = candidate
-      .replaceAll(RegExp(r'\b\d+[a-zA-Z]?\b'), '')
-      .trim()
-      .toLowerCase();
-  if (candidateStreet.isEmpty) {
-    return false;
-  }
-  return existingParts.any((part) {
-    final existingStreet = part
-        .replaceAll(RegExp(r'\b\d+[a-zA-Z]?\b'), '')
-        .trim()
-        .toLowerCase();
-    return existingStreet == candidateStreet &&
-        (_containsDigit(part) || _containsDigit(candidate));
-  });
-}
 
 bool _looksLikeOnlyCity(String query, String city) {
   final normalizedQuery = query.trim().toLowerCase();

@@ -8,12 +8,7 @@ enum CreateActivitySubmissionStatus {
   failure,
 }
 
-enum CreateActivityLocationSearchStatus {
-  idle,
-  searching,
-  success,
-  failure,
-}
+enum CreateActivityLocationSearchStatus { idle, searching, success, failure }
 
 class CreateActivityState extends Equatable {
   CreateActivityState({
@@ -45,9 +40,9 @@ class CreateActivityState extends Equatable {
   final String cityName;
   final String title;
   final String location;
-  final List<ResolvedMeetingLocation> locationResults;
+  final List<MeetingLocationSuggestion> locationResults;
   final CreateActivityLocationSearchStatus locationSearchStatus;
-  final ResolvedMeetingLocation? selectedMeetingLocation;
+  final MeetingLocationSuggestion? selectedMeetingLocation;
   final DateTime selectedDate;
   final int selectedHour;
   final int selectedMinute;
@@ -110,9 +105,9 @@ class CreateActivityState extends Equatable {
     String? cityName,
     String? title,
     String? location,
-    List<ResolvedMeetingLocation>? locationResults,
+    List<MeetingLocationSuggestion>? locationResults,
     CreateActivityLocationSearchStatus? locationSearchStatus,
-    ResolvedMeetingLocation? selectedMeetingLocation,
+    MeetingLocationSuggestion? selectedMeetingLocation,
     bool clearSelectedMeetingLocation = false,
     DateTime? selectedDate,
     int? selectedHour,

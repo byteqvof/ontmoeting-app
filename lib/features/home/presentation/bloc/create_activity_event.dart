@@ -47,7 +47,7 @@ final class CreateActivityMeetingLocationSearchRequested
 final class CreateActivityMeetingLocationSelected extends CreateActivityEvent {
   const CreateActivityMeetingLocationSelected(this.location);
 
-  final ResolvedMeetingLocation location;
+  final MeetingLocationSuggestion location;
 
   @override
   List<Object?> get props => [location];

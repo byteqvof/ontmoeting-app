@@ -40,6 +40,7 @@ const supabaseActivityCompleteFunctionName = 'activities-complete';
 const supabaseActivityFeedbackFunctionName = 'activity-feedback';
 const supabaseActivityAttendanceFunctionName = 'activity-attendance';
 const supabasePushTokenFunctionName = 'push-token';
+const supabaseLocationsSearchFunctionName = 'locations-search';
 const supabaseProfilesFunctionName = 'profiles';
 const supabaseSafetyActionsFunctionName = 'safety-actions';
 const supabaseFriendsFunctionName = 'friends';

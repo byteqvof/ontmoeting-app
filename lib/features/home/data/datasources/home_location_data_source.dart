@@ -16,8 +16,8 @@ abstract interface class HomeLocationDataSource {
 class HomeLocationDataSourceImpl implements HomeLocationDataSource {
   const HomeLocationDataSourceImpl({
     this.useDeviceLocation = false,
-    this.currentPositionTimeout = const Duration(seconds: 2),
-    this.geocodingTimeout = const Duration(seconds: 2),
+    this.currentPositionTimeout = const Duration(seconds: 8),
+    this.geocodingTimeout = const Duration(seconds: 3),
   });
 
   final bool useDeviceLocation;
@@ -27,16 +27,15 @@ class HomeLocationDataSourceImpl implements HomeLocationDataSource {
   @override
   Future<HomeLocation> getCurrentLocation({bool forceRefresh = false}) async {
     if (!useDeviceLocation) {
-      AppLogger.debug('Using default Ter Apel location');
-      return defaultHomeLocation;
+      throw StateError('Device location is disabled.');
     }
 
     await _ensureLocationAccess();
 
     final position = await _getQuickPosition(forceRefresh: forceRefresh);
     if (position == null) {
-      AppLogger.debug('No quick location fix; using Ter Apel fallback');
-      return defaultHomeLocation;
+      AppLogger.debug('No quick location fix available');
+      throw TimeoutException('No location fix.');
     }
 
     return _locationFromPosition(position);
@@ -45,8 +44,7 @@ class HomeLocationDataSourceImpl implements HomeLocationDataSource {
   @override
   Stream<HomeLocation> watchCurrentLocation() async* {
     if (!useDeviceLocation) {
-      yield defaultHomeLocation;
-      return;
+      throw StateError('Device location is disabled.');
     }
 
     await _ensureLocationAccess();
@@ -62,9 +60,15 @@ class HomeLocationDataSourceImpl implements HomeLocationDataSource {
 
   Future<Position?> _getQuickPosition({required bool forceRefresh}) async {
     if (forceRefresh) {
-      return _requestCurrentPosition();
+      final currentPosition = await _requestCurrentPosition();
+      return currentPosition ?? _lastKnownPosition();
     }
 
+    final lastKnownPosition = await _lastKnownPosition();
+    return lastKnownPosition ?? _requestCurrentPosition();
+  }
+
+  Future<Position?> _lastKnownPosition() async {
     AppLogger.debug('Checking last known location');
     final lastKnownPosition = await Geolocator.getLastKnownPosition();
     if (lastKnownPosition != null) {
@@ -90,7 +94,7 @@ class HomeLocationDataSourceImpl implements HomeLocationDataSource {
       }
     }
 
-    return _requestCurrentPosition();
+    return null;
   }
 
   Future<Position?> _requestCurrentPosition() async {
@@ -172,12 +176,12 @@ class HomeLocationDataSourceImpl implements HomeLocationDataSource {
       }
     } catch (error) {
       AppLogger.debug(
-        'City lookup timed out; using Ter Apel label',
+        'City lookup timed out; using generic label',
         error: error,
       );
     }
 
-    return defaultHomeLocation.cityName;
+    return 'Je locatie';
   }
 
   String? _firstNotBlank(List<String?> values) {
