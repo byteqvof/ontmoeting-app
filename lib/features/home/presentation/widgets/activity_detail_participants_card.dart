@@ -128,12 +128,24 @@ class _ParticipantPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.toch;
     final isFree = participant.isAvailableSlot;
+    final isHost = participant.isHost;
     final backgroundColor = isFree
         ? colors.cream
+        : isHost
+        ? const Color(0xFFFFF6D8)
         : participant.isCurrentUser
         ? colors.green100
         : colors.card;
-    final borderColor = isFree ? colors.line : colors.green200;
+    final borderColor = isFree
+        ? colors.line
+        : isHost
+        ? const Color(0xFFD8A928)
+        : colors.green200;
+    final avatarBackgroundColor = isFree
+        ? Colors.transparent
+        : isHost
+        ? const Color(0xFFB88900)
+        : colors.green;
     final canOpenProfile =
         participant.profileId.isNotEmpty && onProfilePressed != null;
 
@@ -155,13 +167,13 @@ class _ParticipantPill extends StatelessWidget {
             children: [
               DecoratedBox(
                 decoration: BoxDecoration(
-                  color: isFree ? Colors.transparent : colors.green,
+                  color: avatarBackgroundColor,
                   shape: BoxShape.circle,
                   border: isFree ? Border.all(color: colors.line) : null,
                 ),
                 child: CircleAvatar(
                   radius: 15.5,
-                  backgroundColor: isFree ? Colors.transparent : colors.green,
+                  backgroundColor: avatarBackgroundColor,
                   foregroundImage: participant.avatarUrl == null
                       ? null
                       : NetworkImage(participant.avatarUrl!),
@@ -178,6 +190,14 @@ class _ParticipantPill extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 7),
+              if (isHost) ...[
+                Icon(
+                  Icons.workspace_premium_rounded,
+                  size: 15,
+                  color: const Color(0xFF9A6A00),
+                ),
+                const SizedBox(width: 3),
+              ],
               Text(
                 participant.label,
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
@@ -199,21 +219,42 @@ List<_ActivityParticipant> _participantsFor(
   HomeActivity activity, {
   Profile? currentProfile,
 }) {
-  final participants = <_ActivityParticipant>[
-    for (final participant in activity.participants)
+  final participants = <_ActivityParticipant>[];
+  final hostId = activity.hostId.trim();
+  if (hostId.isNotEmpty) {
+    participants.add(
+      _ActivityParticipant(
+        profileId: hostId,
+        initials: _safeInitials(_initialsFor(activity.hostFullName)),
+        label: activity.hostFullName.isEmpty
+            ? activity.hostName
+            : activity.hostFullName,
+        avatarUrl: activity.hostAvatarUrl,
+        isHost: true,
+      ),
+    );
+  }
+
+  for (final participant in activity.participants) {
+    if (participant.id.isNotEmpty && participant.id == hostId) {
+      continue;
+    }
+    participants.add(
       _ActivityParticipant(
         profileId: participant.id,
         initials: participant.initials,
-        label: participant.isHost ? 'host' : participant.displayName,
+        label: participant.displayName,
         avatarUrl: participant.avatarUrl,
+        isHost: participant.isHost,
       ),
-  ];
+    );
+  }
 
   final currentProfileId = currentProfile?.id.trim() ?? '';
   final hasCurrentProfile =
       currentProfileId.isNotEmpty &&
-      activity.participants.any(
-        (participant) => participant.id == currentProfileId,
+      participants.any(
+        (participant) => participant.profileId == currentProfileId,
       );
   if (activity.isJoined && !hasCurrentProfile) {
     participants.add(
@@ -258,6 +299,7 @@ class _ActivityParticipant {
     required this.label,
     required this.avatarUrl,
     this.isCurrentUser = false,
+    this.isHost = false,
     this.isAvailableSlot = false,
   });
 
@@ -266,5 +308,25 @@ class _ActivityParticipant {
   final String label;
   final String? avatarUrl;
   final bool isCurrentUser;
+  final bool isHost;
   final bool isAvailableSlot;
+}
+
+String _initialsFor(String name) {
+  final words = name
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((word) => word.isNotEmpty)
+      .toList();
+  if (words.isEmpty) {
+    return '';
+  }
+  if (words.length == 1) {
+    return words.first.characters.take(2).toString().toUpperCase();
+  }
+  return words
+      .take(2)
+      .map((word) => word.characters.first)
+      .join()
+      .toUpperCase();
 }
