@@ -1,0 +1,4 @@
+// Copy this file to Signing.xcconfig and set a paid Apple Developer Program
+// team ID. Apple Personal Teams cannot provision the Push Notifications
+// capability required by Runner/*.entitlements.
+TOCH_DEVELOPMENT_TEAM = YOUR_PAID_APPLE_TEAM_ID

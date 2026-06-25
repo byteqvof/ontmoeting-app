@@ -62,10 +62,7 @@ class HomeActivityCard extends StatelessWidget {
                               Expanded(
                                 child: Text(
                                   activity.category.label,
-<<<<<<< HEAD
                                   maxLines: 1,
-=======
->>>>>>> codex/beta-round-2-polish
                                   overflow: TextOverflow.ellipsis,
                                   style: Theme.of(context).textTheme.labelSmall
                                       ?.copyWith(

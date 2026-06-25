@@ -6,23 +6,20 @@ import '../../../../app/router/app_router.dart';
 import '../../../../app/theme/toch_theme.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../../../core/usecases/usecase.dart';
-<<<<<<< HEAD
-import '../../domain/entities/home_activity.dart';
-import '../../domain/usecases/get_activity_agenda.dart';
-=======
-import '../../domain/usecases/get_activity_agenda.dart';
 import '../../domain/entities/home_activity.dart';
 import '../../domain/entities/home_category.dart';
 import '../../domain/entities/home_location.dart';
->>>>>>> codex/beta-round-2-polish
+import '../../domain/usecases/get_activity_agenda.dart';
 import '../bloc/home_bloc.dart';
 import 'create_activity_page.dart';
 import '../widgets/home_activity_card.dart';
 import '../widgets/home_bottom_nav.dart';
 import '../widgets/home_discovery_controls.dart';
+import '../widgets/home_distance_filter.dart';
 import '../widgets/home_feed_summary.dart';
 import '../widgets/home_filter_sheet.dart';
 import '../widgets/home_header.dart';
+import '../widgets/home_map_preview.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -186,7 +183,6 @@ class _HomeFeed extends StatelessWidget {
                     );
                   },
                 ),
-<<<<<<< HEAD
                 HomeDistanceFilter(
                   distances: state.feed.distanceFilters,
                   selectedDistanceKm: state.selectedDistanceKm,
@@ -198,17 +194,7 @@ class _HomeFeed extends StatelessWidget {
                 ),
                 HomeFilterButton(
                   hasActiveFilters: state.filters.hasAdvancedFilters,
-                  onPressed: () async {
-                    final filters = await showHomeFilterSheet(
-                      context: context,
-                      filters: state.filters,
-                      categories: state.feed.categories,
-                    );
-                    if (!context.mounted || filters == null) {
-                      return;
-                    }
-                    context.read<HomeBloc>().add(HomeFiltersApplied(filters));
-                  },
+                  onPressed: () => _showFilters(context),
                 ),
                 HomeMapPreview(
                   location: state.location,
@@ -216,9 +202,6 @@ class _HomeFeed extends StatelessWidget {
                   filters: state.filters,
                 ),
                 const _HostedActivitiesOverview(),
-=======
-                const _HostedActivityLane(),
->>>>>>> codex/beta-round-2-polish
                 HomeFeedSummary(activityCount: activities.length),
                 if (activities.isEmpty)
                   _EmptyActivities(
@@ -276,7 +259,6 @@ class _HomeFeed extends StatelessWidget {
   }
 }
 
-<<<<<<< HEAD
 class _HostedActivitiesOverview extends StatefulWidget {
   const _HostedActivitiesOverview();
 
@@ -290,39 +272,18 @@ class _HostedActivitiesOverviewState extends State<_HostedActivitiesOverview> {
 
   List<HomeActivity> _hostedActivities = const [];
   bool _isLoading = true;
-=======
-class _HostedActivityLane extends StatefulWidget {
-  const _HostedActivityLane();
-
-  @override
-  State<_HostedActivityLane> createState() => _HostedActivityLaneState();
-}
-
-class _HostedActivityLaneState extends State<_HostedActivityLane> {
-  final GetActivityAgenda _getActivityAgenda = sl();
-
-  HomeActivity? _activity;
->>>>>>> codex/beta-round-2-polish
 
   @override
   void initState() {
     super.initState();
-<<<<<<< HEAD
     _loadHostedActivities();
   }
 
   Future<void> _loadHostedActivities() async {
-=======
-    _loadHostedActivity();
-  }
-
-  Future<void> _loadHostedActivity() async {
->>>>>>> codex/beta-round-2-polish
     final result = await _getActivityAgenda(const NoParams());
     if (!mounted) {
       return;
     }
-<<<<<<< HEAD
 
     result.fold(
       (_) {
@@ -340,28 +301,6 @@ class _HostedActivityLaneState extends State<_HostedActivityLane> {
         });
       },
     );
-=======
-    result.fold((_) => setState(() => _activity = null), (agenda) {
-      final hosted = agenda.activeHostedActivities.toList()
-        ..sort(_compareUpcomingActivities);
-      setState(() => _activity = hosted.isEmpty ? null : hosted.first);
-    });
-  }
-
-  int _compareUpcomingActivities(HomeActivity left, HomeActivity right) {
-    final leftStartsAt = left.startsAt;
-    final rightStartsAt = right.startsAt;
-    if (leftStartsAt == null && rightStartsAt == null) {
-      return 0;
-    }
-    if (leftStartsAt == null) {
-      return 1;
-    }
-    if (rightStartsAt == null) {
-      return -1;
-    }
-    return leftStartsAt.compareTo(rightStartsAt);
->>>>>>> codex/beta-round-2-polish
   }
 
   Future<void> _openActivity(HomeActivity activity) async {
@@ -372,23 +311,17 @@ class _HostedActivityLaneState extends State<_HostedActivityLane> {
     if (!mounted || updatedActivity == null) {
       return;
     }
-<<<<<<< HEAD
 
     setState(() {
       _hostedActivities = _sortHostedActivities([
         for (final hosted in _hostedActivities)
           if (hosted.id == updatedActivity.id) updatedActivity else hosted,
       ]);
-=======
-    setState(() {
-      _activity = updatedActivity.isCompleted ? null : updatedActivity;
->>>>>>> codex/beta-round-2-polish
     });
   }
 
   @override
   Widget build(BuildContext context) {
-<<<<<<< HEAD
     if (_isLoading || _hostedActivities.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -564,99 +497,6 @@ class _HostedActivityTile extends StatelessWidget {
                 ),
               ],
             ),
-=======
-    final activity = _activity;
-    if (activity == null) {
-      return const SizedBox.shrink();
-    }
-
-    final colors = context.toch;
-    final textTheme = Theme.of(context).textTheme;
-    final metaText = [
-      activity.dateLabel,
-      activity.timeLabel,
-    ].where((value) => value.trim().isNotEmpty).join(' ');
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 6, 20, 12),
-      child: Material(
-        color: colors.card,
-        borderRadius: BorderRadius.circular(TochRadius.lg),
-        child: InkWell(
-          onTap: () => _openActivity(activity),
-          borderRadius: BorderRadius.circular(TochRadius.lg),
-          child: Ink(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(TochRadius.lg),
-              border: Border.all(color: colors.green200),
-              boxShadow: [
-                BoxShadow(
-                  color: colors.ink.withValues(alpha: .06),
-                  blurRadius: 18,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(TochSpacing.md),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'jij organiseert',
-                          style: textTheme.labelMedium?.copyWith(
-                            color: colors.green,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          activity.title,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: textTheme.titleMedium?.copyWith(
-                            color: colors.ink,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          _hostedActivityMeta(
-                            metaText: metaText,
-                            participantCount: activity.participantCount,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: textTheme.bodySmall?.copyWith(
-                            color: colors.green700,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: TochSpacing.md),
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: activity.category.backgroundColor,
-                      borderRadius: BorderRadius.circular(TochRadius.md),
-                    ),
-                    child: SizedBox.square(
-                      dimension: 48,
-                      child: Icon(
-                        activity.category.icon,
-                        color: activity.category.color,
-                        size: 26,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
->>>>>>> codex/beta-round-2-polish
           ),
         ),
       ),
@@ -664,22 +504,6 @@ class _HostedActivityTile extends StatelessWidget {
   }
 }
 
-<<<<<<< HEAD
-=======
-String _hostedActivityMeta({
-  required String metaText,
-  required int participantCount,
-}) {
-  final registrations = participantCount == 1
-      ? '1 aanmelding'
-      : '$participantCount aanmeldingen';
-  if (metaText.isEmpty) {
-    return registrations;
-  }
-  return '$metaText * $registrations';
-}
-
->>>>>>> codex/beta-round-2-polish
 class _LocationLoading extends StatelessWidget {
   const _LocationLoading();
 

@@ -319,7 +319,6 @@ class HomeRepositoryImpl implements HomeRepository {
         message.contains('location timed out') ||
         message.contains('unable to get current location') ||
         message.contains('no location fix')) {
-<<<<<<< HEAD
       return const ServerFailure(
         'We kunnen je locatie niet bepalen. Controleer de locatie van je toestel en probeer opnieuw.',
       );
@@ -327,13 +326,6 @@ class HomeRepositoryImpl implements HomeRepository {
     return const ServerFailure(
       'We kunnen je locatie niet bepalen. Controleer de locatie van je toestel en probeer opnieuw.',
     );
-=======
-      return const NetworkFailure(
-        'We konden je locatie niet ophalen. Probeer het opnieuw.',
-      );
-    }
-    return UnknownFailure(error.toString());
->>>>>>> codex/beta-round-2-polish
   }
 
   Failure _mapLocationSearchError(Object error) {

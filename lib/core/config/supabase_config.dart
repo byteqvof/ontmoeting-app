@@ -1,6 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../utils/app_logger.dart';
+import 'supabase_auth_storage.dart';
+
+const defaultSupabaseUrl = 'https://pmnymluxikcmqehlbxlt.supabase.co';
+const defaultSupabaseAnonKey = 'sb_publishable_q9O8Q1jmRZ-9PVGdj_9dYg_S24tTwwt';
 const appEnvironment = String.fromEnvironment('TOCH_ENV', defaultValue: 'dev');
 const posthogApiKey = String.fromEnvironment('POSTHOG_API_KEY');
 const posthogHost = String.fromEnvironment(
@@ -22,11 +27,11 @@ const firebaseMessagingSenderId = String.fromEnvironment(
 const firebaseProjectId = String.fromEnvironment('FIREBASE_PROJECT_ID');
 const supabaseUrl = String.fromEnvironment(
   'SUPABASE_URL',
-  defaultValue: 'https://pmnymluxikcmqehlbxlt.supabase.co',
+  defaultValue: defaultSupabaseUrl,
 );
 const supabaseAnonKey = String.fromEnvironment(
   'SUPABASE_ANON_KEY',
-  defaultValue: 'sb_publishable_q9O8Q1jmRZ-9PVGdj_9dYg_S24tTwwt',
+  defaultValue: defaultSupabaseAnonKey,
 );
 const supabaseOAuthRedirectUrl = 'meetingsapp://auth-callback';
 const supabaseEmailVerificationRedirectUrl =
@@ -66,12 +71,43 @@ class SupabaseConfig {
     return supabaseEmailVerificationRedirectUrl;
   }
 
+  static void logStartupConfiguration() {
+    final supabaseHost = Uri.tryParse(supabaseUrl)?.host;
+    final firebaseConfigured =
+        firebaseApiKey.isNotEmpty &&
+        firebaseAppId.isNotEmpty &&
+        firebaseMessagingSenderId.isNotEmpty &&
+        firebaseProjectId.isNotEmpty;
+
+    AppLogger.debug(
+      'Startup config: '
+      'env=$appEnvironment, '
+      'fakePhoneRequested=$tochFakePhoneVerificationRequested, '
+      'fakePhoneEnabled=$tochFakePhoneVerificationEnabled, '
+      'pushEnabled=$tochPushEnabled, '
+      'firebaseConfigured=$firebaseConfigured, '
+      'posthogConfigured=${posthogApiKey.trim().isNotEmpty}, '
+      'sentryConfigured=${sentryDsn.trim().isNotEmpty}, '
+      'supabaseHost=${supabaseHost ?? '<invalid>'}, '
+      'usesDefaultSupabaseUrl=${supabaseUrl == defaultSupabaseUrl}, '
+      'supabaseKey=${_redactConfigValue(supabaseAnonKey)}, '
+      'usesDefaultSupabaseKey=${supabaseAnonKey == defaultSupabaseAnonKey}',
+    );
+  }
+
   static Future<void> initialize() {
+    final authStorage = SupabaseAuthStorage(
+      persistSessionKey:
+          'sb-${Uri.parse(supabaseUrl).host.split('.').first}-auth-token',
+    );
+
     return Supabase.initialize(
       url: supabaseUrl,
       publishableKey: supabaseAnonKey,
-      authOptions: const FlutterAuthClientOptions(
+      authOptions: FlutterAuthClientOptions(
         authFlowType: AuthFlowType.pkce,
+        localStorage: authStorage,
+        pkceAsyncStorage: authStorage,
       ),
     );
   }
@@ -82,4 +118,16 @@ bool isFakePhoneVerificationAllowed({
   required bool requested,
 }) {
   return requested && environment.trim().toLowerCase() == 'dev';
+}
+
+String _redactConfigValue(String value) {
+  final trimmed = value.trim();
+  if (trimmed.isEmpty) {
+    return '<empty>';
+  }
+  if (trimmed.length <= 10) {
+    return '<set:${trimmed.length} chars>';
+  }
+  return '${trimmed.substring(0, 6)}...${trimmed.substring(trimmed.length - 4)}'
+      ' (${trimmed.length} chars)';
 }

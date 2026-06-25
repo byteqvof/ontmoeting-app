@@ -5,7 +5,7 @@ import 'package:meetings_app/features/home/domain/entities/home_activity.dart';
 import 'package:meetings_app/features/home/domain/entities/home_category.dart';
 
 void main() {
-  test('chat activities combines active hosted and joined without duplicates', () {
+  test('chat activities combines agenda conversations without duplicates', () {
     final hosted = _activity('activity-1', title: 'Vissen');
     final joined = _activity('activity-2', title: 'Koffie');
     final duplicate = _activity('activity-1', title: 'Vissen later');
@@ -21,7 +21,7 @@ void main() {
       completedActivities: [completed],
     );
 
-    expect(agenda.chatActivities, [hosted, joined]);
+    expect(agenda.chatActivities, [hosted, joined, completed]);
     expect(agenda.totalCount, 3);
   });
 
@@ -81,7 +81,6 @@ void main() {
     expect(agenda.chatActivities, [unread, recent, quiet]);
   });
 
-<<<<<<< HEAD
   test('cancelled chats stay in messages but not active joined activities', () {
     final cancelledChat = _activity(
       'activity-4',
@@ -104,23 +103,12 @@ void main() {
 
     expect(agenda.activeJoinedActivities, [joined]);
     expect(agenda.chatActivities, [cancelledChat, joined]);
-=======
+  });
+
   test('marking a chat read clears unread count in all agenda sections', () {
-    final hosted = _activity(
-      'activity-1',
-      title: 'Vissen',
-      chatUnreadCount: 1,
-    );
-    final joined = _activity(
-      'activity-1',
-      title: 'Vissen',
-      chatUnreadCount: 1,
-    );
-    final other = _activity(
-      'activity-2',
-      title: 'Koffie',
-      chatUnreadCount: 2,
-    );
+    final hosted = _activity('activity-1', title: 'Vissen', chatUnreadCount: 1);
+    final joined = _activity('activity-1', title: 'Vissen', chatUnreadCount: 1);
+    final other = _activity('activity-2', title: 'Koffie', chatUnreadCount: 2);
 
     final agenda = ActivityAgenda(
       hostedActivities: [hosted],
@@ -132,7 +120,6 @@ void main() {
     expect(updated.hostedActivities.first.chatUnreadCount, 0);
     expect(updated.joinedActivities.first.chatUnreadCount, 0);
     expect(updated.joinedActivities.last.chatUnreadCount, 2);
->>>>>>> codex/beta-round-2-polish
   });
 }
 

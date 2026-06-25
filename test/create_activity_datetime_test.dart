@@ -19,23 +19,13 @@ import 'package:meetings_app/features/home/domain/usecases/create_activity.dart'
 import 'package:meetings_app/features/home/domain/usecases/search_meeting_locations.dart';
 import 'package:meetings_app/features/home/presentation/bloc/create_activity_bloc.dart';
 
-const _testLocation = HomeLocation(
-  cityName: 'Ter Apel',
-  latitude: 52.876,
-  longitude: 7.059,
-);
-
 void main() {
   test('submits the custom selected date and time', () async {
     final repository = _CapturingHomeRepository();
     final bloc = CreateActivityBloc(
       CreateActivity(repository),
-<<<<<<< HEAD
-      location: _testLocation,
-=======
       SearchMeetingLocations(repository),
       location: _terApelLocation,
->>>>>>> codex/beta-round-2-polish
       categories: const [_category],
     );
 
@@ -68,12 +58,8 @@ void main() {
       final repository = _CapturingHomeRepository();
       final bloc = CreateActivityBloc(
         CreateActivity(repository),
-<<<<<<< HEAD
-        location: _testLocation,
-=======
         SearchMeetingLocations(repository),
         location: _terApelLocation,
->>>>>>> codex/beta-round-2-polish
         categories: const [_category],
         searchMeetingPlaces: (_, _) async => const [],
       );
@@ -113,12 +99,8 @@ void main() {
       final repository = _CapturingHomeRepository();
       final bloc = CreateActivityBloc(
         CreateActivity(repository),
-<<<<<<< HEAD
-        location: _testLocation,
-=======
         SearchMeetingLocations(repository),
         location: _terApelLocation,
->>>>>>> codex/beta-round-2-polish
         categories: const [_category],
       );
 

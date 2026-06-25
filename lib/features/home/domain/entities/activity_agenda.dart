@@ -61,11 +61,8 @@ class ActivityAgenda extends Equatable {
     for (final activity in [
       ...activeHostedActivities,
       ...activeJoinedActivities,
-<<<<<<< HEAD
       ..._inactiveChatHistoryActivities,
       ...uniqueCompletedActivities,
-=======
->>>>>>> codex/beta-round-2-polish
     ]) {
       activitiesById.putIfAbsent(activity.id, () => activity);
     }

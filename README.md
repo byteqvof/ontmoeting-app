@@ -54,6 +54,19 @@ fvm flutter build apk --debug
 Plaats `google-services.json` alleen in de Android app wanneer je FCM lokaal wilt
 testen. Beperk Firebase API keys in Google Cloud waar mogelijk.
 
+Voor iOS push moet `nl.gatoch.toch` onder een betaald Apple Developer Program
+team vallen. Apple Personal Teams kunnen geen provisioning profile maken met de
+Push Notifications capability. Kopieer daarom lokaal:
+
+```powershell
+Copy-Item ios\Flutter\Signing.xcconfig.example ios\Flutter\Signing.xcconfig
+```
+
+Vul in `ios/Flutter/Signing.xcconfig` de betaalde Apple Team ID in bij
+`TOCH_DEVELOPMENT_TEAM`. Controleer daarna in Apple Developer dat App ID
+`nl.gatoch.toch` de Push Notifications capability heeft en dat Firebase voor iOS
+de juiste APNs key/certificaten gebruikt.
+
 Een Firebase service-account private key hoort nooit in deze repo. Sla die alleen
 als Supabase secret op aan backendzijde en roteer hem direct als hij ooit in chat,
 logs of git terechtkomt.

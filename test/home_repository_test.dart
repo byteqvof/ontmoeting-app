@@ -23,11 +23,7 @@ import 'package:meetings_app/features/profile/domain/entities/profile_trust.dart
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-<<<<<<< HEAD
-const _testLocation = HomeLocation(
-=======
 const _sampleLocation = HomeLocation(
->>>>>>> codex/beta-round-2-polish
   cityName: 'Winschoten',
   latitude: 53.144,
   longitude: 7.034,
@@ -56,11 +52,7 @@ void main() {
     }, (_) => fail('Expected a network failure.'));
   });
 
-<<<<<<< HEAD
   test('returns a location failure when device location times out', () async {
-=======
-  test('returns a failure when device location times out', () async {
->>>>>>> codex/beta-round-2-polish
     final repository = HomeRepositoryImpl(
       _ThrowingHomeRemoteDataSource(Exception('unused')),
       _ThrowingLocationDataSource(
@@ -71,21 +63,12 @@ void main() {
     final result = await repository.getCurrentLocation();
 
     result.fold((failure) {
-<<<<<<< HEAD
       expect(failure, isA<ServerFailure>());
       expect(
         failure.message,
         'We kunnen je locatie niet bepalen. Controleer de locatie van je toestel en probeer opnieuw.',
       );
     }, (_) => fail('Expected location failure.'));
-=======
-      expect(failure, isA<NetworkFailure>());
-      expect(
-        failure.message,
-        'We konden je locatie niet ophalen. Probeer het opnieuw.',
-      );
-    }, (_) => fail('Expected a location failure.'));
->>>>>>> codex/beta-round-2-polish
   });
 
   test('does not wait for a hanging device location lookup', () async {
@@ -98,13 +81,8 @@ void main() {
     final result = await repository.getCurrentLocation();
 
     result.fold(
-<<<<<<< HEAD
       (failure) => expect(failure, isA<ServerFailure>()),
       (_) => fail('Expected location failure.'),
-=======
-      (failure) => expect(failure, isA<NetworkFailure>()),
-      (_) => fail('Expected a location failure.'),
->>>>>>> codex/beta-round-2-polish
     );
   });
 
@@ -128,13 +106,8 @@ void main() {
       final live = await repository.getCurrentLocation(forceRefresh: true);
 
       fallback.fold(
-<<<<<<< HEAD
         (failure) => expect(failure, isA<ServerFailure>()),
         (_) => fail('Expected first lookup to fail.'),
-=======
-        (failure) => expect(failure, isA<NetworkFailure>()),
-        (_) => fail('Expected first location lookup to fail.'),
->>>>>>> codex/beta-round-2-polish
       );
       live.fold(
         (failure) => fail('Expected live location, got $failure'),
@@ -191,11 +164,7 @@ void main() {
       feedCacheTtl: const Duration(seconds: 30),
     );
 
-<<<<<<< HEAD
-    final location = _testLocation;
-=======
     const location = _sampleLocation;
->>>>>>> codex/beta-round-2-polish
     final first = await repository.getHomeFeed(
       location: location,
       filters: const HomeFeedFilters(),
@@ -218,11 +187,7 @@ void main() {
       feedCacheTtl: const Duration(seconds: 30),
     );
 
-<<<<<<< HEAD
-    final location = _testLocation;
-=======
     const location = _sampleLocation;
->>>>>>> codex/beta-round-2-polish
     final first = await repository.getHomeFeed(
       location: location,
       filters: const HomeFeedFilters(),
@@ -245,11 +210,7 @@ void main() {
       const _FakeLocationDataSource(),
       feedCacheTtl: const Duration(seconds: 30),
     );
-<<<<<<< HEAD
-    final location = _testLocation;
-=======
     const location = _sampleLocation;
->>>>>>> codex/beta-round-2-polish
 
     await repository.getHomeFeed(
       location: location,

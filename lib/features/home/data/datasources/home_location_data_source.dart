@@ -15,14 +15,8 @@ abstract interface class HomeLocationDataSource {
 
 class HomeLocationDataSourceImpl implements HomeLocationDataSource {
   const HomeLocationDataSourceImpl({
-<<<<<<< HEAD
     this.currentPositionTimeout = const Duration(seconds: 10),
     this.geocodingTimeout = const Duration(seconds: 2),
-=======
-    this.useDeviceLocation = false,
-    this.currentPositionTimeout = const Duration(seconds: 8),
-    this.geocodingTimeout = const Duration(seconds: 3),
->>>>>>> codex/beta-round-2-polish
   });
 
   final Duration currentPositionTimeout;
@@ -30,36 +24,14 @@ class HomeLocationDataSourceImpl implements HomeLocationDataSource {
 
   @override
   Future<HomeLocation> getCurrentLocation({bool forceRefresh = false}) async {
-<<<<<<< HEAD
     await _ensureLocationAccess();
 
     final position = await _getQuickPosition(forceRefresh: forceRefresh);
-=======
-    if (!useDeviceLocation) {
-      throw StateError('Device location is disabled.');
-    }
-
-    await _ensureLocationAccess();
-
-    final position = await _getQuickPosition(forceRefresh: forceRefresh);
-    if (position == null) {
-      AppLogger.debug('No quick location fix available');
-      throw TimeoutException('No location fix.');
-    }
-
->>>>>>> codex/beta-round-2-polish
     return _locationFromPosition(position);
   }
 
   @override
   Stream<HomeLocation> watchCurrentLocation() async* {
-<<<<<<< HEAD
-=======
-    if (!useDeviceLocation) {
-      throw StateError('Device location is disabled.');
-    }
-
->>>>>>> codex/beta-round-2-polish
     await _ensureLocationAccess();
     await for (final position in Geolocator.getPositionStream(
       locationSettings: _locationSettings(
@@ -73,14 +45,9 @@ class HomeLocationDataSourceImpl implements HomeLocationDataSource {
 
   Future<Position> _getQuickPosition({required bool forceRefresh}) async {
     if (forceRefresh) {
-<<<<<<< HEAD
       return _requestCurrentPosition(
         forceAndroidLocationManager: _preferAndroidLocationManager,
       );
-=======
-      final currentPosition = await _requestCurrentPosition();
-      return currentPosition ?? _lastKnownPosition();
->>>>>>> codex/beta-round-2-polish
     }
 
     final lastKnownPosition = await _lastKnownPosition();
@@ -113,13 +80,9 @@ class HomeLocationDataSourceImpl implements HomeLocationDataSource {
       }
     }
 
-<<<<<<< HEAD
     return _requestCurrentPosition(
       forceAndroidLocationManager: _preferAndroidLocationManager,
     );
-=======
-    return null;
->>>>>>> codex/beta-round-2-polish
   }
 
   Future<Position> _requestCurrentPosition({
@@ -212,20 +175,12 @@ class HomeLocationDataSourceImpl implements HomeLocationDataSource {
       }
     } catch (error) {
       AppLogger.debug(
-<<<<<<< HEAD
         'City lookup failed; using generic current location label',
-=======
-        'City lookup timed out; using generic label',
->>>>>>> codex/beta-round-2-polish
         error: error,
       );
     }
 
-<<<<<<< HEAD
     return 'Huidige locatie';
-=======
-    return 'Je locatie';
->>>>>>> codex/beta-round-2-polish
   }
 
   String? _firstNotBlank(List<String?> values) {

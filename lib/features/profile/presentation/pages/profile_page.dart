@@ -146,10 +146,7 @@ class _ProfileContent extends StatelessWidget {
           const SizedBox(height: TochSpacing.md),
           ProfilePremiumCard(isPremium: profile.isPremium),
           const SizedBox(height: TochSpacing.md),
-          _ProfileMenu(
-            isOwnProfile: isOwnProfile,
-            profile: profile,
-          ),
+          _ProfileMenu(isOwnProfile: isOwnProfile, profile: profile),
           if (isOwnProfile) ...[
             const SizedBox(height: TochSpacing.lg),
             const _AppVersionFooter(),
@@ -160,7 +157,6 @@ class _ProfileContent extends StatelessWidget {
   }
 }
 
-<<<<<<< HEAD
 class _AppVersionFooter extends StatelessWidget {
   const _AppVersionFooter();
 
@@ -188,7 +184,12 @@ class _AppVersionFooter extends StatelessWidget {
             color: colors.green700.withValues(alpha: .48),
             fontWeight: FontWeight.w800,
           ),
-=======
+        );
+      },
+    );
+  }
+}
+
 class _ProfileMenu extends StatelessWidget {
   const _ProfileMenu({required this.isOwnProfile, required this.profile});
 
@@ -223,7 +224,9 @@ class _ProfileMenu extends StatelessWidget {
       onAccountVerificationPressed: isOwnProfile
           ? () => context.push(AppRoutes.accountVerification)
           : null,
-      onFriendsPressed: isOwnProfile ? () => context.push(AppRoutes.friends) : null,
+      onFriendsPressed: isOwnProfile
+          ? () => context.push(AppRoutes.friends)
+          : null,
       onPrivacyPressed: () => context.push(AppRoutes.privacyLocation),
       onNotificationsPressed: () => context.push(AppRoutes.notifications),
       onHelpPressed: () => context.push(AppRoutes.appInfo),
@@ -319,17 +322,18 @@ class _FriendshipActionCardState extends State<_FriendshipActionCard> {
                 'Verzoek ingetrokken.',
               ),
             ),
-            FriendshipStatus.pendingReceived => _FriendshipPendingReceivedActions(
-              isUpdating: _isUpdating,
-              onAccept: () => _runAction(
-                (service) => service.accept(widget.profile.id),
-                'Vriend toegevoegd.',
+            FriendshipStatus.pendingReceived =>
+              _FriendshipPendingReceivedActions(
+                isUpdating: _isUpdating,
+                onAccept: () => _runAction(
+                  (service) => service.accept(widget.profile.id),
+                  'Vriend toegevoegd.',
+                ),
+                onDecline: () => _runAction(
+                  (service) => service.decline(widget.profile.id),
+                  'Verzoek geweigerd.',
+                ),
               ),
-              onDecline: () => _runAction(
-                (service) => service.decline(widget.profile.id),
-                'Verzoek geweigerd.',
-              ),
-            ),
             FriendshipStatus.blocked => _FriendshipUnavailable(),
             FriendshipStatus.self => const SizedBox.shrink(),
             _ => _FriendshipRequestActions(
@@ -340,15 +344,12 @@ class _FriendshipActionCardState extends State<_FriendshipActionCard> {
               ),
             ),
           },
->>>>>>> codex/beta-round-2-polish
         );
       },
     );
   }
 }
 
-<<<<<<< HEAD
-=======
 class _FriendshipCardShell extends StatelessWidget {
   const _FriendshipCardShell({required this.child});
 
@@ -439,10 +440,7 @@ class _FriendshipLoading extends StatelessWidget {
       children: [
         SizedBox.square(
           dimension: 22,
-          child: CircularProgressIndicator(
-            color: colors.green,
-            strokeWidth: 2,
-          ),
+          child: CircularProgressIndicator(color: colors.green, strokeWidth: 2),
         ),
         const SizedBox(width: TochSpacing.sm),
         Expanded(
@@ -597,7 +595,6 @@ class _FriendshipUnavailable extends StatelessWidget {
   }
 }
 
->>>>>>> codex/beta-round-2-polish
 Future<void> _reportProfile(BuildContext context, Profile profile) async {
   final report = await _askForSafetyDetails(
     context,
