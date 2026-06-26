@@ -26,6 +26,7 @@ class CreateActivityState extends Equatable {
     this.capacity = 5,
     this.groupType = 'open',
     this.minReputationLevel = 'new_member',
+    this.requiresIdentityVerified = false,
     this.isPrivateLocation = false,
     this.targetAgeBands = const [],
     this.targetGenders = const [],
@@ -49,6 +50,7 @@ class CreateActivityState extends Equatable {
   final int capacity;
   final String groupType;
   final String minReputationLevel;
+  final bool requiresIdentityVerified;
   final bool isPrivateLocation;
   final List<String> targetAgeBands;
   final List<String> targetGenders;
@@ -115,6 +117,7 @@ class CreateActivityState extends Equatable {
     int? capacity,
     String? groupType,
     String? minReputationLevel,
+    bool? requiresIdentityVerified,
     bool? isPrivateLocation,
     List<String>? targetAgeBands,
     List<String>? targetGenders,
@@ -140,6 +143,8 @@ class CreateActivityState extends Equatable {
       capacity: capacity ?? this.capacity,
       groupType: groupType ?? this.groupType,
       minReputationLevel: minReputationLevel ?? this.minReputationLevel,
+      requiresIdentityVerified:
+          requiresIdentityVerified ?? this.requiresIdentityVerified,
       isPrivateLocation: isPrivateLocation ?? this.isPrivateLocation,
       targetAgeBands: targetAgeBands ?? this.targetAgeBands,
       targetGenders: targetGenders ?? this.targetGenders,
@@ -166,6 +171,7 @@ class CreateActivityState extends Equatable {
     capacity,
     groupType,
     minReputationLevel,
+    requiresIdentityVerified,
     isPrivateLocation,
     targetAgeBands,
     targetGenders,

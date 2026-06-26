@@ -12,40 +12,26 @@ class CreateActivityCategoryPicker extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<CreateActivityBloc, CreateActivityState>(
       builder: (context, state) {
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'KIES CATEGORIE',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: context.toch.ink4,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 11.5,
-                    letterSpacing: .8,
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          clipBehavior: Clip.none,
+          child: Row(
+            children: [
+              for (final category in state.categories)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: _CategoryOption(
+                    category: category,
+                    selected: state.categoryId == category.id,
+                    onPressed: () {
+                      context.read<CreateActivityBloc>().add(
+                        CreateActivityCategorySelected(category.id),
+                      );
+                    },
                   ),
-            ),
-            const SizedBox(height: TochSpacing.sm),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  for (final category in state.categories)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 9),
-                      child: _CategoryOption(
-                        category: category,
-                        selected: state.categoryId == category.id,
-                        onPressed: () {
-                          context.read<CreateActivityBloc>().add(
-                            CreateActivityCategorySelected(category.id),
-                          );
-                        },
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ],
+                ),
+            ],
+          ),
         );
       },
     );
@@ -74,7 +60,7 @@ class _CategoryOption extends StatelessWidget {
         style: TextButton.styleFrom(
           foregroundColor: colors.ink,
           padding: EdgeInsets.zero,
-          minimumSize: const Size(76, 94),
+          minimumSize: const Size(76, 86),
           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(TochRadius.lg),
@@ -101,7 +87,7 @@ class _CategoryOption extends StatelessWidget {
               ),
               child: SizedBox.square(
                 dimension: 64,
-                child: Icon(category.icon, color: category.color, size: 29),
+                child: Icon(category.icon, color: category.color, size: 27),
               ),
             ),
             const SizedBox(height: 6),
@@ -113,7 +99,8 @@ class _CategoryOption extends StatelessWidget {
                 color: selected
                     ? colors.green
                     : colors.green700.withValues(alpha: .72),
-                fontWeight: FontWeight.w900,
+                fontSize: 11,
+                fontWeight: selected ? FontWeight.w900 : FontWeight.w800,
               ),
             ),
           ],

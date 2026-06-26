@@ -17,21 +17,25 @@ class CreateActivityCapacityStepper extends StatelessWidget {
         return DecoratedBox(
           decoration: BoxDecoration(
             color: colors.card,
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(TochRadius.md),
             boxShadow: TochShadows.card(colors),
           ),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
             child: Row(
               children: [
                 DecoratedBox(
                   decoration: BoxDecoration(
                     color: colors.green100,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   child: SizedBox.square(
-                    dimension: 44,
-                    child: Icon(Icons.groups_rounded, color: colors.green),
+                    dimension: 36,
+                    child: Icon(
+                      Icons.groups_2_outlined,
+                      color: colors.green,
+                      size: 19,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -40,28 +44,21 @@ class CreateActivityCapacityStepper extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'MAX. MENSEN',
+                        'Hoeveel mensen',
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: colors.green700.withValues(alpha: .62),
+                          color: colors.ink4,
                           fontWeight: FontWeight.w900,
                           fontSize: 11,
-                          letterSpacing: .7,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 2),
                       Text(
                         'Ruimte voor ${state.capacity}',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(
-                              color: colors.ink,
-                              fontWeight: FontWeight.w900,
-                            ),
-                      ),
-                      Text(
-                        'inclusief jezelf',
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: colors.green700.withValues(alpha: .62),
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: colors.ink,
+                          fontSize: 15.5,
                           fontWeight: FontWeight.w800,
+                          height: 1.18,
                         ),
                       ),
                     ],
@@ -71,6 +68,7 @@ class CreateActivityCapacityStepper extends StatelessWidget {
                   children: [
                     _StepperButton(
                       icon: Icons.remove_rounded,
+                      filled: false,
                       onPressed: () {
                         context.read<CreateActivityBloc>().add(
                           const CreateActivityCapacityDecremented(),
@@ -78,11 +76,11 @@ class CreateActivityCapacityStepper extends StatelessWidget {
                       },
                     ),
                     SizedBox(
-                      width: 42,
+                      width: 34,
                       child: Text(
                         '${state.capacity}',
                         textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.headlineSmall
+                        style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(
                               color: colors.ink,
                               fontWeight: FontWeight.w900,
@@ -91,6 +89,7 @@ class CreateActivityCapacityStepper extends StatelessWidget {
                     ),
                     _StepperButton(
                       icon: Icons.add_rounded,
+                      filled: true,
                       onPressed: () {
                         context.read<CreateActivityBloc>().add(
                           const CreateActivityCapacityIncremented(),
@@ -109,9 +108,14 @@ class CreateActivityCapacityStepper extends StatelessWidget {
 }
 
 class _StepperButton extends StatelessWidget {
-  const _StepperButton({required this.icon, required this.onPressed});
+  const _StepperButton({
+    required this.icon,
+    required this.filled,
+    required this.onPressed,
+  });
 
   final IconData icon;
+  final bool filled;
   final VoidCallback onPressed;
 
   @override
@@ -121,15 +125,19 @@ class _StepperButton extends StatelessWidget {
     return IconButton(
       onPressed: onPressed,
       style: IconButton.styleFrom(
-        backgroundColor: colors.card,
-        foregroundColor: colors.ink,
-        fixedSize: const Size.square(42),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(TochRadius.md),
-          side: BorderSide(color: colors.line, width: 1.5),
+        backgroundColor: filled ? colors.green : colors.green100,
+        foregroundColor: filled ? Colors.white : colors.green,
+        fixedSize: const Size.square(28),
+        minimumSize: const Size.square(28),
+        padding: EdgeInsets.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        shape: const CircleBorder(),
+        side: BorderSide(
+          color: filled ? colors.green : Colors.transparent,
+          width: 0,
         ),
       ),
-      icon: Icon(icon, size: 21),
+      icon: Icon(icon, size: 18),
     );
   }
 }
