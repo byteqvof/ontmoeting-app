@@ -129,6 +129,8 @@ GoRouter createRouter(AuthBloc authBloc) {
           !isAuthRoute &&
           !isFtiRoute &&
           !isEmailVerificationRoute) {
+        AccountGate.resetSessionCache();
+        ProfileCompletionGate.resetSessionCache();
         return AppRoutes.splash;
       }
 

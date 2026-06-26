@@ -7,11 +7,16 @@ import '../../../../core/services/account_trust_service.dart';
 import '../../../../core/services/analytics_service.dart';
 import '../../../../core/utils/app_logger.dart';
 import '../../domain/entities/profile_trust.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AccountGate extends StatefulWidget {
   const AccountGate({required this.child, super.key});
 
   final Widget child;
+
+  static void resetSessionCache() {
+    _AccountGateState.resetSessionCache();
+  }
 
   @override
   State<AccountGate> createState() => _AccountGateState();
@@ -20,17 +25,63 @@ class AccountGate extends StatefulWidget {
 class _AccountGateState extends State<AccountGate> {
   late Future<ProfileTrust> _trustFuture = _syncTrust();
 
-  Future<ProfileTrust> _syncTrust() {
-    return sl<AccountTrustService>().syncTrust();
+  static String? _sessionUserKey;
+  static ProfileTrust? _sessionTrust;
+  static Future<ProfileTrust>? _sessionTrustFuture;
+
+  static void resetSessionCache() {
+    _sessionUserKey = null;
+    _sessionTrust = null;
+    _sessionTrustFuture = null;
+  }
+
+  Future<ProfileTrust> _syncTrust({bool forceRefresh = false}) {
+    final userKey = _currentGateUserKey();
+    final cachedTrust = _sessionTrust;
+    if (!forceRefresh &&
+        _sessionUserKey == userKey &&
+        cachedTrust != null &&
+        cachedTrust.phoneVerified) {
+      return Future.value(cachedTrust);
+    }
+
+    final currentFuture = _sessionTrustFuture;
+    if (!forceRefresh && _sessionUserKey == userKey && currentFuture != null) {
+      return currentFuture;
+    }
+
+    _sessionUserKey = userKey;
+    late final Future<ProfileTrust> future;
+    future = sl<AccountTrustService>()
+        .syncTrust()
+        .then((trust) {
+          if (trust.phoneVerified) {
+            _sessionUserKey = userKey;
+            _sessionTrust = trust;
+          }
+          return trust;
+        })
+        .whenComplete(() {
+          if (identical(_sessionTrustFuture, future)) {
+            _sessionTrustFuture = null;
+          }
+        });
+    _sessionTrustFuture = future;
+    return future;
   }
 
   void _retry() {
     setState(() {
-      _trustFuture = _syncTrust();
+      _trustFuture = _syncTrust(forceRefresh: true);
     });
   }
 
   void _complete(ProfileTrust trust) {
+    if (trust.phoneVerified) {
+      _sessionUserKey = _currentGateUserKey();
+      _sessionTrust = trust;
+      _sessionTrustFuture = null;
+    }
     setState(() {
       _trustFuture = Future.value(trust);
     });
@@ -532,4 +583,20 @@ String _phoneVerifyErrorMessage(Object error) {
   }
 
   return 'Code controleren lukt niet. Details staan in de debug-console.';
+}
+
+String _currentGateUserKey() {
+  try {
+    if (sl.isRegistered<SupabaseClient>()) {
+      final client = sl<SupabaseClient>();
+      final userId =
+          client.auth.currentSession?.user.id ?? client.auth.currentUser?.id;
+      if (userId != null && userId.isNotEmpty) {
+        return userId;
+      }
+    }
+  } catch (_) {
+    // Tests and early app startup can build the gate before Supabase is registered.
+  }
+  return '__unknown_user__';
 }
