@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -50,6 +51,10 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   final WatchCurrentLocation _watchLocation;
 
   StreamSubscription? _locationSubscription;
+  DateTime? _lastAutomaticLocationFeedLoadAt;
+
+  static const double _automaticLocationMinDistanceMeters = 1000;
+  static const Duration _automaticLocationMinInterval = Duration(seconds: 90);
 
   Future<void> _onStarted(HomeStarted event, Emitter<HomeState> emit) async {
     add(const HomeLocationRequested());
@@ -66,7 +71,13 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     await result.fold(
       (failure) async => emit(HomeLocationBlocked(failure.message)),
       (location) async {
-        await _loadFeed(emit, location: location, filters: _defaultFilters);
+        _lastAutomaticLocationFeedLoadAt = null;
+        await _loadFeed(
+          emit,
+          location: location,
+          filters: _defaultFilters,
+          forceRefresh: event.forceRefresh,
+        );
         await _startLocationWatcher(restart: true);
       },
     );
@@ -81,12 +92,19 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       return;
     }
 
-    if (current.location == event.location) {
+    if (!_shouldSoftRefreshForAutomaticLocation(
+      current.location,
+      event.location,
+    )) {
       return;
     }
 
     AppLogger.debug('HomeBloc location changed to ${event.location.cityName}');
-    await _loadFeed(emit, location: event.location, filters: current.filters);
+    await _softRefreshFeedForLocation(
+      emit,
+      current: current,
+      location: event.location,
+    );
   }
 
   void _onLocationFailureReceived(
@@ -94,6 +112,11 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     Emitter<HomeState> emit,
   ) {
     AppLogger.debug('HomeBloc location watch failed: ${event.failure.message}');
+    final current = state;
+    if (current is HomeLoaded) {
+      emit(current.copyWith(isRefreshing: false));
+      return;
+    }
     emit(HomeLocationBlocked(event.failure.message));
   }
 
@@ -320,10 +343,15 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     required HomeLocation location,
     required HomeFeedFilters filters,
     String analyticsSource = 'initial',
+    bool forceRefresh = false,
   }) async {
     emit(HomeLoadingFeed(location: location, distanceKm: filters.distanceKm));
     final result = await _getHomeFeed(
-      GetHomeFeedParams(location: location, filters: filters),
+      GetHomeFeedParams(
+        location: location,
+        filters: filters,
+        forceRefresh: forceRefresh,
+      ),
     );
     result.fold(
       (failure) {
@@ -348,6 +376,77 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     );
   }
 
+  Future<void> _softRefreshFeedForLocation(
+    Emitter<HomeState> emit, {
+    required HomeLoaded current,
+    required HomeLocation location,
+  }) async {
+    _lastAutomaticLocationFeedLoadAt = DateTime.now();
+    emit(current.copyWith(location: location, isRefreshing: true));
+
+    final result = await _getHomeFeed(
+      GetHomeFeedParams(
+        location: location,
+        filters: current.filters,
+        forceRefresh: true,
+      ),
+    );
+
+    final latest = state;
+    if (latest is! HomeLoaded) {
+      return;
+    }
+
+    result.fold(
+      (failure) {
+        AppLogger.debug(
+          'HomeBloc soft location refresh failed: ${failure.message}',
+        );
+        AnalyticsService.instance.track(
+          'feed_load_failed',
+          properties: {'source': 'location_watch'},
+        );
+        emit(latest.copyWith(isRefreshing: false));
+      },
+      (feed) {
+        AnalyticsService.instance.track(
+          'feed_loaded',
+          properties: {
+            'source': 'location_watch',
+            'activity_count': feed.activities.length,
+            'distance_km': current.filters.distanceKm,
+          },
+        );
+        emit(
+          latest.copyWith(feed: feed, location: location, isRefreshing: false),
+        );
+      },
+    );
+  }
+
+  bool _shouldSoftRefreshForAutomaticLocation(
+    HomeLocation current,
+    HomeLocation next,
+  ) {
+    final distanceMeters = _distanceMeters(current, next);
+    if (distanceMeters < _automaticLocationMinDistanceMeters) {
+      return false;
+    }
+
+    final lastLoad = _lastAutomaticLocationFeedLoadAt;
+    if (lastLoad == null) {
+      return true;
+    }
+
+    final elapsed = DateTime.now().difference(lastLoad);
+    if (elapsed >= _automaticLocationMinInterval) {
+      return true;
+    }
+
+    return current.cityName != next.cityName &&
+        distanceMeters >= _automaticLocationMinDistanceMeters * 2;
+  }
+
   Future<void> _startLocationWatcher({bool restart = false}) async {
     if (_locationSubscription != null && !restart) {
       return;
@@ -369,6 +468,25 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     return super.close();
   }
 }
+
+double _distanceMeters(HomeLocation left, HomeLocation right) {
+  const earthRadiusMeters = 6371000.0;
+  final leftLat = _radians(left.latitude);
+  final rightLat = _radians(right.latitude);
+  final deltaLat = _radians(right.latitude - left.latitude);
+  final deltaLng = _radians(right.longitude - left.longitude);
+  final haversine =
+      math.sin(deltaLat / 2) * math.sin(deltaLat / 2) +
+      math.cos(leftLat) *
+          math.cos(rightLat) *
+          math.sin(deltaLng / 2) *
+          math.sin(deltaLng / 2);
+  return earthRadiusMeters *
+      2 *
+      math.atan2(math.sqrt(haversine), math.sqrt(1 - haversine));
+}
+
+double _radians(double degrees) => degrees * math.pi / 180;
 
 HomeActivity? _activityById(List<HomeActivity> activities, String activityId) {
   for (final activity in activities) {

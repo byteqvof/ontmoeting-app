@@ -35,20 +35,34 @@ class HomeFilterButton extends StatelessWidget {
     final colors = context.toch;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 8, 18, 0),
+      padding: const EdgeInsets.fromLTRB(22, 8, 22, 0),
       child: SizedBox(
         width: double.infinity,
-        child: OutlinedButton.icon(
-          onPressed: onPressed,
-          icon: Icon(
-            hasActiveFilters ? Icons.tune_rounded : Icons.filter_list_rounded,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: hasActiveFilters ? colors.green100 : colors.surface2,
+            borderRadius: BorderRadius.circular(TochRadius.xl),
+            border: Border.all(
+              color: hasActiveFilters ? colors.green200 : colors.line,
+            ),
           ),
-          label: Text(hasActiveFilters ? 'Filters actief' : 'Meer filters'),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: colors.green,
-            side: BorderSide(
-              color: hasActiveFilters ? colors.green : colors.line,
-              width: hasActiveFilters ? 1.4 : 1,
+          child: TextButton.icon(
+            onPressed: onPressed,
+            icon: Icon(
+              hasActiveFilters ? Icons.tune_rounded : Icons.filter_list_rounded,
+              size: 19,
+            ),
+            label: Text(hasActiveFilters ? 'Filters actief' : 'Meer filters'),
+            style: TextButton.styleFrom(
+              foregroundColor: colors.green,
+              minimumSize: const Size(0, 54),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(TochRadius.xl),
+              ),
+              textStyle: const TextStyle(
+                fontWeight: FontWeight.w900,
+                fontSize: 15,
+              ),
             ),
           ),
         ),

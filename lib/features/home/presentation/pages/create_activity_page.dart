@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme/toch_theme.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../../../core/widgets/always_24_hour_media_query.dart';
+import '../../../../core/widgets/toch_snack_bar.dart';
 import '../../domain/entities/home_category.dart';
 import '../../domain/entities/home_feed_filters.dart';
 import '../../domain/entities/home_location.dart';
@@ -118,23 +119,21 @@ class _CreateActivityView extends StatelessWidget {
           final message = state.hasFutureStart
               ? 'Vul een titel in en kies een gevonden meetingplek.'
               : 'Kies een datum en tijd in de toekomst.';
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(message)));
+          showTochSnackBar(context, message, type: TochSnackBarType.error);
         }
         if (status == CreateActivitySubmissionStatus.success) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Activiteit geplaatst.')),
+          showTochSnackBar(
+            context,
+            'Activiteit geplaatst.',
+            type: TochSnackBarType.success,
           );
           context.pop();
         }
         if (status == CreateActivitySubmissionStatus.failure) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                state.errorMessage ?? 'Activiteit plaatsen is niet gelukt.',
-              ),
-            ),
+          showTochSnackBar(
+            context,
+            state.errorMessage ?? 'Activiteit plaatsen is niet gelukt.',
+            type: TochSnackBarType.error,
           );
         }
       },
@@ -245,17 +244,16 @@ class _CreateActivityHeader extends StatelessWidget {
     return SafeArea(
       bottom: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(18, 12, 18, 6),
+        padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
         child: Row(
           children: [
             SizedBox(
-              width: 76,
+              width: 96,
               child: TextButton(
-                onPressed: context.pop,
+                onPressed: () => context.pop(),
                 style: TextButton.styleFrom(
-                  padding: EdgeInsets.zero,
-                  alignment: Alignment.centerLeft,
-                  foregroundColor: context.toch.green700.withValues(alpha: .72),
+                  foregroundColor: context.toch.ink3,
+                  textStyle: const TextStyle(fontWeight: FontWeight.w900),
                 ),
                 child: const Text('Annuleer'),
               ),
@@ -270,7 +268,7 @@ class _CreateActivityHeader extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(width: 76),
+            const SizedBox(width: 96),
           ],
         ),
       ),
@@ -288,27 +286,30 @@ class _CreateActivityIntro extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        RichText(
-          text: TextSpan(
-            style: Theme.of(context).textTheme.displayLarge?.copyWith(
-              color: colors.green700.withValues(alpha: .42),
-              fontSize: 52,
-            ),
+        Text.rich(
+          TextSpan(
+            text: 'Ik ga',
             children: [
-              const TextSpan(text: 'Ik ga'),
               TextSpan(
                 text: '.',
                 style: TextStyle(color: colors.orange),
               ),
             ],
           ),
+          style: Theme.of(context).textTheme.displayLarge?.copyWith(
+            color: colors.ink4,
+            fontSize: 72,
+            height: .94,
+            fontWeight: FontWeight.w900,
+          ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 10),
         Text(
           'Geen evenement. Je deelt gewoon wat je toch al gaat doen.',
-          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-            color: colors.green700.withValues(alpha: .68),
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+            color: colors.ink3,
             fontWeight: FontWeight.w800,
+            height: 1.3,
           ),
         ),
       ],
@@ -325,6 +326,7 @@ class _CreateActivityTextFields extends StatelessWidget {
       children: [
         _LabeledField(
           label: 'Titel',
+          icon: Icons.edit_rounded,
           hintText: 'bijv. avondvissen aan de Maas',
           onChanged: (value) {
             context.read<CreateActivityBloc>().add(
@@ -420,19 +422,53 @@ class _CreateActivityLocationFieldState
           children: [
             const _SectionLabel('Waar'),
             const SizedBox(height: TochSpacing.xs),
-            TextField(
-              controller: _controller,
-              textInputAction: TextInputAction.next,
-              onChanged: _onLocationChanged,
-              decoration: InputDecoration(
-                hintText: 'Typ naam of adres, bijv. Markeweg 23',
-                prefixIcon: Icon(
-                  Icons.location_on_rounded,
-                  color: colors.green,
-                ),
-                suffixIcon: isSearching
-                    ? Padding(
-                        padding: const EdgeInsets.all(14),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: colors.card,
+                borderRadius: BorderRadius.circular(22),
+                boxShadow: TochShadows.card(colors),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(14, 8, 8, 8),
+                child: Row(
+                  children: [
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: colors.green100,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: SizedBox.square(
+                        dimension: 44,
+                        child: Icon(
+                          Icons.location_on_rounded,
+                          color: colors.green,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextField(
+                        controller: _controller,
+                        textInputAction: TextInputAction.search,
+                        onChanged: _onLocationChanged,
+                        onSubmitted: (_) => _searchNow(),
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          hintText: 'Typ een plek of adres',
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              color: colors.ink,
+                              fontWeight: FontWeight.w800,
+                            ),
+                      ),
+                    ),
+                    if (isSearching)
+                      Padding(
+                        padding: const EdgeInsets.all(12),
                         child: SizedBox.square(
                           dimension: 18,
                           child: CircularProgressIndicator(
@@ -441,15 +477,32 @@ class _CreateActivityLocationFieldState
                           ),
                         ),
                       )
-                    : hasSelectedLocation
-                    ? Icon(Icons.check_circle_rounded, color: colors.green)
-                    : IconButton(
-                        tooltip: 'Zoek locatie',
-                        onPressed: canSearch ? _searchNow : null,
-                        icon: const Icon(Icons.search_rounded),
+                    else
+                      IconButton(
+                        tooltip: hasSelectedLocation
+                            ? 'Locatie gekozen'
+                            : 'Zoek locatie',
+                        onPressed: hasSelectedLocation
+                            ? null
+                            : canSearch
+                            ? _searchNow
+                            : null,
+                        style: IconButton.styleFrom(
+                          backgroundColor: hasSelectedLocation
+                              ? colors.green100
+                              : colors.green100.withValues(alpha: .7),
+                          foregroundColor: colors.green,
+                          fixedSize: const Size.square(48),
+                        ),
+                        icon: Icon(
+                          hasSelectedLocation
+                              ? Icons.check_rounded
+                              : Icons.keyboard_arrow_down_rounded,
+                        ),
                       ),
+                  ],
+                ),
               ),
-              onSubmitted: (_) => _searchNow(),
             ),
             const SizedBox(height: TochSpacing.xs),
             Text(
@@ -461,22 +514,6 @@ class _CreateActivityLocationFieldState
                 fontWeight: FontWeight.w700,
               ),
             ),
-            if (!hasSelectedLocation) ...[
-              const SizedBox(height: TochSpacing.sm),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: canSearch ? _searchNow : null,
-                  icon: isSearching
-                      ? const SizedBox.square(
-                          dimension: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.search_rounded),
-                  label: Text(isSearching ? 'Locaties zoeken' : 'Zoek locatie'),
-                ),
-              ),
-            ],
             if (results.isNotEmpty) ...[
               const SizedBox(height: TochSpacing.sm),
               _LocationResultsCard(
@@ -851,6 +888,8 @@ class _DateTimePickerTile extends StatelessWidget {
     return Material(
       color: colors.card,
       borderRadius: BorderRadius.circular(TochRadius.lg),
+      shadowColor: colors.ink.withValues(alpha: .08),
+      elevation: 2,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(TochRadius.lg),
@@ -906,6 +945,7 @@ class _CreateActivityNotesField extends StatelessWidget {
     return _LabeledField(
       label: 'Iets erbij',
       suffixLabel: '(optioneel)',
+      icon: Icons.notes_rounded,
       hintText: 'Tempo, wat mee te nemen, sfeer...',
       minLines: 4,
       maxLines: 5,
@@ -1052,63 +1092,99 @@ class _CreateActivityAccessSection extends StatelessWidget {
             DecoratedBox(
               decoration: BoxDecoration(
                 color: colors.card,
-                borderRadius: BorderRadius.circular(TochRadius.lg),
-                border: Border.all(color: colors.line),
+                borderRadius: BorderRadius.circular(22),
+                boxShadow: TochShadows.card(colors),
               ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: TochSpacing.md,
-                  vertical: TochSpacing.sm,
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: state.minReputationLevel,
-                    isExpanded: true,
-                    icon: const Icon(Icons.expand_more_rounded),
-                    items: const [
-                      DropdownMenuItem(
-                        value: 'new_member',
-                        child: Text('Minimum: Nieuw lid'),
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+                    child: Row(
+                      children: [
+                        DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: colors.green100,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: SizedBox.square(
+                            dimension: 42,
+                            child: Icon(
+                              Icons.workspace_premium_rounded,
+                              color: colors.green,
+                              size: 21,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: state.minReputationLevel,
+                              isExpanded: true,
+                              icon: const Icon(Icons.expand_more_rounded),
+                              items: const [
+                                DropdownMenuItem(
+                                  value: 'new_member',
+                                  child: Text('Minimum: Nieuw lid'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'active_member',
+                                  child: Text('Minimum: Actief lid'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'known_member',
+                                  child: Text('Minimum: Bekend lid'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'top_participant',
+                                  child: Text('Minimum: Top deelnemer'),
+                                ),
+                              ],
+                              onChanged: (value) {
+                                if (value == null) {
+                                  return;
+                                }
+                                context.read<CreateActivityBloc>().add(
+                                  CreateActivityMinReputationSelected(value),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Divider(height: 1, color: colors.line),
+                  SwitchListTile(
+                    value: state.isPrivateLocation,
+                    contentPadding: const EdgeInsets.fromLTRB(14, 4, 10, 4),
+                    secondary: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: colors.green100,
+                        borderRadius: BorderRadius.circular(16),
                       ),
-                      DropdownMenuItem(
-                        value: 'active_member',
-                        child: Text('Minimum: Actief lid'),
+                      child: SizedBox.square(
+                        dimension: 42,
+                        child: Icon(
+                          Icons.home_work_rounded,
+                          color: colors.green,
+                          size: 21,
+                        ),
                       ),
-                      DropdownMenuItem(
-                        value: 'known_member',
-                        child: Text('Minimum: Bekend lid'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'top_participant',
-                        child: Text('Minimum: Top deelnemer'),
-                      ),
-                    ],
+                    ),
+                    title: const Text('Prive- of thuislocatie'),
+                    subtitle: const Text(
+                      'Kies dit alleen als de plek niet openbaar toegankelijk is.',
+                    ),
+                    activeThumbColor: colors.green,
                     onChanged: (value) {
-                      if (value == null) {
-                        return;
-                      }
                       context.read<CreateActivityBloc>().add(
-                        CreateActivityMinReputationSelected(value),
+                        CreateActivityPrivateLocationToggled(value),
                       );
                     },
                   ),
-                ),
+                ],
               ),
-            ),
-            const SizedBox(height: TochSpacing.sm),
-            SwitchListTile(
-              value: state.isPrivateLocation,
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Prive- of thuislocatie'),
-              subtitle: const Text(
-                'Kies dit alleen als de plek niet openbaar toegankelijk is.',
-              ),
-              activeThumbColor: colors.green,
-              onChanged: (value) {
-                context.read<CreateActivityBloc>().add(
-                  CreateActivityPrivateLocationToggled(value),
-                );
-              },
             ),
             if (state.isPrivateLocation) ...[
               const SizedBox(height: TochSpacing.xs),
@@ -1206,6 +1282,7 @@ class _LabeledField extends StatelessWidget {
     required this.label,
     required this.hintText,
     required this.onChanged,
+    this.icon,
     this.suffixLabel,
     this.minLines = 1,
     this.maxLines = 1,
@@ -1214,6 +1291,7 @@ class _LabeledField extends StatelessWidget {
   final String label;
   final String hintText;
   final ValueChanged<String> onChanged;
+  final IconData? icon;
   final String? suffixLabel;
   final int minLines;
   final int maxLines;
@@ -1241,14 +1319,59 @@ class _LabeledField extends StatelessWidget {
           ],
         ),
         const SizedBox(height: TochSpacing.xs),
-        TextField(
-          minLines: minLines,
-          maxLines: maxLines,
-          onChanged: onChanged,
-          textInputAction: maxLines == 1
-              ? TextInputAction.next
-              : TextInputAction.newline,
-          decoration: InputDecoration(hintText: hintText),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            color: colors.card,
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: TochShadows.card(colors),
+          ),
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(14, maxLines == 1 ? 8 : 12, 14, 8),
+            child: Row(
+              crossAxisAlignment: maxLines == 1
+                  ? CrossAxisAlignment.center
+                  : CrossAxisAlignment.start,
+              children: [
+                if (icon != null) ...[
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: colors.green100,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: SizedBox.square(
+                      dimension: 44,
+                      child: Icon(icon, color: colors.green, size: 21),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                ],
+                Expanded(
+                  child: TextField(
+                    minLines: minLines,
+                    maxLines: maxLines,
+                    onChanged: onChanged,
+                    textInputAction: maxLines == 1
+                        ? TextInputAction.next
+                        : TextInputAction.newline,
+                    decoration: InputDecoration(
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      hintText: hintText,
+                      contentPadding: maxLines == 1
+                          ? EdgeInsets.zero
+                          : const EdgeInsets.only(top: 2),
+                    ),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: colors.ink,
+                      fontWeight: FontWeight.w800,
+                      height: 1.25,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ],
     );

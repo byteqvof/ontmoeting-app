@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/toch_theme.dart';
+import '../../../../app/widgets/toch_design_system.dart';
 import '../../domain/entities/home_activity.dart';
 import 'home_avatar_stack.dart';
 
@@ -23,7 +24,9 @@ class HomeActivityCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.toch;
-    final borderRadius = BorderRadius.circular(22);
+    final skin = tochCategorySkin('${activity.category.id} ${activity.category.label}');
+    final borderRadius = BorderRadius.circular(TochRadius.lg);
+    final isLarge = activity.isFeatured || activity.distanceKm <= 2;
 
     return Material(
       color: colors.card,
@@ -35,168 +38,72 @@ class HomeActivityCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: colors.card,
             borderRadius: borderRadius,
-            border: Border.all(color: colors.line),
-            boxShadow: [
-              BoxShadow(
-                color: colors.ink.withValues(alpha: .06),
-                blurRadius: 26,
-                offset: const Offset(0, 10),
-              ),
-            ],
+            boxShadow: TochShadows.card(colors),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
-                child: Row(
-                  children: [
-                    _CategoryTile(activity: activity),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  activity.category.label,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(context).textTheme.labelSmall
-                                      ?.copyWith(
-                                        color: activity.category.color,
-                                        fontWeight: FontWeight.w900,
-                                      ),
-                                ),
-                              ),
-                              if (activity.isFeatured) ...[
-                                const SizedBox(width: 8),
-                                const _FeaturedBadge(),
-                              ],
-                              const SizedBox(width: 8),
-                              Icon(
-                                Icons.location_on_outlined,
-                                size: 14,
-                                color: colors.green700.withValues(alpha: .55),
-                              ),
-                              const SizedBox(width: 3),
-                              Text(
-                                activity.distanceLabel,
-                                style: Theme.of(context).textTheme.labelSmall
-                                    ?.copyWith(
-                                      color: colors.green700.withValues(
-                                        alpha: .72,
-                                      ),
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  activity.title,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(context).textTheme.titleMedium
-                                      ?.copyWith(
-                                        color: colors.ink,
-                                        height: 1.12,
-                                        fontWeight: FontWeight.w900,
-                                      ),
-                                ),
-                              ),
-                              if (activity.hostIdentityVerified) ...[
-                                const SizedBox(width: 6),
-                                Tooltip(
-                                  message:
-                                      'Deze gebruiker heeft zijn identiteit geverifieerd.',
-                                  child: Icon(
-                                    Icons.verified_rounded,
-                                    color: const Color(0xFF2E7E5C),
-                                    size: 16,
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+              TochPhotoPanel(
+                title: activity.title,
+                categoryLabel: activity.category.label,
+                icon: activity.category.icon,
+                skin: skin,
+                distanceLabel: activity.distanceLabel,
+                live: _isLive(activity),
+                height: isLarge ? 176 : 120,
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(18, 0, 18, 14),
-                child: Row(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      Icons.calendar_today_rounded,
-                      size: 15,
-                      color: colors.green700,
-                    ),
-                    const SizedBox(width: 6),
-                    Flexible(
-                      child: Text(
-                        activity.dateLabel,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.labelMedium
-                            ?.copyWith(
-                              color: colors.green700,
-                              fontWeight: FontWeight.w800,
-                            ),
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Icon(
-                      Icons.schedule_rounded,
-                      size: 16,
-                      color: colors.green700,
-                    ),
-                    const SizedBox(width: 5),
                     Text(
-                      activity.timeLabel,
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: colors.green700,
-                        fontWeight: FontWeight.w800,
+                      activity.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: colors.ink,
+                        fontWeight: FontWeight.w900,
+                        height: 1.18,
                       ),
                     ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.fromLTRB(18, 13, 18, 13),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFCFBF8),
-                  border: Border(top: BorderSide(color: colors.line)),
-                ),
-                child: Row(
-                  children: [
-                    HomeAvatarStack(
-                      participants: activity.participants,
-                      maxVisibleAvatars: 3,
-                      onProfilePressed: onProfilePressed,
+                    const SizedBox(height: 7),
+                    _HostRow(activity: activity),
+                    const SizedBox(height: 8),
+                    _MetaRow(activity: activity),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      child: Divider(height: 1, color: const Color(0xFFF2EEE5)),
                     ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        activity.spotsLabel,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.labelMedium
-                            ?.copyWith(
-                              color: colors.green700.withValues(alpha: .72),
-                              fontWeight: FontWeight.w800,
-                            ),
-                      ),
-                    ),
-                    _JoinButton(
-                      activity: activity,
-                      isPending: isJoinPending,
-                      onPressed: onJoinPressed,
+                    Row(
+                      children: [
+                        HomeAvatarStack(
+                          participants: activity.participants,
+                          maxVisibleAvatars: 3,
+                          onProfilePressed: onProfilePressed,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _participantsLabel(activity),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelMedium
+                                ?.copyWith(
+                                  color: colors.ink3,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        _JoinButton(
+                          activity: activity,
+                          isPending: isJoinPending,
+                          onPressed: onJoinPressed,
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -209,36 +116,129 @@ class HomeActivityCard extends StatelessWidget {
   }
 }
 
-class _FeaturedBadge extends StatelessWidget {
-  const _FeaturedBadge();
+class _HostRow extends StatelessWidget {
+  const _HostRow({required this.activity});
+
+  final HomeActivity activity;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.toch;
+    final initials = activity.hostName.trim().isEmpty
+        ? '?'
+        : activity.hostName
+              .trim()
+              .split(RegExp(r'\s+'))
+              .take(2)
+              .map((part) => part.isEmpty ? '' : part[0].toUpperCase())
+              .join();
+
+    return Row(
+      children: [
+        CircleAvatar(
+          radius: 11,
+          backgroundColor: tochCategorySkin(activity.category.label).color,
+          child: Text(
+            initials,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w900,
+              fontSize: 8,
+            ),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(
+            activity.hostName,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: colors.ink2,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+        if (activity.hostIdentityVerified) ...[
+          const SizedBox(width: 4),
+          Tooltip(
+            message: 'Deze gebruiker heeft zijn identiteit geverifieerd.',
+            child: Icon(Icons.verified_rounded, color: colors.verified, size: 14),
+          ),
+        ],
+        const SizedBox(width: 8),
+        Text(
+          '${activity.hostScore} score',
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: colors.ink3,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MetaRow extends StatelessWidget {
+  const _MetaRow({required this.activity});
+
+  final HomeActivity activity;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.toch;
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF3C4),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0xFFE1B53A)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.star_rounded, size: 12, color: colors.ink),
-            const SizedBox(width: 3),
-            Text(
-              'Uitgelicht',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: colors.ink,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ],
+    return Wrap(
+      spacing: 12,
+      runSpacing: 6,
+      children: [
+        _MetaItem(
+          icon: Icons.calendar_today_rounded,
+          label: '${activity.dateLabel} ${activity.timeLabel}',
         ),
-      ),
+        _MetaItem(
+          icon: Icons.place_outlined,
+          label: activity.meetingPoint.isEmpty
+              ? activity.locationName
+              : activity.meetingPoint,
+        ),
+      ].map((item) {
+        return IconTheme(
+          data: IconThemeData(color: colors.ink3, size: 13),
+          child: DefaultTextStyle.merge(
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: colors.ink3,
+              fontWeight: FontWeight.w700,
+            ),
+            child: item,
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+class _MetaItem extends StatelessWidget {
+  const _MetaItem({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon),
+        const SizedBox(width: 5),
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -263,54 +263,47 @@ class _JoinButton extends StatelessWidget {
         isOwnActivity || isFull || isPending || activity.isParticipationPending;
     final filled = !disabled && !activity.isJoined;
 
-    return TextButton.icon(
-      onPressed: disabled ? null : onPressed,
-      style: TextButton.styleFrom(
-        foregroundColor: disabled
-            ? colors.green700.withValues(alpha: .55)
-            : filled
-            ? Colors.white
-            : colors.green,
-        backgroundColor: disabled
-            ? colors.cream
-            : filled
-            ? colors.green
-            : colors.green100,
-        minimumSize: const Size(0, 40),
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        shape: const StadiumBorder(),
-        textStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14.5),
+    return SizedBox(
+      height: 36,
+      child: TextButton(
+        onPressed: disabled ? null : onPressed,
+        style: TextButton.styleFrom(
+          foregroundColor: filled ? Colors.white : colors.green,
+          backgroundColor: filled ? colors.green : colors.green100,
+          disabledForegroundColor: colors.ink4,
+          disabledBackgroundColor: colors.surface2,
+          padding: const EdgeInsets.symmetric(horizontal: 15),
+          shape: const StadiumBorder(),
+          textStyle: const TextStyle(
+            fontWeight: FontWeight.w900,
+            fontSize: 13,
+          ),
+        ),
+        child: isPending
+            ? SizedBox.square(
+                dimension: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: filled ? Colors.white : colors.green,
+                ),
+              )
+            : Text(_joinLabelFor(activity)),
       ),
-      icon: isPending
-          ? SizedBox.square(
-              dimension: 17,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: filled ? Colors.white : colors.green,
-              ),
-            )
-          : Icon(_joinIconFor(activity), size: 17),
-      label: Text(_joinLabelFor(activity)),
     );
   }
 }
 
-IconData _joinIconFor(HomeActivity activity) {
-  if (activity.isOwnedByCurrentUser) {
-    return Icons.event_available_rounded;
+String _participantsLabel(HomeActivity activity) {
+  final count = activity.participantCount;
+  if (count <= 0) {
+    return activity.spotsLabel;
   }
-  if (activity.isParticipationPending) {
-    return Icons.hourglass_top_rounded;
-  }
-  if (!activity.isJoined && activity.availableSpots <= 0) {
-    return Icons.block_rounded;
-  }
-  return activity.isJoined ? Icons.check_rounded : Icons.add_rounded;
+  return '$count gaan mee - ${activity.spotsLabel}';
 }
 
 String _joinLabelFor(HomeActivity activity) {
   if (activity.isOwnedByCurrentUser) {
-    return 'Jouw event';
+    return 'Beheer';
   }
   if (activity.isParticipationPending) {
     return 'In aanvraag';
@@ -318,25 +311,14 @@ String _joinLabelFor(HomeActivity activity) {
   if (!activity.isJoined && activity.availableSpots <= 0) {
     return 'Vol';
   }
-  return activity.isJoined ? 'Je gaat' : 'Ga mee';
+  return activity.isJoined ? 'Je gaat' : 'Aansluiten';
 }
 
-class _CategoryTile extends StatelessWidget {
-  const _CategoryTile({required this.activity});
-
-  final HomeActivity activity;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: activity.category.color,
-        borderRadius: BorderRadius.circular(15),
-      ),
-      child: SizedBox.square(
-        dimension: 52,
-        child: Icon(activity.category.icon, color: Colors.white, size: 26),
-      ),
-    );
+bool _isLive(HomeActivity activity) {
+  final start = activity.startsAt;
+  if (start == null || activity.isCompleted) {
+    return false;
   }
+  final now = DateTime.now();
+  return !start.isAfter(now) && now.difference(start).inHours < 5;
 }

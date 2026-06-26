@@ -15,6 +15,7 @@ import '../../features/home/presentation/pages/activity_detail_page.dart';
 import '../../features/home/presentation/pages/activity_join_confirmation_page.dart';
 import '../../features/home/presentation/pages/activity_map_page.dart';
 import '../../features/home/presentation/pages/activity_route_loader_page.dart';
+import '../../features/home/presentation/pages/activity_search_page.dart';
 import '../../features/home/presentation/pages/create_activity_page.dart';
 import '../../features/home/presentation/pages/edit_activity_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
@@ -27,6 +28,7 @@ import '../../features/profile/presentation/pages/edit_profile_page.dart';
 import '../../features/profile/presentation/pages/account_gate.dart';
 import '../../features/profile/presentation/pages/friends_page.dart';
 import '../../features/profile/presentation/pages/notifications_page.dart';
+import '../../features/profile/presentation/pages/premium_page.dart';
 import '../../features/profile/presentation/pages/profile_completion_gate.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/profile/presentation/pages/profile_setup_page.dart';
@@ -49,10 +51,12 @@ class AppRoutes {
   static const activityMessages = '/messages';
   static const activityAgenda = '/agenda';
   static const activityMap = '/map';
+  static const search = '/search';
   static const profile = '/profile';
   static const friends = '/friends';
   static const appInfo = '/info';
   static const notifications = '/notifications';
+  static const premium = '/premium';
   static const privacyLocation = '/privacy-location';
   static const accountVerification = '/account/verification';
   static const profileSetup = '/profile/setup';
@@ -150,6 +154,12 @@ GoRouter createRouter(AuthBloc authBloc) {
               categories: args.categories,
             ),
           );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.search,
+        builder: (context, state) {
+          return _protected(const ActivitySearchPage());
         },
       ),
       GoRoute(
@@ -275,6 +285,12 @@ GoRouter createRouter(AuthBloc authBloc) {
         path: AppRoutes.notifications,
         builder: (context, state) {
           return _protected(const NotificationsPage());
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.premium,
+        builder: (context, state) {
+          return _phoneProtected(const PremiumPage());
         },
       ),
       GoRoute(

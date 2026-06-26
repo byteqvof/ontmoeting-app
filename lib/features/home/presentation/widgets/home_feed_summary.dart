@@ -12,23 +12,31 @@ class HomeFeedSummary extends StatelessWidget {
     final colors = context.toch;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 22, 20, 12),
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 10),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            'Vlakbij',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: colors.ink,
-              fontWeight: FontWeight.w900,
-              letterSpacing: -0.2,
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: colors.orange,
+              shape: BoxShape.circle,
+            ),
+            child: const SizedBox.square(dimension: 7),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              activityCount > 0 ? 'Nu live' : 'Activiteiten',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: colors.ink,
+                fontWeight: FontWeight.w900,
+              ),
             ),
           ),
           Text(
-            '$activityCount activiteiten',
+            '$activityCount',
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: colors.green700.withValues(alpha: .70),
-              fontWeight: FontWeight.w800,
+              color: colors.ink4,
+              fontWeight: FontWeight.w900,
             ),
           ),
         ],

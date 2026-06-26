@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../app/theme/toch_theme.dart';
+import '../../../../app/widgets/toch_design_system.dart';
 
 class HomeDistanceFilter extends StatelessWidget {
   const HomeDistanceFilter({
@@ -16,37 +16,20 @@ class HomeDistanceFilter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.toch;
-
     return SizedBox(
       height: 48,
       child: ListView.separated(
-        padding: const EdgeInsets.fromLTRB(18, 8, 18, 4),
+        padding: const EdgeInsets.fromLTRB(20, 2, 20, 8),
         scrollDirection: Axis.horizontal,
         itemCount: distances.length,
         separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           final distance = distances[index];
-          final selected = distance == selectedDistanceKm;
-
-          return ChoiceChip(
-            selected: selected,
-            showCheckmark: false,
-            avatar: Icon(
-              Icons.near_me_rounded,
-              size: 16,
-              color: selected ? Colors.white : colors.green,
-            ),
-            label: Text('$distance km'),
-            onSelected: (_) => onSelected(distance),
-            selectedColor: colors.green,
-            backgroundColor: colors.card,
-            side: BorderSide(color: selected ? colors.green : colors.line),
-            labelStyle: TextStyle(
-              color: selected ? Colors.white : colors.ink,
-              fontWeight: FontWeight.w900,
-            ),
-            shape: const StadiumBorder(),
+          return TochPill(
+            label: '$distance km',
+            icon: Icons.near_me_rounded,
+            active: distance == selectedDistanceKm,
+            onTap: () => onSelected(distance),
           );
         },
       ),

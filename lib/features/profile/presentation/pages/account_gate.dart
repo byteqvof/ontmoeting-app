@@ -192,25 +192,38 @@ class _PhoneVerificationPageState extends State<_PhoneVerificationPage> {
 
     return Scaffold(
       backgroundColor: colors.cream,
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(TochSpacing.xl),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: colors.card,
-                  borderRadius: BorderRadius.circular(TochRadius.lg),
-                  border: Border.all(color: colors.line),
+                  borderRadius: BorderRadius.circular(30),
+                  boxShadow: TochShadows.raised(colors),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.all(TochSpacing.lg),
+                  padding: const EdgeInsets.all(24),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.sms_outlined, color: colors.green, size: 44),
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: colors.green100,
+                          borderRadius: BorderRadius.circular(22),
+                        ),
+                        child: SizedBox.square(
+                          dimension: 64,
+                          child: Icon(
+                            Icons.sms_outlined,
+                            color: colors.green,
+                            size: 34,
+                          ),
+                        ),
+                      ),
                       const SizedBox(height: TochSpacing.md),
                       Text(
                         'Bevestig je telefoonnummer',
@@ -225,24 +238,29 @@ class _PhoneVerificationPageState extends State<_PhoneVerificationPage> {
                         tochFakePhoneVerificationEnabled
                             ? 'Ontwikkelmodus: SMS wordt nu gesimuleerd. Dit is alleen bedoeld voor lokaal testen.'
                             : 'Dit helpt wegwerpaccounts en spam beperken. Je nummer wordt via Supabase Auth bevestigd.',
-                        style: Theme.of(context).textTheme.bodyMedium,
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: colors.ink3,
+                          fontWeight: FontWeight.w700,
+                          height: 1.35,
+                        ),
                       ),
                       if (tochFakePhoneVerificationEnabled) ...[
                         const SizedBox(height: TochSpacing.md),
                         DecoratedBox(
                           decoration: BoxDecoration(
-                            color: colors.green.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(TochRadius.md),
-                            border: Border.all(
-                              color: colors.green.withValues(alpha: 0.18),
-                            ),
+                            color: colors.orangeSoft,
+                            borderRadius: BorderRadius.circular(20),
                           ),
                           child: Padding(
                             padding: const EdgeInsets.all(TochSpacing.md),
                             child: Text(
                               'Gebruik na Code sturen bijvoorbeeld 1234. In productie werkt dit niet.',
                               style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(color: colors.green700),
+                                  ?.copyWith(
+                                    color: colors.ink2,
+                                    fontWeight: FontWeight.w800,
+                                    height: 1.35,
+                                  ),
                             ),
                           ),
                         ),
@@ -285,6 +303,7 @@ class _PhoneVerificationPageState extends State<_PhoneVerificationPage> {
                       const SizedBox(height: TochSpacing.lg),
                       SizedBox(
                         width: double.infinity,
+                        height: 58,
                         child: ElevatedButton.icon(
                           onPressed: _isBusy
                               ? null
@@ -343,9 +362,36 @@ class _AccountGateLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.toch;
+
     return Scaffold(
-      backgroundColor: context.toch.cream,
-      body: Center(child: CircularProgressIndicator(color: context.toch.green)),
+      backgroundColor: colors.cream,
+      body: Center(
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: colors.card,
+            borderRadius: BorderRadius.circular(26),
+            boxShadow: TochShadows.card(colors),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(22),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(color: colors.green),
+                const SizedBox(height: 14),
+                Text(
+                  'Account controleren',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: colors.ink,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -361,28 +407,37 @@ class _AccountGateError extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: colors.cream,
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.all(TochSpacing.xl),
+              padding: const EdgeInsets.all(24),
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: colors.card,
-                  borderRadius: BorderRadius.circular(TochRadius.lg),
-                  border: Border.all(color: colors.line),
+                  borderRadius: BorderRadius.circular(30),
+                  boxShadow: TochShadows.raised(colors),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.all(TochSpacing.lg),
+                  padding: const EdgeInsets.all(24),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(
-                        Icons.phone_android_outlined,
-                        color: colors.green,
-                        size: 44,
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: colors.green100,
+                          borderRadius: BorderRadius.circular(22),
+                        ),
+                        child: SizedBox.square(
+                          dimension: 64,
+                          child: Icon(
+                            Icons.phone_android_outlined,
+                            color: colors.green,
+                            size: 34,
+                          ),
+                        ),
                       ),
                       const SizedBox(height: TochSpacing.md),
                       Text(
@@ -396,11 +451,15 @@ class _AccountGateError extends StatelessWidget {
                       const SizedBox(height: TochSpacing.xs),
                       Text(
                         'We kunnen je telefoonstatus nu niet controleren.',
-                        style: Theme.of(context).textTheme.bodyMedium,
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: colors.ink3,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                       const SizedBox(height: TochSpacing.lg),
                       SizedBox(
                         width: double.infinity,
+                        height: 58,
                         child: ElevatedButton.icon(
                           onPressed: onRetry,
                           icon: const Icon(Icons.refresh_rounded),

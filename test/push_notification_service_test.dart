@@ -24,4 +24,11 @@ void main() {
 
     expect(activityId, isNull);
   });
+
+  test('reports push diagnostics without exposing token data', () {
+    final diagnostics = PushNotificationService.diagnosticSummary();
+
+    expect(diagnostics['enabled_by_flag'], isFalse);
+    expect(diagnostics.containsKey('token'), isFalse);
+  });
 }

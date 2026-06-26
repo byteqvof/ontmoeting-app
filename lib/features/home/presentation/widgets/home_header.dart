@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/app_router.dart';
 import '../../../../app/theme/toch_theme.dart';
+import '../../../../app/widgets/toch_design_system.dart';
 
 class HomeHeader extends StatelessWidget {
   const HomeHeader({
@@ -21,195 +24,92 @@ class HomeHeader extends StatelessWidget {
     final colors = context.toch;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 12, 18, 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.center,
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Wat is er te doen in',
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: colors.green700.withValues(alpha: .70),
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                TextButton.icon(
-                  onPressed: onLocationTap,
-                  style: TextButton.styleFrom(
-                    foregroundColor: colors.ink,
-                    padding: EdgeInsets.zero,
-                    minimumSize: const Size(0, 34),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  icon: Icon(
-                    Icons.location_on_outlined,
-                    color: colors.green,
-                    size: 20,
-                  ),
-                  label: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Flexible(
-                        child: Text(
-                          locationName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.headlineSmall
-                              ?.copyWith(
-                                color: colors.ink,
-                                fontWeight: FontWeight.w900,
-                                height: 1,
-                              ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TochSectionLabel('Vlakbij in'),
+                  const SizedBox(height: 2),
+                  TextButton(
+                    onPressed: onLocationTap,
+                    style: TextButton.styleFrom(
+                      foregroundColor: colors.ink,
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size(0, 28),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 230),
+                          child: Text(
+                            locationName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(
+                                  color: colors.ink,
+                                  fontWeight: FontWeight.w900,
+                                  height: 1,
+                                  letterSpacing: 0,
+                                ),
+                          ),
                         ),
+                        const SizedBox(width: 5),
+                        Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          color: colors.ink,
+                          size: 18,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  TochRoundButton(
+                    icon: Icons.search_rounded,
+                    tooltip: 'Zoeken',
+                    onPressed: () => context.push(AppRoutes.search),
+                  ),
+                  const SizedBox(width: 8),
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      TochRoundButton(
+                        icon: Icons.tune_rounded,
+                        tooltip: 'Filters',
+                        onPressed: onFilterTap,
                       ),
-                      const SizedBox(width: 3),
-                      Icon(
-                        Icons.keyboard_arrow_down_rounded,
-                        color: colors.green700.withValues(alpha: .72),
-                        size: 20,
-                      ),
+                      if (hasActiveFilters)
+                        Positioned(
+                          right: 3,
+                          top: 3,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: colors.orange,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: colors.card, width: 2),
+                            ),
+                            child: const SizedBox.square(dimension: 10),
+                          ),
+                        ),
                     ],
                   ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: TochSpacing.sm),
-          Row(
-            children: [
-              IconButton(
-                tooltip: 'Zoeken',
-                onPressed: () {},
-                style: IconButton.styleFrom(
-                  backgroundColor: colors.card,
-                  foregroundColor: colors.green,
-                  side: BorderSide(color: colors.line),
-                  fixedSize: const Size.square(42),
-                ),
-                icon: const Icon(Icons.search_rounded),
-              ),
-              const SizedBox(width: TochSpacing.xs),
-              _HeaderFilterButton(
-                hasActiveFilters: hasActiveFilters,
-                onPressed: onFilterTap,
+                ],
               ),
             ],
           ),
         ],
       ),
     );
-  }
-}
-
-class _HeaderFilterButton extends StatelessWidget {
-  const _HeaderFilterButton({
-    required this.hasActiveFilters,
-    required this.onPressed,
-  });
-
-  final bool hasActiveFilters;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.toch;
-
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        IconButton(
-          tooltip: 'Filters',
-          onPressed: onPressed,
-          style: IconButton.styleFrom(
-            backgroundColor: hasActiveFilters ? colors.green : colors.card,
-            foregroundColor: hasActiveFilters ? Colors.white : colors.green,
-            side: BorderSide(
-              color: hasActiveFilters ? colors.green : colors.line,
-            ),
-            fixedSize: const Size.square(42),
-          ),
-          icon: _FilterSvgIcon(
-            color: hasActiveFilters ? Colors.white : colors.green,
-          ),
-        ),
-        if (hasActiveFilters)
-          Positioned(
-            top: 5,
-            right: 5,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: colors.orange,
-                shape: BoxShape.circle,
-                border: Border.all(color: colors.card, width: 1.4),
-              ),
-              child: const SizedBox.square(dimension: 9),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-class _FilterSvgIcon extends StatelessWidget {
-  const _FilterSvgIcon({required this.color});
-
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomPaint(
-      size: const Size.square(22),
-      painter: _FilterSvgPainter(color),
-    );
-  }
-}
-
-class _FilterSvgPainter extends CustomPainter {
-  const _FilterSvgPainter(this.color);
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final stroke = Paint()
-      ..color = color
-      ..strokeWidth = 2.1
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
-    final fill = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-
-    final y1 = size.height * .26;
-    final y2 = size.height * .50;
-    final y3 = size.height * .74;
-    canvas.drawLine(
-      Offset(size.width * .12, y1),
-      Offset(size.width * .88, y1),
-      stroke,
-    );
-    canvas.drawCircle(Offset(size.width * .35, y1), 2.7, fill);
-    canvas.drawLine(
-      Offset(size.width * .12, y2),
-      Offset(size.width * .88, y2),
-      stroke,
-    );
-    canvas.drawCircle(Offset(size.width * .66, y2), 2.7, fill);
-    canvas.drawLine(
-      Offset(size.width * .12, y3),
-      Offset(size.width * .88, y3),
-      stroke,
-    );
-    canvas.drawCircle(Offset(size.width * .48, y3), 2.7, fill);
-  }
-
-  @override
-  bool shouldRepaint(covariant _FilterSvgPainter oldDelegate) {
-    return oldDelegate.color != color;
   }
 }

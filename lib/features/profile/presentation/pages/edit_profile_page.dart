@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../../app/theme/toch_theme.dart';
 import '../../../../core/di/injection_container.dart';
+import '../../../../core/widgets/toch_snack_bar.dart';
 import '../../../home/domain/entities/home_feed_filters.dart';
 import '../../domain/entities/profile.dart';
 import '../../domain/entities/profile_avatar_file.dart';
@@ -80,25 +81,25 @@ class _EditProfileView extends StatelessWidget {
       listenWhen: (previous, current) => previous.status != current.status,
       listener: (context, state) {
         if (state.status == EditProfileStatus.invalid) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Vul je naam, plaats, leeftijdsband, gender en interesses in.',
-              ),
-            ),
+          showTochSnackBar(
+            context,
+            'Vul je naam, plaats, leeftijdsband, gender en interesses in.',
+            type: TochSnackBarType.error,
           );
         }
         if (state.status == EditProfileStatus.failure) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.errorMessage ?? 'Profiel opslaan mislukt.'),
-            ),
+          showTochSnackBar(
+            context,
+            state.errorMessage ?? 'Profiel opslaan mislukt.',
+            type: TochSnackBarType.error,
           );
         }
         if (state.status == EditProfileStatus.success) {
-          ScaffoldMessenger.of(
+          showTochSnackBar(
             context,
-          ).showSnackBar(const SnackBar(content: Text('Profiel bijgewerkt.')));
+            'Profiel bijgewerkt.',
+            type: TochSnackBarType.success,
+          );
           context.pop(state.profile);
         }
       },
@@ -282,18 +283,20 @@ class _EditProfileAvatarPreview extends StatelessWidget {
     }
 
     if (bytes.length > 5 * 1024 * 1024) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Kies een afbeelding kleiner dan 5 MB.')),
+      showTochSnackBar(
+        context,
+        'Kies een afbeelding kleiner dan 5 MB.',
+        type: TochSnackBarType.error,
       );
       return;
     }
 
     final mimeType = image.mimeType ?? _mimeTypeForFileName(image.name);
     if (mimeType == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Kies een jpeg, png, webp of gif afbeelding.'),
-        ),
+      showTochSnackBar(
+        context,
+        'Kies een jpeg, png, webp of gif afbeelding.',
+        type: TochSnackBarType.error,
       );
       return;
     }

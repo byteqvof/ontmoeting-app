@@ -20,24 +20,24 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
   static const _slides = [
     _OnboardingSlide(
-      kicker: 'Het idee',
-      title: 'Geen evenement.\nGewoon meedoen.',
+      kicker: 'Welkom bij TOCH',
+      title: 'Wat doe jij\nvanavond?',
       body:
-          'Mensen delen wat ze toch al gaan doen. Jij sluit aan wanneer je zin hebt, zonder gedoe of druk.',
+          'Ontdek wat er bij jou in de buurt gebeurt en doe gewoon mee. Zo simpel is het.',
       hero: OnboardingHeroKind.activity,
     ),
     _OnboardingSlide(
-      kicker: 'Ontdekken',
-      title: 'Zie wat er vlakbij\ngebeurt.',
+      kicker: 'Ontdek dichtbij',
+      title: 'Geen planning.\nWel iets doen.',
       body:
-          'Vissen, koffie, wandelen, gamen. Spontane activiteiten bij jou in de buurt, vandaag of dit weekend.',
+          'Vissen, koffie, wandelen of gamen. Kies wat past bij vandaag, morgen of dit weekend.',
       hero: OnboardingHeroKind.nearby,
     ),
     _OnboardingSlide(
-      kicker: 'Vertrouwen',
-      title: 'Lage drempel.\nEchte mensen.',
+      kicker: 'Lage drempel',
+      title: 'Echte mensen.\nMinder gedoe.',
       body:
-          'Geverifieerde profielen en een eerlijke opkomstscore. Je weet met wie je afspreekt.',
+          'Telefoonbevestiging, meldingen en duidelijke profielen helpen wegwerpaccounts beperken.',
       hero: OnboardingHeroKind.trust,
     ),
   ];
@@ -67,99 +67,256 @@ class _OnboardingPageState extends State<OnboardingPage> {
     final isLast = _index == _slides.length - 1;
 
     return Scaffold(
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final compact = constraints.maxHeight < 720;
-            final horizontalPadding = constraints.maxWidth < 390 ? 18.0 : 22.0;
-            final heroHeight = (constraints.maxHeight * (compact ? .34 : .40))
-                .clamp(260.0, compact ? 300.0 : 360.0);
+      backgroundColor: colors.green,
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final compact = constraints.maxHeight < 740;
+                final heroHeight = (constraints.maxHeight * .36).clamp(
+                  compact ? 240.0 : 270.0,
+                  compact ? 280.0 : 330.0,
+                );
 
-            return ListView(
-              padding: EdgeInsets.fromLTRB(
-                horizontalPadding,
-                18,
-                horizontalPadding,
-                20,
-              ),
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                return Stack(
                   children: [
-                    const TochWordmark(fontSize: 28),
-                    TextButton(
-                      onPressed: _skip,
-                      child: const Text('Overslaan'),
-                    ),
-                  ],
-                ),
-                SizedBox(height: compact ? TochSpacing.sm : TochSpacing.md),
-                SizedBox(
-                  height: heroHeight,
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 260),
-                    child: OnboardingHero(
-                      key: ValueKey(slide.hero),
-                      kind: slide.hero,
-                      compact: compact,
-                    ),
-                  ),
-                ),
-                SizedBox(height: compact ? TochSpacing.lg : TochSpacing.xl),
-                Text(
-                  slide.kicker,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: colors.orange,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: TochSpacing.sm),
-                Text(
-                  slide.title,
-                  style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                    fontSize: compact ? 36 : 42,
-                    height: 1.02,
-                  ),
-                ),
-                const SizedBox(height: TochSpacing.sm),
-                Text(slide.body, style: Theme.of(context).textTheme.bodyLarge),
-                SizedBox(height: compact ? TochSpacing.lg : TochSpacing.xl),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Row(
-                        children: List.generate(_slides.length, (index) {
-                          final selected = index == _index;
-                          return AnimatedContainer(
-                            duration: const Duration(milliseconds: 240),
-                            margin: const EdgeInsets.only(right: 8),
-                            height: 7,
-                            width: selected ? 24 : 7,
-                            decoration: BoxDecoration(
-                              color: selected ? colors.green : colors.line,
-                              borderRadius: BorderRadius.circular(99),
+                    Positioned.fill(child: CustomPaint(painter: _GreenGrain())),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const TochWordmark(fontSize: 32, onDark: true),
+                              TextButton(
+                                onPressed: _skip,
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.white,
+                                  backgroundColor: Colors.white.withValues(
+                                    alpha: .12,
+                                  ),
+                                  shape: const StadiumBorder(),
+                                ),
+                                child: const Text('Overslaan'),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: compact ? 8 : 18),
+                          SizedBox(
+                            height: heroHeight,
+                            child: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 260),
+                              child: OnboardingHero(
+                                key: ValueKey(slide.hero),
+                                kind: slide.hero,
+                                compact: compact,
+                              ),
                             ),
-                          );
-                        }),
+                          ),
+                          const Spacer(),
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 220),
+                            child: Column(
+                              key: ValueKey(slide.title),
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  slide.kicker,
+                                  style: Theme.of(context).textTheme.labelSmall
+                                      ?.copyWith(
+                                        color: colors.orange,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: .8,
+                                      ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  slide.title,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .displayLarge
+                                      ?.copyWith(
+                                        color: Colors.white,
+                                        fontSize: compact ? 40 : 46,
+                                        height: .98,
+                                      ),
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  slide.body,
+                                  style: Theme.of(context).textTheme.bodyLarge
+                                      ?.copyWith(
+                                        color: Colors.white.withValues(
+                                          alpha: .78,
+                                        ),
+                                        height: 1.35,
+                                      ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          const _SocialProofStrip(),
+                          const SizedBox(height: 22),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Row(
+                                  children: List.generate(_slides.length, (
+                                    index,
+                                  ) {
+                                    final selected = index == _index;
+                                    return AnimatedContainer(
+                                      duration: const Duration(
+                                        milliseconds: 240,
+                                      ),
+                                      margin: const EdgeInsets.only(right: 8),
+                                      height: 7,
+                                      width: selected ? 26 : 7,
+                                      decoration: BoxDecoration(
+                                        color: selected
+                                            ? Colors.white
+                                            : Colors.white.withValues(
+                                                alpha: .28,
+                                              ),
+                                        borderRadius: BorderRadius.circular(99),
+                                      ),
+                                    );
+                                  }),
+                                ),
+                              ),
+                              SizedBox(
+                                height: 58,
+                                child: ElevatedButton.icon(
+                                  onPressed: _next,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    foregroundColor: colors.green,
+                                    elevation: 0,
+                                    shape: const StadiumBorder(),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 24,
+                                    ),
+                                    textStyle: const TextStyle(
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  icon: Icon(
+                                    isLast
+                                        ? Icons.check_rounded
+                                        : Icons.arrow_forward_rounded,
+                                  ),
+                                  label: Text(
+                                    isLast ? 'Aan de slag' : 'Verder',
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                    ),
-                    ElevatedButton.icon(
-                      onPressed: _next,
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: const Size(0, 48),
-                      ),
-                      icon: Icon(isLast ? Icons.check : Icons.arrow_forward),
-                      label: Text(isLast ? 'Aan de slag' : 'Verder'),
                     ),
                   ],
-                ),
-              ],
-            );
-          },
+                );
+              },
+            ),
+          ),
         ),
       ),
     );
   }
+}
+
+class _SocialProofStrip extends StatelessWidget {
+  const _SocialProofStrip();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.toch;
+
+    return Row(
+      children: [
+        const SizedBox(
+          width: 84,
+          height: 34,
+          child: Stack(
+            children: [
+              Positioned(left: 0, child: _ProofAvatar(label: 'SV')),
+              Positioned(left: 24, child: _ProofAvatar(label: 'RH')),
+              Positioned(left: 48, child: _ProofAvatar(label: 'JB')),
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            'Sanne, Rick en buurtgenoten\ndoen al mee',
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: Colors.white.withValues(alpha: .82),
+              fontWeight: FontWeight.w800,
+              height: 1.2,
+            ),
+          ),
+        ),
+        Icon(Icons.favorite_rounded, color: colors.orange, size: 22),
+      ],
+    );
+  }
+}
+
+class _ProofAvatar extends StatelessWidget {
+  const _ProofAvatar({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.toch;
+    final avatarColor = switch (label) {
+      'SV' => const Color(0xFF347E70),
+      'RH' => const Color(0xFF93623B),
+      _ => const Color(0xFF5E8B3A),
+    };
+
+    return Container(
+      width: 34,
+      height: 34,
+      decoration: BoxDecoration(
+        color: avatarColor,
+        shape: BoxShape.circle,
+        border: Border.all(color: colors.green, width: 2),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 10,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+  }
+}
+
+class _GreenGrain extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withValues(alpha: .035)
+      ..strokeWidth = 1.2;
+    for (var y = 16.0; y < size.height; y += 34) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y - 18), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _GreenGrain oldDelegate) => false;
 }
 
 class _OnboardingSlide {

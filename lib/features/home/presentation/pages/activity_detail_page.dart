@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_router.dart';
@@ -8,6 +9,8 @@ import '../../../../core/services/activity_attendance_service.dart';
 import '../../../../core/services/analytics_service.dart';
 import '../../../../core/services/safety_service.dart';
 import '../../../../core/widgets/safety_report_dialog.dart';
+import '../../../../core/widgets/toch_snack_bar.dart';
+import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../domain/entities/home_activity.dart';
 import '../../domain/usecases/complete_activity.dart';
 import '../../domain/usecases/set_activity_participation.dart';
@@ -231,9 +234,7 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
   }
 
   void _showMessage(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    showTochSnackBar(context, message, type: TochSnackBarType.info);
   }
 
   void _openChat() {
@@ -293,6 +294,10 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
   @override
   Widget build(BuildContext context) {
     final colors = context.toch;
+    final authState = context.watch<AuthBloc>().state;
+    final currentUserId = authState is AuthAuthenticated
+        ? authState.user.id
+        : null;
 
     return PopScope(
       canPop: false,
@@ -375,6 +380,7 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
                   bottom: 0,
                   child: ActivityDetailActionBar(
                     activity: _activity,
+                    currentUserId: currentUserId,
                     isParticipationPending: _isParticipationPending,
                     isCompletionPending: _isCompletionPending,
                     onParticipationPressed: _toggleParticipation,

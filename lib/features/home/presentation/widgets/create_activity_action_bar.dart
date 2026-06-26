@@ -57,7 +57,7 @@ class CreateActivityActionBar extends StatelessWidget {
                           dimension: 18,
                           child: CircularProgressIndicator(strokeWidth: 2.2),
                         )
-                      : const Text('Plaatsen · ik ga toch'),
+                      : const Text('Plaats activiteit'),
                 ),
               );
             },

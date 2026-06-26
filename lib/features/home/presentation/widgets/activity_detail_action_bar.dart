@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/toch_theme.dart';
 import '../../domain/entities/home_activity.dart';
+import 'activity_status_labels.dart';
 
 class ActivityDetailActionBar extends StatelessWidget {
   const ActivityDetailActionBar({
@@ -9,6 +10,7 @@ class ActivityDetailActionBar extends StatelessWidget {
     this.onParticipationPressed,
     this.onCompletePressed,
     this.onChatPressed,
+    this.currentUserId,
     this.isParticipationPending = false,
     this.isCompletionPending = false,
     super.key,
@@ -18,6 +20,7 @@ class ActivityDetailActionBar extends StatelessWidget {
   final VoidCallback? onParticipationPressed;
   final VoidCallback? onCompletePressed;
   final VoidCallback? onChatPressed;
+  final String? currentUserId;
   final bool isParticipationPending;
   final bool isCompletionPending;
 
@@ -63,7 +66,12 @@ class ActivityDetailActionBar extends StatelessWidget {
                           ),
                         )
                       : Icon(_primaryIconFor(activity)),
-                  label: Text(_primaryLabelFor(activity)),
+                  label: Text(
+                    activityPrimaryActionLabel(
+                      activity,
+                      currentUserId: currentUserId,
+                    ),
+                  ),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: activity.isCompleted || isFull
                         ? colors.green700.withValues(alpha: .55)
@@ -122,23 +130,4 @@ IconData _primaryIconFor(HomeActivity activity) {
     return Icons.block_rounded;
   }
   return activity.isJoined ? Icons.close_rounded : Icons.add_rounded;
-}
-
-String _primaryLabelFor(HomeActivity activity) {
-  if (activity.isCompleted) {
-    return 'Afgerond';
-  }
-  if (activity.isOwnedByCurrentUser) {
-    if (!activity.hasStarted) {
-      return 'Nog niet begonnen';
-    }
-    return 'Afronden';
-  }
-  if (activity.isParticipationPending) {
-    return 'Wacht op akkoord';
-  }
-  if (!activity.isJoined && activity.availableSpots <= 0) {
-    return 'Vol';
-  }
-  return activity.isJoined ? 'Afmelden' : 'Ga mee';
 }

@@ -10,6 +10,7 @@ import '../../../../core/services/analytics_service.dart';
 import '../../../../core/services/friendship_service.dart';
 import '../../../../core/services/safety_service.dart';
 import '../../../../core/widgets/safety_report_dialog.dart';
+import '../../../../core/widgets/toch_snack_bar.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../home/domain/entities/home_activity.dart';
 import '../../../home/domain/entities/home_category.dart';
@@ -18,12 +19,10 @@ import '../../domain/entities/profile.dart';
 import '../../domain/entities/profile_activity.dart';
 import '../bloc/profile_bloc.dart';
 import '../widgets/profile_activities_card.dart';
-import '../widgets/profile_header.dart';
 import '../widgets/profile_interests_card.dart';
 import '../widgets/profile_menu_list.dart';
 import '../widgets/profile_premium_card.dart';
 import '../widgets/profile_score_card.dart';
-import '../widgets/profile_stats_card.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({this.profileId, super.key});
@@ -112,49 +111,359 @@ class _ProfileContent extends StatelessWidget {
     return SafeArea(
       bottom: false,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(18, 12, 18, 130),
+        padding: const EdgeInsets.fromLTRB(0, 0, 0, 130),
         children: [
-          _ProfileTopBar(profile: profile, isOwnProfile: isOwnProfile),
-          const SizedBox(height: TochSpacing.md),
-          ProfileHeader(profile: profile),
-          if (!isOwnProfile) ...[
-            const SizedBox(height: TochSpacing.md),
-            _FriendshipActionCard(profile: profile),
-          ],
-          const SizedBox(height: TochSpacing.md),
-          ProfileScoreCard(profile: profile),
-          const SizedBox(height: TochSpacing.md),
-          ProfileStatsCard(profile: profile),
-          const SizedBox(height: TochSpacing.md),
-          ProfileActivitiesCard(
-            activities: activities,
-            isOwnProfile: isOwnProfile,
-            errorMessage: activitiesErrorMessage,
-            onActivityPressed: (activity) {
-              context.push(
-                AppRoutes.activityDetailPath(activity.id),
-                extra: _homeActivityFromProfileActivity(
-                  activity: activity,
-                  profile: profile,
+          _ProfileHeroHeader(profile: profile, isOwnProfile: isOwnProfile),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+            child: Column(
+              children: [
+                if (!isOwnProfile) ...[
+                  _FriendshipActionCard(profile: profile),
+                  const SizedBox(height: TochSpacing.md),
+                ],
+                _ProfileStatsGrid(profile: profile),
+                const SizedBox(height: TochSpacing.md),
+                ProfileScoreCard(profile: profile),
+                const SizedBox(height: TochSpacing.md),
+                ProfileActivitiesCard(
+                  activities: activities,
                   isOwnProfile: isOwnProfile,
+                  errorMessage: activitiesErrorMessage,
+                  onActivityPressed: (activity) {
+                    context.push(
+                      AppRoutes.activityDetailPath(activity.id),
+                      extra: _homeActivityFromProfileActivity(
+                        activity: activity,
+                        profile: profile,
+                        isOwnProfile: isOwnProfile,
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
+                const SizedBox(height: TochSpacing.md),
+                ProfileInterestsCard(interests: profile.interests),
+                const SizedBox(height: TochSpacing.md),
+                ProfilePremiumCard(isPremium: profile.isPremium),
+                const SizedBox(height: TochSpacing.md),
+                _ProfileMenu(isOwnProfile: isOwnProfile, profile: profile),
+                if (isOwnProfile) ...[
+                  const SizedBox(height: TochSpacing.lg),
+                  const _AppVersionFooter(),
+                ],
+              ],
+            ),
           ),
-          const SizedBox(height: TochSpacing.md),
-          ProfileInterestsCard(interests: profile.interests),
-          const SizedBox(height: TochSpacing.md),
-          ProfilePremiumCard(isPremium: profile.isPremium),
-          const SizedBox(height: TochSpacing.md),
-          _ProfileMenu(isOwnProfile: isOwnProfile, profile: profile),
-          if (isOwnProfile) ...[
-            const SizedBox(height: TochSpacing.lg),
-            const _AppVersionFooter(),
-          ],
         ],
       ),
     );
   }
+}
+
+class _ProfileHeroHeader extends StatelessWidget {
+  const _ProfileHeroHeader({required this.profile, required this.isOwnProfile});
+
+  final Profile profile;
+  final bool isOwnProfile;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.toch;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        DecoratedBox(
+          decoration: BoxDecoration(color: colors.green),
+          child: SizedBox(
+            height: 112,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+              child: Align(
+                alignment: Alignment.topRight,
+                child: isOwnProfile
+                    ? TextButton.icon(
+                        onPressed: () async {
+                          final updatedProfile = await context.push<Profile>(
+                            AppRoutes.editProfile,
+                            extra: profile,
+                          );
+                          if (updatedProfile != null && context.mounted) {
+                            context.read<ProfileBloc>().add(
+                              const ProfileStarted(),
+                            );
+                          }
+                        },
+                        style: TextButton.styleFrom(
+                          backgroundColor: Colors.white.withValues(alpha: .18),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                          minimumSize: const Size(0, 34),
+                          shape: const StadiumBorder(),
+                          textStyle: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        icon: const Icon(Icons.edit_rounded, size: 15),
+                        label: const Text('Bewerken'),
+                      )
+                    : IconButton(
+                        onPressed: context.pop,
+                        style: IconButton.styleFrom(
+                          backgroundColor: Colors.white.withValues(alpha: .18),
+                          foregroundColor: Colors.white,
+                        ),
+                        icon: const Icon(Icons.arrow_back_rounded),
+                      ),
+              ),
+            ),
+          ),
+        ),
+        Transform.translate(
+          offset: const Offset(0, -44),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _ProfileAvatar(profile: profile),
+                const SizedBox(height: 10),
+                Text(
+                  profile.displayName,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: colors.ink,
+                    fontSize: 23,
+                    fontWeight: FontWeight.w900,
+                    height: 1.1,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Row(
+                  children: [
+                    Icon(Icons.place_outlined, color: colors.ink3, size: 15),
+                    const SizedBox(width: 5),
+                    Expanded(
+                      child: Text(
+                        '${profile.cityName} - lid sinds ${_profileMemberSinceLabel(profile.memberSince)}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelMedium
+                            ?.copyWith(
+                              color: colors.ink3,
+                              fontWeight: FontWeight.w800,
+                            ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  _profileBioLine(profile),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: colors.ink2,
+                    height: 1.45,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ProfileAvatar extends StatelessWidget {
+  const _ProfileAvatar({required this.profile});
+
+  final Profile profile;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.toch;
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        DecoratedBox(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: colors.cream, width: 4),
+            boxShadow: [
+              BoxShadow(
+                color: colors.ink.withValues(alpha: .18),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: CircleAvatar(
+            radius: 44,
+            backgroundColor: colors.green,
+            foregroundImage: profile.avatarUrl == null
+                ? null
+                : NetworkImage(profile.avatarUrl!),
+            child: Text(
+              profile.initials,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 28,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+        ),
+        if (profile.trust.identityVerified || profile.trust.phoneVerified)
+          Positioned(
+            right: 2,
+            bottom: 2,
+            child: Tooltip(
+              message: profile.trust.identityVerified
+                  ? 'Deze gebruiker heeft zijn identiteit geverifieerd.'
+                  : 'Telefoon bevestigd.',
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: colors.verified,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: colors.cream, width: 3),
+                ),
+                child: const SizedBox.square(
+                  dimension: 26,
+                  child: Icon(
+                    Icons.check_rounded,
+                    color: Colors.white,
+                    size: 16,
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _ProfileStatsGrid extends StatelessWidget {
+  const _ProfileStatsGrid({required this.profile});
+
+  final Profile profile;
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+        childAspectRatio: 1.75,
+      ),
+      children: [
+        _ProfileStatTile(
+          value: '${profile.activitiesJoinedCount}',
+          label: 'keer meegedaan',
+        ),
+        _ProfileStatTile(
+          value: '${profile.activitiesHostedCount}',
+          label: 'georganiseerd',
+        ),
+        _ProfileStatTile(
+          value: profile.rating.toStringAsFixed(1).replaceAll('.', ','),
+          label: 'beoordeling',
+          accent: context.toch.orange,
+        ),
+        _ProfileStatTile(
+          value: '${profile.attendanceScore}%',
+          label: 'opkomst',
+          accent: context.toch.green,
+        ),
+      ],
+    );
+  }
+}
+
+class _ProfileStatTile extends StatelessWidget {
+  const _ProfileStatTile({
+    required this.value,
+    required this.label,
+    this.accent,
+  });
+
+  final String value;
+  final String label;
+  final Color? accent;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.toch;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.card,
+        borderRadius: BorderRadius.circular(TochRadius.md),
+        boxShadow: TochShadows.card(colors),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: accent ?? colors.ink,
+                fontSize: 24,
+                fontWeight: FontWeight.w900,
+                height: 1,
+              ),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: colors.ink3,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+String _profileBioLine(Profile profile) {
+  if (profile.interests.isEmpty) {
+    return 'Open voor laagdrempelige ontmoetingen en nieuwe plannen in de buurt.';
+  }
+  final labels = profile.interests.take(3).map((interest) => interest.label);
+  return 'Interesse in ${labels.join(', ')} en spontane plannen in de buurt.';
+}
+
+String _profileMemberSinceLabel(DateTime date) {
+  const months = [
+    'januari',
+    'februari',
+    'maart',
+    'april',
+    'mei',
+    'juni',
+    'juli',
+    'augustus',
+    'september',
+    'oktober',
+    'november',
+    'december',
+  ];
+  return '${months[date.month - 1]} ${date.year}';
 }
 
 class _AppVersionFooter extends StatelessWidget {
@@ -724,7 +1033,7 @@ Future<SafetyReportDraft?> _askForSafetyDetails(
 }
 
 void _showProfileMessage(BuildContext context, String message) {
-  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  showTochSnackBar(context, message);
 }
 
 Future<void> _confirmSignOut(BuildContext context) async {
@@ -829,6 +1138,7 @@ IconData _iconForKey(String key) {
   };
 }
 
+// ignore: unused_element
 class _ProfileTopBar extends StatelessWidget {
   const _ProfileTopBar({required this.profile, required this.isOwnProfile});
 

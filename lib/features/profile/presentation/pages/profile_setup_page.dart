@@ -9,6 +9,7 @@ import '../../../../app/router/app_router.dart';
 import '../../../../app/theme/toch_theme.dart';
 import '../../../../app/widgets/toch_wordmark.dart';
 import '../../../../core/di/injection_container.dart';
+import '../../../../core/widgets/toch_snack_bar.dart';
 import '../../../home/domain/entities/home_feed_filters.dart';
 import '../../domain/entities/profile_avatar_file.dart';
 import '../../domain/entities/profile_interest.dart';
@@ -59,15 +60,17 @@ class _ProfileSetupViewState extends State<_ProfileSetupView> {
       listenWhen: (previous, current) => previous.status != current.status,
       listener: (context, state) {
         if (state.status == ProfileSetupStatus.invalid) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Vul alle verplichte velden in.')),
+          showTochSnackBar(
+            context,
+            'Vul alle verplichte velden in.',
+            type: TochSnackBarType.error,
           );
         }
         if (state.status == ProfileSetupStatus.failure) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.errorMessage ?? 'Profiel aanmaken mislukt.'),
-            ),
+          showTochSnackBar(
+            context,
+            state.errorMessage ?? 'Profiel aanmaken mislukt.',
+            type: TochSnackBarType.error,
           );
         }
         if (state.status == ProfileSetupStatus.success) {
@@ -133,16 +136,10 @@ class _ProfileSetupViewState extends State<_ProfileSetupView> {
                                       : () => _goToStep(state.stepIndex - 1),
                                   onNext: () {
                                     if (!_canContinueCurrentStep(state)) {
-                                      ScaffoldMessenger.of(
+                                      showTochSnackBar(
                                         context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            _validationMessageFor(
-                                              state.stepIndex,
-                                            ),
-                                          ),
-                                        ),
+                                        _validationMessageFor(state.stepIndex),
+                                        type: TochSnackBarType.error,
                                       );
                                       return;
                                     }
@@ -491,18 +488,20 @@ class _AvatarStep extends StatelessWidget {
       return;
     }
     if (bytes.length > 5 * 1024 * 1024) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Kies een afbeelding kleiner dan 5 MB.')),
+      showTochSnackBar(
+        context,
+        'Kies een afbeelding kleiner dan 5 MB.',
+        type: TochSnackBarType.error,
       );
       return;
     }
 
     final mimeType = image.mimeType ?? _mimeTypeForFileName(image.name);
     if (mimeType == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Kies een jpeg, png, webp of gif afbeelding.'),
-        ),
+      showTochSnackBar(
+        context,
+        'Kies een jpeg, png, webp of gif afbeelding.',
+        type: TochSnackBarType.error,
       );
       return;
     }

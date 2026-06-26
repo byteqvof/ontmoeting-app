@@ -27,9 +27,9 @@ class HomeMapPreview extends StatelessWidget {
     final colors = context.toch;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 14, 18, 2),
+      padding: const EdgeInsets.fromLTRB(22, 12, 22, 6),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(TochRadius.xl),
         child: Material(
           color: const Color(0xFFEAEDE4),
           child: InkWell(
@@ -52,7 +52,7 @@ class HomeMapPreview extends StatelessWidget {
               );
             },
             child: SizedBox(
-              height: 88,
+              height: 190,
               child: Stack(
                 children: [
                   Positioned.fill(
@@ -63,19 +63,13 @@ class HomeMapPreview extends StatelessWidget {
                     ),
                   ),
                   Positioned(
-                    left: 12,
-                    top: 26,
+                    left: 14,
+                    top: 14,
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: .92),
                         borderRadius: BorderRadius.circular(TochRadius.pill),
-                        boxShadow: [
-                          BoxShadow(
-                            color: colors.ink.withValues(alpha: .08),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
+                        boxShadow: TochShadows.card(colors),
                       ),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
@@ -105,26 +99,102 @@ class HomeMapPreview extends StatelessWidget {
                     ),
                   ),
                   Positioned(
-                    right: 12,
-                    top: 26,
+                    left: 14,
+                    right: 14,
+                    bottom: 14,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: colors.card.withValues(alpha: .94),
+                        borderRadius: BorderRadius.circular(22),
+                        boxShadow: TochShadows.raised(colors),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+                        child: Row(
+                          children: [
+                            DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: colors.green100,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: SizedBox.square(
+                                dimension: 42,
+                                child: Icon(
+                                  Icons.map_rounded,
+                                  color: colors.green,
+                                  size: 22,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Bekijk op kaart',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleSmall
+                                        ?.copyWith(
+                                          color: colors.ink,
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Rond ${location.cityName}',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .labelMedium
+                                        ?.copyWith(
+                                          color: colors.ink3,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: colors.green,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const SizedBox.square(
+                                dimension: 40,
+                                child: Icon(
+                                  Icons.arrow_forward_rounded,
+                                  color: Colors.white,
+                                  size: 21,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    right: 14,
+                    top: 14,
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         color: colors.green,
                         shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: colors.ink.withValues(alpha: .18),
-                            blurRadius: 12,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
+                        boxShadow: TochShadows.button(colors),
                       ),
                       child: const SizedBox.square(
-                        dimension: 36,
+                        dimension: 42,
                         child: Icon(
-                          Icons.chevron_right_rounded,
+                          Icons.open_in_full_rounded,
                           color: Colors.white,
-                          size: 22,
+                          size: 19,
                         ),
                       ),
                     ),

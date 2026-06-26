@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/app_router.dart';
 import '../../../../app/theme/toch_theme.dart';
 
 class ProfilePremiumCard extends StatelessWidget {
@@ -14,32 +16,33 @@ class ProfilePremiumCard extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () {},
+        onTap: () => context.push(AppRoutes.premium),
         borderRadius: BorderRadius.circular(TochRadius.lg),
         child: Ink(
           decoration: BoxDecoration(
-            color: colors.ink,
+            color: const Color(0xFF17201B),
             borderRadius: BorderRadius.circular(TochRadius.lg),
+            boxShadow: TochShadows.raised(colors),
           ),
           child: Padding(
-            padding: const EdgeInsets.all(TochSpacing.md),
+            padding: const EdgeInsets.all(18),
             child: Row(
               children: [
                 DecoratedBox(
                   decoration: BoxDecoration(
-                    color: colors.orange.withValues(alpha: .18),
-                    borderRadius: BorderRadius.circular(TochRadius.md),
+                    color: Colors.white.withValues(alpha: .10),
+                    borderRadius: BorderRadius.circular(14),
                   ),
                   child: SizedBox.square(
-                    dimension: 48,
+                    dimension: 44,
                     child: Icon(
                       Icons.auto_awesome_rounded,
                       color: colors.orange,
-                      size: 25,
+                      size: 23,
                     ),
                   ),
                 ),
-                const SizedBox(width: TochSpacing.md),
+                const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -49,24 +52,41 @@ class ProfilePremiumCard extends StatelessWidget {
                         style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(
                               color: Colors.white,
+                              fontSize: 17,
                               fontWeight: FontWeight.w900,
                             ),
                       ),
                       const SizedBox(height: 3),
                       Text(
-                        'Groter bereik, geen reclame',
+                        'Meer ontdekken, eerder opvallen',
                         style: Theme.of(context).textTheme.labelMedium
                             ?.copyWith(
-                              color: Colors.white.withValues(alpha: .62),
+                              color: Colors.white.withValues(alpha: .58),
                               fontWeight: FontWeight.w800,
                             ),
                       ),
                     ],
                   ),
                 ),
-                Icon(
-                  Icons.chevron_right_rounded,
-                  color: Colors.white.withValues(alpha: .54),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: colors.orange,
+                    borderRadius: BorderRadius.circular(TochRadius.pill),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 9,
+                    ),
+                    child: Text(
+                      isPremium ? 'Bekijk' : 'Probeer',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),

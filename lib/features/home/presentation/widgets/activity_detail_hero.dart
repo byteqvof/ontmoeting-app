@@ -1,13 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../app/router/app_router.dart';
 import '../../../../app/theme/toch_theme.dart';
+import '../../../../app/widgets/toch_design_system.dart';
 import '../../domain/entities/home_activity.dart';
-import '../../domain/entities/home_feed_filters.dart';
-import '../../domain/entities/home_location.dart';
-import '../pages/activity_map_page.dart';
-import 'activity_map_canvas.dart';
 
 class ActivityDetailHero extends StatelessWidget {
   const ActivityDetailHero({
@@ -24,260 +20,154 @@ class ActivityDetailHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.toch;
+    final skin = tochCategorySkin('${activity.category.id} ${activity.category.label}');
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colors.cream,
-        borderRadius: const BorderRadius.vertical(
-          bottom: Radius.circular(TochRadius.lg),
-        ),
-        border: Border(bottom: BorderSide(color: colors.line)),
-      ),
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(18, 12, 18, 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+    return SizedBox(
+      height: 280,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          TochPhotoPanel(
+            title: activity.title,
+            categoryLabel: activity.category.label,
+            icon: activity.category.icon,
+            skin: skin,
+            distanceLabel: activity.distanceLabel,
+            live: _isLive(activity),
+            height: 280,
+          ),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black.withValues(alpha: .12),
+                  Colors.black.withValues(alpha: .58),
+                ],
+              ),
+            ),
+          ),
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _HeroIconButton(
-                    icon: Icons.arrow_back_rounded,
-                    onPressed: onBackPressed ?? () => context.pop(),
+                  Row(
+                    children: [
+                      TochRoundButton(
+                        icon: Icons.arrow_back_rounded,
+                        dark: true,
+                        size: 40,
+                        onPressed: onBackPressed ?? () => context.pop(),
+                      ),
+                      const Spacer(),
+                      TochRoundButton(
+                        icon: Icons.ios_share_rounded,
+                        dark: true,
+                        size: 40,
+                        onPressed: () {},
+                      ),
+                      const SizedBox(width: 8),
+                      if (onEditPressed != null) ...[
+                        TochRoundButton(
+                          icon: Icons.edit_rounded,
+                          dark: true,
+                          size: 40,
+                          onPressed: onEditPressed,
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+                      TochRoundButton(
+                        icon: Icons.bookmark_border_rounded,
+                        dark: true,
+                        size: 40,
+                        onPressed: () {},
+                      ),
+                    ],
                   ),
                   const Spacer(),
-                  _HeroIconButton(
-                    icon: Icons.ios_share_rounded,
-                    onPressed: () {},
-                  ),
-                  const SizedBox(width: TochSpacing.xs),
-                  if (onEditPressed != null) ...[
-                    _HeroIconButton(
-                      icon: Icons.edit_rounded,
-                      onPressed: onEditPressed!,
-                    ),
-                    const SizedBox(width: TochSpacing.xs),
-                  ],
-                  _HeroIconButton(
-                    icon: Icons.bookmark_border_rounded,
-                    onPressed: () {},
-                  ),
-                ],
-              ),
-              const SizedBox(height: TochSpacing.lg),
-              Row(
-                children: [
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: activity.category.backgroundColor,
-                      borderRadius: BorderRadius.circular(TochRadius.md),
-                    ),
-                    child: SizedBox.square(
-                      dimension: 44,
-                      child: Icon(
-                        activity.category.icon,
-                        color: activity.category.color,
-                        size: 24,
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      TochPill(
+                        label: activity.category.label,
+                        icon: activity.category.icon,
+                        compact: true,
+                        backgroundColor: skin.color.withValues(alpha: .86),
+                        foregroundColor: Colors.white,
                       ),
-                    ),
+                      if (_isLive(activity))
+                        const TochPill(
+                          label: 'Live',
+                          compact: true,
+                          backgroundColor: Color(0xFFE0913A),
+                          foregroundColor: Colors.white,
+                        ),
+                    ],
                   ),
-                  const SizedBox(width: TochSpacing.sm),
-                  Expanded(
-                    child: Wrap(
-                      spacing: 8,
-                      runSpacing: 6,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        Text(
-                          '${activity.category.label} · ${activity.distanceLabel}',
-                          style: Theme.of(context).textTheme.labelMedium
+                  const SizedBox(height: 8),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          activity.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineSmall
                               ?.copyWith(
-                                color: colors.green700.withValues(alpha: .72),
+                                color: Colors.white,
                                 fontWeight: FontWeight.w900,
+                                height: 1.1,
                               ),
                         ),
-                        if (activity.isFeatured) const _FeaturedBadge(),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(width: 8),
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: .40),
+                          borderRadius: BorderRadius.circular(TochRadius.pill),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          child: Text(
+                            activity.distanceLabel,
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelSmall
+                                ?.copyWith(
+                                  color: colors.card,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-              const SizedBox(height: TochSpacing.sm),
-              Text(
-                activity.title,
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  color: colors.ink,
-                  height: 1.04,
-                ),
-              ),
-              const SizedBox(height: TochSpacing.lg),
-              _MapPreview(activity: activity),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _FeaturedBadge extends StatelessWidget {
-  const _FeaturedBadge();
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.toch;
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF3C4),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0xFFE1B53A)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.star_rounded, size: 12, color: colors.ink),
-            const SizedBox(width: 3),
-            Text(
-              'Uitgelicht',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: colors.ink,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _HeroIconButton extends StatelessWidget {
-  const _HeroIconButton({required this.icon, required this.onPressed});
-
-  final IconData icon;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.toch;
-
-    return IconButton.filled(
-      onPressed: onPressed,
-      style: IconButton.styleFrom(
-        backgroundColor: colors.card,
-        foregroundColor: colors.ink,
-        fixedSize: const Size.square(42),
-      ),
-      icon: Icon(icon, size: 21),
-    );
-  }
-}
-
-class _MapPreview extends StatelessWidget {
-  const _MapPreview({required this.activity});
-
-  final HomeActivity activity;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.toch;
-    final hasCoordinates = activity.latitude != 0 || activity.longitude != 0;
-    final location = HomeLocation(
-      cityName: activity.locationName,
-      latitude: activity.latitude,
-      longitude: activity.longitude,
-    );
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(TochRadius.lg),
-      child: Material(
-        color: const Color(0xFFE7EBE0),
-        child: InkWell(
-          onTap: hasCoordinates
-              ? () => context.push(
-                  AppRoutes.activityMap,
-                  extra: ActivityMapPageArgs(
-                    location: location,
-                    activities: [activity],
-                    filters: const HomeFeedFilters(),
-                  ),
-                )
-              : null,
-          child: SizedBox(
-            height: 152,
-            width: double.infinity,
-            child: Stack(
-              children: [
-                if (hasCoordinates)
-                  Positioned.fill(
-                    child: ActivityMapCanvas(
-                      location: location,
-                      activities: [activity],
-                      interactive: false,
-                    ),
-                  )
-                else
-                  const Positioned.fill(
-                    child: ColoredBox(color: Color(0xFFE7EBE0)),
-                  ),
-                Center(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: colors.card.withValues(alpha: .94),
-                      borderRadius: BorderRadius.circular(TochRadius.pill),
-                      boxShadow: [
-                        BoxShadow(
-                          color: colors.ink.withValues(alpha: .10),
-                          blurRadius: 14,
-                          offset: const Offset(0, 7),
-                        ),
-                      ],
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            hasCoordinates
-                                ? Icons.map_rounded
-                                : Icons.location_off_rounded,
-                            color: colors.green,
-                            size: 16,
-                          ),
-                          const SizedBox(width: 6),
-                          ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 250),
-                            child: Text(
-                              hasCoordinates
-                                  ? activity.meetingPoint
-                                  : 'Locatie nog niet exact',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.labelSmall
-                                  ?.copyWith(
-                                    color: colors.ink,
-                                    fontWeight: FontWeight.w900,
-                                  ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
             ),
           ),
-        ),
+        ],
       ),
     );
   }
+}
+
+bool _isLive(HomeActivity activity) {
+  final start = activity.startsAt;
+  if (start == null || activity.isCompleted) {
+    return false;
+  }
+  final now = DateTime.now();
+  return !start.isAfter(now) && now.difference(start).inHours < 5;
 }

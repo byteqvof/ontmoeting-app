@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:meetings_app/features/home/domain/entities/activity_agenda.dart';
 import 'package:meetings_app/features/home/domain/entities/home_activity.dart';
 import 'package:meetings_app/features/home/domain/entities/home_category.dart';
+import 'package:meetings_app/features/home/domain/entities/home_participant.dart';
 
 void main() {
   test('chat activities combines agenda conversations without duplicates', () {
@@ -52,6 +53,41 @@ void main() {
     expect(agenda.activeJoinedActivities, isEmpty);
     expect(agenda.uniqueCompletedActivities, [completedDuplicate]);
   });
+
+  test(
+    'completed activities prefer copy with feedback participant context',
+    () {
+      const participant = HomeParticipant(
+        id: 'profile-1',
+        displayName: 'Jasper',
+        initials: 'JS',
+        isHost: false,
+        attendanceStatus: 'present',
+        feedbackSubmitted: true,
+      );
+      final sparseCompleted = _activity(
+        'activity-1',
+        title: 'Wandelen',
+        status: 'completed',
+        isJoined: false,
+      );
+      final richJoinedCompleted = _activity(
+        'activity-1',
+        title: 'Wandelen',
+        status: 'completed',
+        isJoined: true,
+        participants: const [participant],
+      );
+
+      final agenda = ActivityAgenda(
+        hostedActivities: const [],
+        joinedActivities: [richJoinedCompleted],
+        completedActivities: [sparseCompleted],
+      );
+
+      expect(agenda.uniqueCompletedActivities, [richJoinedCompleted]);
+    },
+  );
 
   test('chat activities prioritizes unread and recent conversations', () {
     final quiet = _activity(
@@ -121,6 +157,29 @@ void main() {
     expect(updated.joinedActivities.first.chatUnreadCount, 0);
     expect(updated.joinedActivities.last.chatUnreadCount, 2);
   });
+
+  test('updates matching activity in all agenda sections', () {
+    final hosted = _activity('activity-1', title: 'Vissen');
+    final joined = _activity('activity-1', title: 'Vissen');
+    final completed = _activity(
+      'activity-1',
+      title: 'Vissen',
+      status: 'completed',
+    );
+
+    final agenda = ActivityAgenda(
+      hostedActivities: [hosted],
+      joinedActivities: [joined],
+      completedActivities: [completed],
+    );
+
+    final updatedActivity = hosted.copyWith(chatUnreadCount: 3);
+    final updated = agenda.withActivityUpdated(updatedActivity);
+
+    expect(updated.hostedActivities.first.chatUnreadCount, 3);
+    expect(updated.joinedActivities.first.chatUnreadCount, 3);
+    expect(updated.completedActivities.first.chatUnreadCount, 3);
+  });
 }
 
 HomeActivity _activity(
@@ -131,6 +190,7 @@ HomeActivity _activity(
   DateTime? chatLastMessageAt,
   bool isJoined = true,
   String? participationStatus,
+  List<HomeParticipant> participants = const [],
 }) {
   return HomeActivity(
     id: id,
@@ -154,7 +214,7 @@ HomeActivity _activity(
     hostFullName: 'Jasper Scheper',
     hostSubtitle: 'Ter Apel',
     hostScore: 100,
-    participants: const [],
+    participants: participants,
     availableSpots: 4,
     spotsLabel: 'nog 4 plekken',
     status: status,

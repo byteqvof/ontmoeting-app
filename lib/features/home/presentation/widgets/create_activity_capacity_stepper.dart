@@ -14,63 +14,94 @@ class CreateActivityCapacityStepper extends StatelessWidget {
     return BlocBuilder<CreateActivityBloc, CreateActivityState>(
       buildWhen: (previous, current) => previous.capacity != current.capacity,
       builder: (context, state) {
-        return Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'MAX. MENSEN',
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: colors.green700.withValues(alpha: .62),
-                      fontWeight: FontWeight.w900,
-                      fontSize: 11,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'inclusief jezelf',
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: colors.green700.withValues(alpha: .62),
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Row(
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            color: colors.card,
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: TochShadows.card(colors),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+            child: Row(
               children: [
-                _StepperButton(
-                  icon: Icons.remove_rounded,
-                  onPressed: () {
-                    context.read<CreateActivityBloc>().add(
-                      const CreateActivityCapacityDecremented(),
-                    );
-                  },
-                ),
-                SizedBox(
-                  width: 50,
-                  child: Text(
-                    '${state.capacity}',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: colors.ink,
-                      fontWeight: FontWeight.w900,
-                    ),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: colors.green100,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: SizedBox.square(
+                    dimension: 44,
+                    child: Icon(Icons.groups_rounded, color: colors.green),
                   ),
                 ),
-                _StepperButton(
-                  icon: Icons.add_rounded,
-                  onPressed: () {
-                    context.read<CreateActivityBloc>().add(
-                      const CreateActivityCapacityIncremented(),
-                    );
-                  },
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'MAX. MENSEN',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: colors.green700.withValues(alpha: .62),
+                          fontWeight: FontWeight.w900,
+                          fontSize: 11,
+                          letterSpacing: .7,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Ruimte voor ${state.capacity}',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              color: colors.ink,
+                              fontWeight: FontWeight.w900,
+                            ),
+                      ),
+                      Text(
+                        'inclusief jezelf',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: colors.green700.withValues(alpha: .62),
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Row(
+                  children: [
+                    _StepperButton(
+                      icon: Icons.remove_rounded,
+                      onPressed: () {
+                        context.read<CreateActivityBloc>().add(
+                          const CreateActivityCapacityDecremented(),
+                        );
+                      },
+                    ),
+                    SizedBox(
+                      width: 42,
+                      child: Text(
+                        '${state.capacity}',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(
+                              color: colors.ink,
+                              fontWeight: FontWeight.w900,
+                            ),
+                      ),
+                    ),
+                    _StepperButton(
+                      icon: Icons.add_rounded,
+                      onPressed: () {
+                        context.read<CreateActivityBloc>().add(
+                          const CreateActivityCapacityIncremented(),
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
+          ),
         );
       },
     );

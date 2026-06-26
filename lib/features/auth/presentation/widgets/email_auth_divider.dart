@@ -17,8 +17,9 @@ class EmailAuthDivider extends StatelessWidget {
             child: Text(
               'of met e-mail',
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: context.toch.green700,
-                fontWeight: FontWeight.w800,
+                color: context.toch.ink4,
+                fontWeight: FontWeight.w900,
+                letterSpacing: .8,
               ),
             ),
           ),

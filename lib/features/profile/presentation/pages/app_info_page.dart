@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/toch_theme.dart';
+import '../../../../app/widgets/toch_design_system.dart';
 
 class AppInfoPage extends StatelessWidget {
   const AppInfoPage({super.key});
@@ -11,61 +13,74 @@ class AppInfoPage extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: colors.cream,
-      appBar: AppBar(
-        title: const Text('Info over TOCH'),
-        backgroundColor: colors.cream,
-        foregroundColor: colors.ink,
-        elevation: 0,
-      ),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 480),
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(18, 8, 18, 28),
-            children: const [
-              _InfoHero(),
-              SizedBox(height: TochSpacing.md),
-              _InfoTile(
-                icon: Icons.explore_outlined,
-                title: 'Ontdekken',
-                body:
-                    'Je ziet activiteiten in de buurt op basis van locatie, afstand, datum en filters. Je exacte live locatie wordt niet als eventlocatie opgeslagen.',
+          child: Stack(
+            children: [
+              CustomScrollView(
+                slivers: [
+                  SliverToBoxAdapter(child: _StoryHero(colors: colors)),
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(24, 26, 24, 118),
+                    sliver: SliverList.list(
+                      children: const [
+                        TochSectionLabel('Waarom TOCH?'),
+                        SizedBox(height: 12),
+                        _BodyParagraph(
+                          'Veel mensen kennen genoeg mensen, maar missen toch net iemand om iets mee te doen. De stap is vaak te groot, het moment gaat voorbij.',
+                        ),
+                        _BodyParagraph(
+                          'TOCH is anders. Geen matches afwachten en geen groot evenement opzetten. Je kijkt wat er vandaag bij jou in de buurt gebeurt en sluit gewoon aan.',
+                        ),
+                        _QuoteBlock(
+                          quote: 'Contact hoeft niet ingewikkeld te zijn.',
+                          attribution: 'Ons uitgangspunt',
+                        ),
+                        _BodyParagraph(
+                          'We geloven dat de meeste mensen gewoon iets willen doen. Een avondje vissen, een wandeling maken of samen koffie drinken. TOCH maakt die kleine uitnodiging zichtbaar.',
+                        ),
+                        Divider(height: 42),
+                        TochSectionLabel('Hoe het werkt'),
+                        SizedBox(height: 12),
+                        _BodyParagraph(
+                          'Iemand organiseert iets simpels. Jij ziet het. Je meldt je aan. De activiteit begint, jullie ontmoeten elkaar, en daarna verdwijnt de app weer naar de achtergrond.',
+                        ),
+                        _BigQuote(),
+                        _BodyParagraph(
+                          'Geen verplichtingen, geen abonnement nodig om mee te doen, geen data die doorverkocht wordt. Gewoon mensen bij mensen brengen.',
+                        ),
+                        _ClosingCard(),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              _InfoTile(
-                icon: Icons.add_circle_outline_rounded,
-                title: 'Iets organiseren',
-                body:
-                    'Maak alleen aan wat je echt gaat doen. Kies een concrete meetingplek, tijd, groepsgrootte en eventuele doelgroep.',
-              ),
-              _InfoTile(
-                icon: Icons.chat_bubble_outline_rounded,
-                title: 'Chat',
-                body:
-                    'Chat is bedoeld om praktisch af te stemmen. Oude chats van afgelopen activiteiten worden gesloten en daarna opgeschoond.',
-              ),
-              _InfoTile(
-                icon: Icons.verified_user_outlined,
-                title: 'Verificatie',
-                body:
-                    'Telefoon bevestigd beperkt wegwerpaccounts. Identiteit bevestigd betekent alleen dat iemand zijn identiteit heeft geverifieerd.',
-              ),
-              _InfoTile(
-                icon: Icons.tune_rounded,
-                title: 'Filters',
-                body:
-                    'Gebruik afstand en datum voor snelle keuzes. Extra filters helpen als je zoekt op categorie, doelgroep, beschikbaarheid of sortering.',
-              ),
-              _InfoTile(
-                icon: Icons.flag_outlined,
-                title: 'Melden en blokkeren',
-                body:
-                    'Blokkeer iemand als je geen contact wilt. Meld gedrag of accounts die niet kloppen; rapporten zijn alleen voor moderatie zichtbaar.',
-              ),
-              _InfoTile(
-                icon: Icons.notifications_outlined,
-                title: 'Meldingen',
-                body:
-                    'Chatmeldingen gebruiken push als je dit toestaat. Je telefoonnummer, chattekst en exacte GPS gaan niet naar analytics.',
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: SafeArea(
+                  top: false,
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(22, 14, 22, 18),
+                    decoration: BoxDecoration(
+                      color: colors.cream.withValues(alpha: .96),
+                      boxShadow: [
+                        BoxShadow(
+                          color: colors.ink.withValues(alpha: .08),
+                          blurRadius: 24,
+                          offset: const Offset(0, -10),
+                        ),
+                      ],
+                    ),
+                    child: TochPrimaryButton(
+                      label: 'Ik ga toch - ga je mee?',
+                      icon: Icons.arrow_forward_rounded,
+                      onPressed: () => context.pop(),
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
@@ -75,37 +90,103 @@ class AppInfoPage extends StatelessWidget {
   }
 }
 
-class _InfoHero extends StatelessWidget {
-  const _InfoHero();
+class _StoryHero extends StatelessWidget {
+  const _StoryHero({required this.colors});
+
+  final TochTokens colors;
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.toch;
-
-    return DecoratedBox(
+    return Container(
       decoration: BoxDecoration(
         color: colors.green,
-        borderRadius: BorderRadius.circular(TochRadius.lg),
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(34)),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(22, 12, 22, 30),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TochRoundButton(
+                icon: Icons.arrow_back_ios_new_rounded,
+                onPressed: () => context.pop(),
+                dark: true,
+              ),
+              const SizedBox(height: 40),
+              Text(
+                'Ons verhaal',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: colors.orange,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: .9,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Eenzaamheid los\nje niet online op.',
+                style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                  color: Colors.white,
+                  fontSize: 42,
+                  height: 1,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'TOCH is gemaakt omdat contact simpeler moet. Echt contact, offline.',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: Colors.white.withValues(alpha: .74),
+                  fontWeight: FontWeight.w800,
+                  height: 1.45,
+                ),
+              ),
+              const SizedBox(height: 18),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: const [
+                  _StoryChip(icon: Icons.phishing_rounded, label: 'Vissen'),
+                  _StoryChip(
+                    icon: Icons.directions_walk_rounded,
+                    label: 'Wandelen',
+                  ),
+                  _StoryChip(icon: Icons.coffee_rounded, label: 'Koffie'),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StoryChip extends StatelessWidget {
+  const _StoryChip({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: .12),
+        borderRadius: BorderRadius.circular(TochRadius.pill),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(TochSpacing.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
+            Icon(icon, color: Colors.white, size: 15),
+            const SizedBox(width: 6),
             Text(
-              'TOCH is voor laagdrempelig afspreken in de buurt.',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: colors.cream,
+              label,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: Colors.white,
                 fontWeight: FontWeight.w900,
-              ),
-            ),
-            const SizedBox(height: TochSpacing.sm),
-            Text(
-              'Geen groot evenement, geen druk. Je deelt wat je toch al gaat doen en anderen kunnen aansluiten.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: colors.cream.withValues(alpha: .88),
-                fontWeight: FontWeight.w700,
-                height: 1.4,
               ),
             ),
           ],
@@ -115,69 +196,116 @@ class _InfoHero extends StatelessWidget {
   }
 }
 
-class _InfoTile extends StatelessWidget {
-  const _InfoTile({
-    required this.icon,
-    required this.title,
-    required this.body,
-  });
+class _BodyParagraph extends StatelessWidget {
+  const _BodyParagraph(this.text);
 
-  final IconData icon;
-  final String title;
-  final String body;
+  final String text;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.toch;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: TochSpacing.sm),
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Text(
+        text,
+        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+          color: colors.ink2,
+          fontWeight: FontWeight.w700,
+          height: 1.52,
+        ),
+      ),
+    );
+  }
+}
+
+class _QuoteBlock extends StatelessWidget {
+  const _QuoteBlock({required this.quote, required this.attribution});
+
+  final String quote;
+  final String attribution;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.toch;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: colors.card,
-          borderRadius: BorderRadius.circular(TochRadius.lg),
-          border: Border.all(color: colors.line),
+          color: colors.greenPressed,
+          borderRadius: BorderRadius.circular(26),
         ),
         child: Padding(
-          padding: const EdgeInsets.all(TochSpacing.md),
-          child: Row(
+          padding: const EdgeInsets.all(22),
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  color: colors.green100,
-                  borderRadius: BorderRadius.circular(TochRadius.md),
-                ),
-                child: SizedBox.square(
-                  dimension: 42,
-                  child: Icon(icon, color: colors.green, size: 22),
+              Text(
+                '"$quote"',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  height: 1.1,
                 ),
               ),
-              const SizedBox(width: TochSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: colors.ink,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      body,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: colors.green700.withValues(alpha: .72),
-                        height: 1.35,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
+              const SizedBox(height: 10),
+              Text(
+                '- $attribution',
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: colors.orange,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BigQuote extends StatelessWidget {
+  const _BigQuote();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.toch;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Text(
+        '"Ik ga toch.\nGa je mee?"',
+        style: Theme.of(context).textTheme.displayLarge?.copyWith(
+          color: colors.green,
+          fontSize: 36,
+          height: 1.03,
+        ),
+      ),
+    );
+  }
+}
+
+class _ClosingCard extends StatelessWidget {
+  const _ClosingCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.toch;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.green100,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Text(
+          'TOCH is gebouwd vanuit Maastricht, voor iedereen die gewoon wil doen. Elke dag zijn er mensen vlakbij die hetzelfde voelen. Sluit aan.',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: colors.green,
+            fontWeight: FontWeight.w900,
+            height: 1.35,
           ),
         ),
       ),

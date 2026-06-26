@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dartz/dartz.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -37,10 +39,77 @@ void main() {
     expect(repository.lastForceRefresh, isFalse);
     await bloc.close();
   });
+
+  test(
+    'ignores small watcher location changes without reloading feed',
+    () async {
+      final repository = _HomeRepositoryStub();
+      final bloc = HomeBloc(
+        GetHomeFeed(repository),
+        GetCurrentLocation(repository),
+        SetActivityParticipation(repository),
+        WatchCurrentLocation(repository),
+      );
+
+      bloc.add(const HomeStarted());
+      await expectLater(bloc.stream, emitsThrough(isA<HomeLoaded>()));
+
+      repository.emitWatchedLocation(
+        const HomeLocation(
+          cityName: 'Winschoten',
+          latitude: 53.1442,
+          longitude: 7.0342,
+        ),
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      expect(repository.feedLoadCount, 1);
+      await bloc.close();
+    },
+  );
+
+  test(
+    'large watcher location changes reload feed without hard loading state',
+    () async {
+      final repository = _HomeRepositoryStub();
+      final bloc = HomeBloc(
+        GetHomeFeed(repository),
+        GetCurrentLocation(repository),
+        SetActivityParticipation(repository),
+        WatchCurrentLocation(repository),
+      );
+
+      bloc.add(const HomeStarted());
+      await expectLater(bloc.stream, emitsThrough(isA<HomeLoaded>()));
+
+      final states = <HomeState>[];
+      final subscription = bloc.stream.listen(states.add);
+      repository.emitWatchedLocation(
+        const HomeLocation(
+          cityName: 'Groningen',
+          latitude: 53.219,
+          longitude: 6.566,
+        ),
+      );
+      await expectLater(bloc.stream, emitsThrough(isA<HomeLoaded>()));
+
+      expect(repository.feedLoadCount, 2);
+      expect(states.whereType<HomeLoadingFeed>(), isEmpty);
+      await subscription.cancel();
+      await bloc.close();
+    },
+  );
 }
 
 class _HomeRepositoryStub implements HomeRepository {
+  final _locationController =
+      StreamController<Either<Failure, HomeLocation>>.broadcast();
   bool? lastForceRefresh;
+  int feedLoadCount = 0;
+
+  void emitWatchedLocation(HomeLocation location) {
+    _locationController.add(right(location));
+  }
 
   @override
   Future<Either<Failure, HomeLocation>> getCurrentLocation({
@@ -56,6 +125,7 @@ class _HomeRepositoryStub implements HomeRepository {
     required HomeFeedFilters filters,
     bool forceRefresh = false,
   }) async {
+    feedLoadCount += 1;
     return right(
       HomeFeed(
         locationName: location.cityName,
@@ -71,7 +141,7 @@ class _HomeRepositoryStub implements HomeRepository {
 
   @override
   Stream<Either<Failure, HomeLocation>> watchCurrentLocation() {
-    return const Stream.empty();
+    return _locationController.stream;
   }
 
   @override

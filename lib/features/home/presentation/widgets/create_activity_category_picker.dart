@@ -16,12 +16,13 @@ class CreateActivityCategoryPicker extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'WAT GA JE DOEN?',
+              'KIES CATEGORIE',
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: context.toch.green700.withValues(alpha: .62),
-                fontWeight: FontWeight.w900,
-                fontSize: 11,
-              ),
+                    color: context.toch.ink4,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 11.5,
+                    letterSpacing: .8,
+                  ),
             ),
             const SizedBox(height: TochSpacing.sm),
             SingleChildScrollView(
@@ -67,13 +68,13 @@ class _CategoryOption extends StatelessWidget {
     final colors = context.toch;
 
     return SizedBox(
-      width: 68,
+      width: 76,
       child: TextButton(
         onPressed: onPressed,
         style: TextButton.styleFrom(
           foregroundColor: colors.ink,
           padding: EdgeInsets.zero,
-          minimumSize: const Size(68, 88),
+          minimumSize: const Size(76, 94),
           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(TochRadius.lg),
@@ -99,7 +100,7 @@ class _CategoryOption extends StatelessWidget {
                     : null,
               ),
               child: SizedBox.square(
-                dimension: 60,
+                dimension: 64,
                 child: Icon(category.icon, color: category.color, size: 29),
               ),
             ),

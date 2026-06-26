@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/toch_theme.dart';
@@ -14,31 +16,39 @@ class OnboardingHero extends StatelessWidget {
   Widget build(BuildContext context) {
     final data = switch (kind) {
       OnboardingHeroKind.activity => const _HeroData(
-        icon: Icons.event_available_rounded,
-        title: 'Avondvissen aan de Maas',
-        subtitle: 'Vissen · 3,2 km',
-        supporting: 'jij + Rick · Je gaat',
+        icon: Icons.phishing_rounded,
+        label: 'Vissen',
+        title: 'Avondvissen\naan de Maas',
+        badge: 'Je gaat mee',
+        accent: Color(0xFF347E70),
       ),
       OnboardingHeroKind.nearby => const _HeroData(
         icon: Icons.map_rounded,
-        title: 'Activiteiten vlakbij',
-        subtitle: 'Koffie · wandelen · gaming',
-        supporting: '5 ontmoetingen rond Maastricht',
+        label: 'Vlakbij',
+        title: 'Koffie in\nhet centrum',
+        badge: '3 plekken vrij',
+        accent: Color(0xFFE0913A),
       ),
       OnboardingHeroKind.trust => const _HeroData(
         icon: Icons.verified_user_rounded,
-        title: 'Echte mensen',
-        subtitle: 'Profielen geverifieerd',
-        supporting: '96 opkomstscore',
+        label: 'Profiel',
+        title: 'Telefoon\nbevestigd',
+        badge: 'Echte accounts',
+        accent: Color(0xFF7E5C9E),
       ),
     };
 
-    return _PlaceholderImage(data: data, compact: compact);
+    return Center(
+      child: Transform.rotate(
+        angle: kind == OnboardingHeroKind.activity ? -.055 : .035,
+        child: _FloatingActivityCard(data: data, compact: compact),
+      ),
+    );
   }
 }
 
-class _PlaceholderImage extends StatelessWidget {
-  const _PlaceholderImage({required this.data, required this.compact});
+class _FloatingActivityCard extends StatelessWidget {
+  const _FloatingActivityCard({required this.data, required this.compact});
 
   final _HeroData data;
   final bool compact;
@@ -46,139 +56,150 @@ class _PlaceholderImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.toch;
+    final width = compact ? 238.0 : 274.0;
 
-    return SizedBox.expand(
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: colors.green100,
-          borderRadius: BorderRadius.circular(TochRadius.lg),
-          border: Border.all(color: colors.line),
-        ),
-        child: Padding(
-          padding: EdgeInsets.all(compact ? TochSpacing.md : TochSpacing.lg),
-          child: Stack(
-            children: [
-              Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: colors.cream.withValues(alpha: .55),
-                    borderRadius: BorderRadius.circular(TochRadius.md),
-                  ),
-                  child: CustomPaint(
-                    painter: _PlaceholderPatternPainter(colors),
-                  ),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.card,
+        borderRadius: BorderRadius.circular(32),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: .24),
+            blurRadius: 34,
+            offset: const Offset(0, 22),
+          ),
+        ],
+      ),
+      child: SizedBox(
+        width: width,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              height: compact ? 148 : 178,
+              decoration: BoxDecoration(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(32),
+                ),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    data.accent.withValues(alpha: .92),
+                    colors.greenPressed,
+                  ],
                 ),
               ),
-              Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 300),
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: colors.card,
-                      borderRadius: BorderRadius.circular(TochRadius.lg),
-                      border: Border.all(color: colors.line),
-                      boxShadow: [
-                        BoxShadow(
-                          color: colors.green.withValues(alpha: .14),
-                          blurRadius: 28,
-                          offset: const Offset(0, 16),
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: CustomPaint(
+                      painter: _HeroTexturePainter(data.accent),
+                    ),
+                  ),
+                  Positioned(
+                    left: 20,
+                    bottom: 18,
+                    right: 18,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: .2),
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: SizedBox.square(
+                            dimension: 48,
+                            child: Icon(
+                              data.icon,
+                              color: Colors.white,
+                              size: 27,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                data.label,
+                                style: Theme.of(context).textTheme.labelSmall
+                                    ?.copyWith(
+                                      color: Colors.white.withValues(
+                                        alpha: .72,
+                                      ),
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                              ),
+                              Text(
+                                data.title,
+                                style: Theme.of(context).textTheme.titleLarge
+                                    ?.copyWith(
+                                      color: Colors.white,
+                                      height: 1,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
-                    child: Padding(
-                      padding: EdgeInsets.all(
-                        compact ? TochSpacing.md : TochSpacing.lg,
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(18),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: colors.green,
+                  borderRadius: BorderRadius.circular(TochRadius.pill),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 13,
+                    vertical: 10,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 22,
+                        height: 22,
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.check_rounded,
+                          color: colors.green,
+                          size: 16,
+                        ),
                       ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          DecoratedBox(
-                            decoration: BoxDecoration(
-                              color: colors.orange.withValues(alpha: .14),
-                              borderRadius: BorderRadius.circular(
-                                TochRadius.md,
+                      const SizedBox(width: 9),
+                      Expanded(
+                        child: Text(
+                          data.badge,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.labelMedium
+                              ?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
                               ),
-                            ),
-                            child: SizedBox.square(
-                              dimension: compact ? 54 : 64,
-                              child: Icon(
-                                data.icon,
-                                color: colors.orange,
-                                size: compact ? 30 : 34,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: TochSpacing.md),
-                          Text(
-                            data.subtitle,
-                            textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.labelSmall
-                                ?.copyWith(
-                                  color: colors.green700,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            data.title,
-                            textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.titleMedium
-                                ?.copyWith(color: colors.green),
-                          ),
-                          const SizedBox(height: TochSpacing.md),
-                          DecoratedBox(
-                            decoration: BoxDecoration(
-                              color: colors.green,
-                              borderRadius: BorderRadius.circular(
-                                TochRadius.pill,
-                              ),
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 9,
-                              ),
-                              child: Text(
-                                data.supporting,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: colors.cream,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
               ),
-              Positioned(
-                right: 18,
-                top: 18,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: colors.card.withValues(alpha: .9),
-                    borderRadius: BorderRadius.circular(TochRadius.pill),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    child: Text(
-                      'placeholder',
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: colors.green700,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -188,50 +209,47 @@ class _PlaceholderImage extends StatelessWidget {
 class _HeroData {
   const _HeroData({
     required this.icon,
+    required this.label,
     required this.title,
-    required this.subtitle,
-    required this.supporting,
+    required this.badge,
+    required this.accent,
   });
 
   final IconData icon;
+  final String label;
   final String title;
-  final String subtitle;
-  final String supporting;
+  final String badge;
+  final Color accent;
 }
 
-class _PlaceholderPatternPainter extends CustomPainter {
-  const _PlaceholderPatternPainter(this.colors);
+class _HeroTexturePainter extends CustomPainter {
+  const _HeroTexturePainter(this.accent);
 
-  final TochTokens colors;
+  final Color accent;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final linePaint = Paint()
-      ..color = colors.green200
-      ..strokeWidth = 2
+    final paint = Paint()
+      ..color = Colors.white.withValues(alpha: .075)
       ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-    final dotPaint = Paint()..color = colors.orange.withValues(alpha: .72);
+      ..strokeWidth = 1.4;
 
-    for (var x = -size.height; x < size.width; x += 34) {
-      canvas.drawLine(
-        Offset(x, size.height),
-        Offset(x + size.height, 0),
-        linePaint,
-      );
+    for (var i = 0; i < 8; i++) {
+      final y = size.height * (.16 + i * .11);
+      final path = Path()..moveTo(-20, y);
+      for (var x = -20.0; x <= size.width + 20; x += 42) {
+        path.quadraticBezierTo(x + 16, y + math.sin(i + x) * 9, x + 42, y);
+      }
+      canvas.drawPath(path, paint);
     }
 
-    for (final point in [
-      Offset(size.width * .16, size.height * .24),
-      Offset(size.width * .82, size.height * .28),
-      Offset(size.width * .24, size.height * .78),
-      Offset(size.width * .76, size.height * .72),
-    ]) {
-      canvas.drawCircle(point, 6, dotPaint);
-      canvas.drawCircle(point, 2.4, Paint()..color = colors.cream);
-    }
+    canvas.drawCircle(
+      Offset(size.width * .78, size.height * .16),
+      40,
+      Paint()..color = accent.withValues(alpha: .28),
+    );
   }
 
   @override
-  bool shouldRepaint(covariant _PlaceholderPatternPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _HeroTexturePainter oldDelegate) => false;
 }

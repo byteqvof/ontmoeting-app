@@ -4,8 +4,11 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_router.dart';
 import '../../../../app/theme/toch_theme.dart';
+import '../../../../app/widgets/pip_mascot.dart';
+import '../../../../app/widgets/toch_design_system.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../../../core/usecases/usecase.dart';
+import '../../../../core/widgets/toch_snack_bar.dart';
 import '../../domain/entities/home_activity.dart';
 import '../../domain/entities/home_category.dart';
 import '../../domain/entities/home_location.dart';
@@ -14,12 +17,11 @@ import '../bloc/home_bloc.dart';
 import 'create_activity_page.dart';
 import '../widgets/home_activity_card.dart';
 import '../widgets/home_bottom_nav.dart';
-import '../widgets/home_discovery_controls.dart';
-import '../widgets/home_distance_filter.dart';
 import '../widgets/home_feed_summary.dart';
 import '../widgets/home_filter_sheet.dart';
 import '../widgets/home_header.dart';
-import '../widgets/home_map_preview.dart';
+import '../widgets/home_distance_filter.dart';
+import '../widgets/home_quick_filter_rail.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -69,9 +71,7 @@ class _HomeView extends StatelessWidget {
               }
               final error = state.participationError;
               if (error != null) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text(error)));
+                showTochSnackBar(context, error, type: TochSnackBarType.error);
                 return;
               }
 
@@ -174,7 +174,7 @@ class _HomeFeed extends StatelessWidget {
                   },
                   onFilterTap: () => _showFilters(context),
                 ),
-                HomeDiscoveryControls(
+                HomeQuickFilterRail(
                   timeFilters: state.feed.timeFilters,
                   selectedTimeFilter: state.selectedTimeFilter,
                   onTimeSelected: (filter) {
@@ -182,6 +182,21 @@ class _HomeFeed extends StatelessWidget {
                       HomeTimeFilterSelected(filter),
                     );
                   },
+                  distances: state.feed.distanceFilters,
+                  selectedDistanceKm: state.selectedDistanceKm,
+                  onDistanceSelected: (distanceKm) {
+                    context.read<HomeBloc>().add(
+                      HomeDistanceSelected(distanceKm),
+                    );
+                  },
+                  categories: state.feed.categories,
+                  selectedCategoryId: state.selectedCategoryId,
+                  onCategorySelected: (categoryId) {
+                    context.read<HomeBloc>().add(
+                      HomeCategorySelected(categoryId),
+                    );
+                  },
+                  onAdvancedFilters: () => _showFilters(context),
                 ),
                 HomeDistanceFilter(
                   distances: state.feed.distanceFilters,
@@ -191,15 +206,6 @@ class _HomeFeed extends StatelessWidget {
                       HomeDistanceSelected(distanceKm),
                     );
                   },
-                ),
-                HomeFilterButton(
-                  hasActiveFilters: state.filters.hasAdvancedFilters,
-                  onPressed: () => _showFilters(context),
-                ),
-                HomeMapPreview(
-                  location: state.location,
-                  activities: activities,
-                  filters: state.filters,
                 ),
                 const _HostedActivitiesOverview(),
                 HomeFeedSummary(activityCount: activities.length),
@@ -329,7 +335,7 @@ class _HostedActivitiesOverviewState extends State<_HostedActivitiesOverview> {
     return _HostedActivitiesSection(
       activities: _hostedActivities,
       onActivityPressed: _openActivity,
-      onAgendaPressed: () => context.push(AppRoutes.activityAgenda),
+      onAgendaPressed: () => context.go(AppRoutes.activityAgenda),
     );
   }
 }
@@ -365,54 +371,41 @@ class _HostedActivitiesSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final visibleActivities = activities.take(2).toList();
-    final remainingCount = activities.length - visibleActivities.length;
+    final visibleActivity = activities.first;
+    final remainingCount = activities.length - 1;
     final colors = context.toch;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 6, 20, 12),
+      padding: const EdgeInsets.fromLTRB(20, 6, 20, 6),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Expanded(
-                child: Text(
-                  'Jij organiseert',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: colors.ink,
-                    fontWeight: FontWeight.w900,
-                  ),
+              Icon(Icons.circle, size: 7, color: colors.green),
+              const SizedBox(width: 8),
+              Text(
+                'Jij organiseert',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: colors.green,
+                  fontWeight: FontWeight.w900,
                 ),
-              ),
-              TextButton(
-                onPressed: onAgendaPressed,
-                style: TextButton.styleFrom(
-                  foregroundColor: colors.green,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  minimumSize: const Size(0, 36),
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                child: const Text('Agenda'),
               ),
             ],
           ),
           const SizedBox(height: TochSpacing.xs),
-          for (final activity in visibleActivities)
-            Padding(
-              padding: const EdgeInsets.only(bottom: TochSpacing.xs),
-              child: _HostedActivityTile(
-                activity: activity,
-                onPressed: () => onActivityPressed(activity),
-              ),
-            ),
+          _HostedActivityTileV2(
+            activity: visibleActivity,
+            onPressed: () => onActivityPressed(visibleActivity),
+            onAgendaPressed: onAgendaPressed,
+          ),
           if (remainingCount > 0)
             Padding(
-              padding: const EdgeInsets.only(top: 2),
+              padding: const EdgeInsets.only(top: 8, left: 2),
               child: Text(
                 '+$remainingCount meer in je agenda',
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: colors.green700.withValues(alpha: .72),
+                  color: colors.ink3,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -423,6 +416,99 @@ class _HostedActivitiesSection extends StatelessWidget {
   }
 }
 
+class _HostedActivityTileV2 extends StatelessWidget {
+  const _HostedActivityTileV2({
+    required this.activity,
+    required this.onPressed,
+    required this.onAgendaPressed,
+  });
+
+  final HomeActivity activity;
+  final VoidCallback onPressed;
+  final VoidCallback onAgendaPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.toch;
+    final skin = tochCategorySkin(activity.category.label);
+
+    return Material(
+      color: colors.green100,
+      borderRadius: BorderRadius.circular(TochRadius.md),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onPressed,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: skin.color,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: SizedBox.square(
+                  dimension: 40,
+                  child: Icon(
+                    activity.category.icon,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+              ),
+              const SizedBox(width: TochSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      activity.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: colors.green,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${activity.dateLabel} - ${activity.timeLabel} - ${activity.participantCount} aanmeldingen',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: colors.verified,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: TochSpacing.xs),
+              TextButton(
+                onPressed: onAgendaPressed,
+                style: TextButton.styleFrom(
+                  backgroundColor: colors.green,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(0, 30),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  shape: const StadiumBorder(),
+                  textStyle: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 12,
+                  ),
+                ),
+                child: const Text('Beheer'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ignore: unused_element
 class _HostedActivityTile extends StatelessWidget {
   const _HostedActivityTile({required this.activity, required this.onPressed});
 
@@ -594,20 +680,7 @@ class _LocationBlocked extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: colors.green100,
-                      borderRadius: BorderRadius.circular(TochRadius.lg),
-                    ),
-                    child: SizedBox.square(
-                      dimension: 64,
-                      child: Icon(
-                        Icons.location_off_rounded,
-                        color: colors.green,
-                        size: 34,
-                      ),
-                    ),
-                  ),
+                  const PipMascot(expression: PipExpression.wait, size: 116),
                   const SizedBox(height: TochSpacing.lg),
                   Text(
                     'Locatie is nodig',
@@ -650,25 +723,45 @@ class _HomeError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.toch;
+
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(TochSpacing.lg),
         child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.error_outline_rounded,
-                color: context.toch.orange,
-                size: 42,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: colors.card,
+              borderRadius: BorderRadius.circular(TochRadius.xl),
+              border: Border.all(color: colors.line),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(TochSpacing.xl),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const PipMascot(
+                    expression: PipExpression.surprise,
+                    size: 108,
+                  ),
+                  const SizedBox(height: TochSpacing.md),
+                  Text(
+                    'Even opnieuw proberen',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      color: colors.green,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: TochSpacing.sm),
+                  Text(
+                    message,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+                ],
               ),
-              const SizedBox(height: TochSpacing.md),
-              Text(
-                message,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyLarge,
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -690,12 +783,9 @@ class _EmptyActivities extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [colors.green, const Color(0xFF163D2C)],
-          ),
-          borderRadius: BorderRadius.circular(22),
+          color: colors.card,
+          borderRadius: BorderRadius.circular(TochRadius.xl),
+          border: Border.all(color: colors.line),
           boxShadow: [
             BoxShadow(
               color: colors.ink.withValues(alpha: .10),
@@ -708,19 +798,13 @@ class _EmptyActivities extends StatelessWidget {
           padding: const EdgeInsets.all(24),
           child: Column(
             children: [
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  color: colors.orange,
-                  shape: BoxShape.circle,
-                ),
-                child: const SizedBox.square(dimension: 14),
-              ),
+              const PipMascot(expression: PipExpression.thinking, size: 118),
               const SizedBox(height: TochSpacing.md),
               Text(
                 'Rustig in de buurt?',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Colors.white,
+                  color: colors.green,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -729,7 +813,7 @@ class _EmptyActivities extends StatelessWidget {
                 'Soms gebeurt er nog niet veel vlakbij. Plaats zelf iets - koffie, wandelen of iets kleins. Grote kans dat iemand toch meegaat.',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.white.withValues(alpha: .82),
+                  color: colors.green700.withValues(alpha: .84),
                   height: 1.45,
                   fontWeight: FontWeight.w600,
                 ),
@@ -749,7 +833,7 @@ class _EmptyActivities extends StatelessWidget {
                       },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: colors.orange,
-                  foregroundColor: const Color(0xFF163D2C),
+                  foregroundColor: colors.ink,
                   textStyle: const TextStyle(
                     fontWeight: FontWeight.w900,
                     fontSize: 14,

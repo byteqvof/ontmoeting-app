@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_router.dart';
 import '../../../../app/theme/toch_theme.dart';
+import '../../../../app/widgets/toch_mark.dart';
 import '../../../../app/widgets/toch_wordmark.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../../../core/utils/app_preferences.dart';
@@ -46,7 +47,7 @@ class _SplashPageState extends State<SplashPage> {
     final colors = context.toch;
 
     return Scaffold(
-      backgroundColor: colors.green,
+      backgroundColor: colors.greenPressed,
       body: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: _continue,
@@ -56,11 +57,77 @@ class _SplashPageState extends State<SplashPage> {
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final fontSize = (constraints.maxWidth * .23).clamp(
-                  72.0,
-                  118.0,
+                  78.0,
+                  112.0,
                 );
-                return Center(
-                  child: TochWordmark(fontSize: fontSize, onDark: true),
+                return Stack(
+                  children: [
+                    Positioned(
+                      top: constraints.maxHeight * .24,
+                      left: (constraints.maxWidth - 320) / 2,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: RadialGradient(
+                            colors: [
+                              colors.green100.withValues(alpha: .18),
+                              Colors.transparent,
+                            ],
+                          ),
+                        ),
+                        child: const SizedBox.square(dimension: 320),
+                      ),
+                    ),
+                    Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          TochMark(
+                            size: 78,
+                            backgroundColor: colors.greenPressed,
+                          ),
+                          const SizedBox(height: TochSpacing.lg),
+                          TochWordmark(fontSize: fontSize, onDark: true),
+                        ],
+                      ),
+                    ),
+                    Positioned(
+                      left: 32,
+                      right: 32,
+                      bottom: 52,
+                      child: Column(
+                        children: [
+                          Text(
+                            'Ik ga toch.',
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Ga je mee?',
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(
+                                  color: Colors.white.withValues(alpha: .72),
+                                  fontWeight: FontWeight.w800,
+                                ),
+                          ),
+                          const SizedBox(height: TochSpacing.md),
+                          Text(
+                            'TIK OM TE STARTEN',
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(
+                                  color: Colors.white.withValues(alpha: .42),
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 1.1,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 );
               },
             ),

@@ -88,9 +88,36 @@ class _ProfileGateLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.toch;
+
     return Scaffold(
-      backgroundColor: context.toch.cream,
-      body: Center(child: CircularProgressIndicator(color: context.toch.green)),
+      backgroundColor: colors.cream,
+      body: Center(
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: colors.card,
+            borderRadius: BorderRadius.circular(26),
+            boxShadow: TochShadows.card(colors),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(22),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(color: colors.green),
+                const SizedBox(height: 14),
+                Text(
+                  'Profiel controleren',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: colors.ink,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -107,28 +134,37 @@ class _ProfileGateError extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: colors.cream,
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.all(TochSpacing.xl),
+              padding: const EdgeInsets.all(24),
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: colors.card,
-                  borderRadius: BorderRadius.circular(TochRadius.lg),
-                  border: Border.all(color: colors.line),
+                  borderRadius: BorderRadius.circular(30),
+                  boxShadow: TochShadows.raised(colors),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.all(TochSpacing.lg),
+                  padding: const EdgeInsets.all(24),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(
-                        Icons.account_circle_outlined,
-                        color: colors.green,
-                        size: 44,
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: colors.green100,
+                          borderRadius: BorderRadius.circular(22),
+                        ),
+                        child: SizedBox.square(
+                          dimension: 64,
+                          child: Icon(
+                            Icons.account_circle_outlined,
+                            color: colors.green,
+                            size: 34,
+                          ),
+                        ),
                       ),
                       const SizedBox(height: TochSpacing.md),
                       Text(
@@ -143,11 +179,16 @@ class _ProfileGateError extends StatelessWidget {
                       Text(
                         message ??
                             'We kunnen nu niet controleren of je profiel compleet is.',
-                        style: Theme.of(context).textTheme.bodyMedium,
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: colors.ink3,
+                          fontWeight: FontWeight.w700,
+                          height: 1.35,
+                        ),
                       ),
                       const SizedBox(height: TochSpacing.lg),
                       SizedBox(
                         width: double.infinity,
+                        height: 58,
                         child: ElevatedButton.icon(
                           onPressed: onRetry,
                           icon: const Icon(Icons.refresh_rounded),

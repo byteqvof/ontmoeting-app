@@ -7,9 +7,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_router.dart';
 import '../../../../app/theme/toch_theme.dart';
+import '../../../../app/widgets/pip_mascot.dart';
+import '../../../../app/widgets/toch_design_system.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../../../core/services/analytics_service.dart';
 import '../../../../core/utils/app_logger.dart';
+import '../../../../core/widgets/toch_snack_bar.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../domain/entities/activity_chat_message.dart';
 import '../../domain/entities/home_activity.dart';
@@ -18,6 +21,7 @@ import '../../domain/usecases/mark_activity_chat_read.dart';
 import '../../domain/usecases/send_activity_chat_message.dart';
 import '../controllers/activity_chat_notice_controller.dart';
 import '../controllers/activity_chat_realtime_controller.dart';
+import '../widgets/activity_status_labels.dart';
 
 class ActivityChatPage extends StatefulWidget {
   const ActivityChatPage({
@@ -232,9 +236,11 @@ class _ActivityChatPageState extends State<ActivityChatPage>
           }
         });
         AnalyticsService.instance.track('message_send_failed');
-        ScaffoldMessenger.of(
+        showTochSnackBar(
           context,
-        ).showSnackBar(SnackBar(content: Text(failure.message)));
+          failure.message,
+          type: TochSnackBarType.error,
+        );
       },
       (message) {
         _messageController.clear();
@@ -349,6 +355,10 @@ class _ActivityChatPageState extends State<ActivityChatPage>
                     onBackPressed: () => _goBack(context),
                     onMembersPressed: _openMembers,
                   ),
+                  _ChatActivitySummary(
+                    activity: _activity,
+                    onPressed: _openActivityDetail,
+                  ),
                   Expanded(
                     child: _ChatBody(
                       messages: _messages,
@@ -362,6 +372,7 @@ class _ActivityChatPageState extends State<ActivityChatPage>
                     ),
                   ),
                   _MessageComposer(
+                    activity: _activity,
                     controller: _messageController,
                     isSending: _isSending,
                     canSend: _canSendMessages,
@@ -400,6 +411,17 @@ class _ActivityChatPageState extends State<ActivityChatPage>
 
     _applyActivityUpdate(updatedActivity);
     await _loadMessages(showLoading: false);
+  }
+
+  Future<void> _openActivityDetail() async {
+    final updatedActivity = await context.push<HomeActivity>(
+      AppRoutes.activityDetailPath(_activity.id),
+      extra: _activity,
+    );
+    if (!mounted || updatedActivity == null) {
+      return;
+    }
+    _applyActivityUpdate(updatedActivity);
   }
 }
 
@@ -489,37 +511,20 @@ class _ChatHeader extends StatelessWidget {
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: colors.card,
+        color: colors.cream,
         border: Border(bottom: BorderSide(color: colors.line)),
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(10, 8, 16, 12),
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            IconButton(
+            TochRoundButton(
+              icon: Icons.arrow_back_ios_new_rounded,
               onPressed: onBackPressed,
-              style: IconButton.styleFrom(
-                backgroundColor: colors.cream,
-                foregroundColor: colors.ink,
-              ),
-              icon: const Icon(Icons.arrow_back_rounded),
+              size: 38,
             ),
-            const SizedBox(width: TochSpacing.xs),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                color: activity.category.backgroundColor,
-                borderRadius: BorderRadius.circular(TochRadius.md),
-              ),
-              child: SizedBox.square(
-                dimension: 42,
-                child: Icon(
-                  activity.category.icon,
-                  color: activity.category.color,
-                  size: 22,
-                ),
-              ),
-            ),
-            const SizedBox(width: TochSpacing.sm),
+            const SizedBox(width: 10),
             Expanded(
               child: Material(
                 color: Colors.transparent,
@@ -527,49 +532,43 @@ class _ChatHeader extends StatelessWidget {
                   onTap: onMembersPressed,
                   borderRadius: BorderRadius.circular(TochRadius.md),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 4,
-                      vertical: 5,
-                    ),
-                    child: Row(
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                activity.title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context).textTheme.titleMedium
-                                    ?.copyWith(
-                                      color: colors.ink,
-                                      fontWeight: FontWeight.w900,
-                                    ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                _chatHeaderSubtitle(
-                                  activity,
-                                  currentUserId: currentUserId,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context).textTheme.labelSmall
-                                    ?.copyWith(
-                                      color: colors.green700.withValues(
-                                        alpha: .72,
-                                      ),
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                              ),
-                            ],
-                          ),
+                        TochPill(
+                          label: activity.category.label,
+                          icon: activity.category.icon,
+                          compact: true,
+                          backgroundColor: activity.category.backgroundColor,
+                          foregroundColor: activity.category.color,
                         ),
-                        const SizedBox(width: 4),
-                        Icon(
-                          Icons.chevron_right_rounded,
-                          color: colors.green700.withValues(alpha: .45),
+                        const SizedBox(height: 5),
+                        Text(
+                          activity.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                color: colors.ink,
+                                fontSize: 17,
+                                fontWeight: FontWeight.w900,
+                                height: 1.15,
+                              ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _chatHeaderSubtitle(
+                            activity,
+                            currentUserId: currentUserId,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(
+                                color: colors.ink3,
+                                fontWeight: FontWeight.w800,
+                              ),
                         ),
                       ],
                     ),
@@ -577,7 +576,109 @@ class _ChatHeader extends StatelessWidget {
                 ),
               ),
             ),
+            IconButton(
+              tooltip: 'Deelnemers',
+              onPressed: onMembersPressed,
+              style: IconButton.styleFrom(
+                backgroundColor: colors.card,
+                foregroundColor: colors.ink2,
+                fixedSize: const Size.square(38),
+              ),
+              icon: const Icon(Icons.group_rounded, size: 20),
+            ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ChatActivitySummary extends StatelessWidget {
+  const _ChatActivitySummary({required this.activity, required this.onPressed});
+
+  final HomeActivity activity;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.toch;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: colors.card,
+          borderRadius: BorderRadius.circular(TochRadius.md),
+          boxShadow: TochShadows.card(colors),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: activity.category.backgroundColor,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: SizedBox.square(
+                  dimension: 36,
+                  child: Icon(
+                    Icons.calendar_today_rounded,
+                    color: activity.category.color,
+                    size: 18,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      [
+                        if (activity.dateLabel.isNotEmpty) activity.dateLabel,
+                        if (activity.timeLabel.isNotEmpty) activity.timeLabel,
+                      ].join(' - '),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: colors.ink,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      activity.meetingPoint.isEmpty
+                          ? activity.locationName
+                          : activity.meetingPoint,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: colors.ink3,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              TextButton(
+                onPressed: onPressed,
+                style: TextButton.styleFrom(
+                  backgroundColor: colors.green100,
+                  foregroundColor: colors.green,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  minimumSize: const Size(0, 30),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  shape: const StadiumBorder(),
+                  textStyle: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                child: const Text('Bekijk'),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -840,12 +941,14 @@ class _InitialsAvatar extends StatelessWidget {
 
 class _MessageComposer extends StatelessWidget {
   const _MessageComposer({
+    required this.activity,
     required this.controller,
     required this.isSending,
     required this.canSend,
     required this.onSendPressed,
   });
 
+  final HomeActivity activity;
   final TextEditingController controller;
   final bool isSending;
   final bool canSend;
@@ -857,20 +960,32 @@ class _MessageComposer extends StatelessWidget {
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: colors.card,
+        color: colors.cream,
         border: Border(top: BorderSide(color: colors.line)),
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+        padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (!canSend) ...[
-              const _ReadOnlyChatNotice(),
+              _ReadOnlyChatNotice(activity: activity),
               const SizedBox(height: TochSpacing.sm),
             ],
             Row(
               children: [
+                IconButton(
+                  tooltip: 'Toevoegen',
+                  onPressed: canSend ? () {} : null,
+                  style: IconButton.styleFrom(
+                    backgroundColor: colors.card,
+                    foregroundColor: colors.ink3,
+                    fixedSize: const Size.square(40),
+                    disabledBackgroundColor: colors.surface2,
+                  ),
+                  icon: const Icon(Icons.add_rounded),
+                ),
+                const SizedBox(width: 8),
                 Expanded(
                   child: TextField(
                     controller: controller,
@@ -881,37 +996,41 @@ class _MessageComposer extends StatelessWidget {
                     decoration: InputDecoration(
                       hintText: canSend ? 'Bericht' : 'Chat alleen lezen',
                       filled: true,
-                      fillColor: colors.cream,
+                      fillColor: colors.card,
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16,
-                        vertical: 13,
+                        vertical: 11,
                       ),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(TochRadius.lg),
+                        borderRadius: BorderRadius.circular(TochRadius.pill),
                         borderSide: BorderSide(color: colors.line),
                       ),
                       enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(TochRadius.lg),
+                        borderRadius: BorderRadius.circular(TochRadius.pill),
                         borderSide: BorderSide(color: colors.line),
                       ),
                       disabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(TochRadius.lg),
+                        borderRadius: BorderRadius.circular(TochRadius.pill),
                         borderSide: BorderSide(color: colors.line),
                       ),
                       focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(TochRadius.lg),
+                        borderRadius: BorderRadius.circular(TochRadius.pill),
                         borderSide: BorderSide(color: colors.green, width: 1.4),
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: TochSpacing.sm),
+                const SizedBox(width: 8),
                 IconButton.filled(
                   onPressed: !canSend || isSending ? null : onSendPressed,
                   style: IconButton.styleFrom(
-                    fixedSize: const Size.square(48),
+                    fixedSize: const Size.square(42),
                     backgroundColor: colors.green,
                     foregroundColor: Colors.white,
+                    disabledBackgroundColor: colors.green100,
+                    disabledForegroundColor: colors.green.withValues(
+                      alpha: .45,
+                    ),
                   ),
                   icon: isSending
                       ? const SizedBox.square(
@@ -933,7 +1052,9 @@ class _MessageComposer extends StatelessWidget {
 }
 
 class _ReadOnlyChatNotice extends StatelessWidget {
-  const _ReadOnlyChatNotice();
+  const _ReadOnlyChatNotice({required this.activity});
+
+  final HomeActivity activity;
 
   @override
   Widget build(BuildContext context) {
@@ -953,7 +1074,7 @@ class _ReadOnlyChatNotice extends StatelessWidget {
             const SizedBox(width: TochSpacing.xs),
             Expanded(
               child: Text(
-                'Je bent afgemeld voor deze activiteit. Je kunt de chat nog teruglezen.',
+                readOnlyChatNoticeText(activity),
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
                   color: colors.green700,
                   fontWeight: FontWeight.w800,
@@ -980,12 +1101,17 @@ class _ChatError extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.error_outline_rounded,
-            color: context.toch.orange,
-            size: 42,
-          ),
+          const PipMascot(expression: PipExpression.surprise, size: 108),
           const SizedBox(height: TochSpacing.md),
+          Text(
+            'Chat hapert even',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: context.toch.green,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: TochSpacing.xs),
           Text(
             message,
             textAlign: TextAlign.center,
@@ -1008,18 +1134,12 @@ class _ChatEmpty extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.toch;
-
     return Padding(
       padding: const EdgeInsets.all(TochSpacing.xl),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.chat_bubble_outline_rounded,
-            color: colors.green,
-            size: 42,
-          ),
+          const PipMascot(expression: PipExpression.happy, size: 112),
           const SizedBox(height: TochSpacing.md),
           Text(
             'Nog geen berichten',

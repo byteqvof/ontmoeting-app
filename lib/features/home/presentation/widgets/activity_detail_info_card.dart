@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/toch_theme.dart';
+import '../../../../app/widgets/toch_design_system.dart';
 import '../../domain/entities/home_activity.dart';
 
 class ActivityDetailInfoCard extends StatelessWidget {
@@ -10,58 +11,23 @@ class ActivityDetailInfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _DetailCard(
-      child: Column(
-        children: [
-          _InfoRow(
-            icon: Icons.calendar_today_rounded,
-            label: activity.dateLabel,
-          ),
-          const _DetailDivider(),
-          _InfoRow(icon: Icons.schedule_rounded, label: activity.timeLabel),
-          const _DetailDivider(),
-          _InfoRow(icon: Icons.near_me_rounded, label: activity.meetingPoint),
-          const _DetailDivider(),
-          _InfoRow(
-            icon: Icons.location_on_rounded,
-            label: activity.locationName,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _InfoRow extends StatelessWidget {
-  const _InfoRow({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.toch;
-
     return Row(
       children: [
-        DecoratedBox(
-          decoration: BoxDecoration(
-            color: colors.green100,
-            borderRadius: BorderRadius.circular(TochRadius.md),
-          ),
-          child: SizedBox.square(
-            dimension: 42,
-            child: Icon(icon, color: colors.green, size: 21),
+        Expanded(
+          child: _MetaCard(
+            icon: Icons.calendar_today_rounded,
+            label: 'Wanneer',
+            value: '${activity.dateLabel}\n${activity.timeLabel}',
           ),
         ),
-        const SizedBox(width: TochSpacing.sm),
+        const SizedBox(width: 10),
         Expanded(
-          child: Text(
-            label,
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: colors.ink,
-              fontWeight: FontWeight.w800,
-            ),
+          child: _MetaCard(
+            icon: Icons.place_outlined,
+            label: 'Waar',
+            value: activity.meetingPoint.isEmpty
+                ? activity.locationName
+                : activity.meetingPoint,
           ),
         ),
       ],
@@ -69,10 +35,16 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
-class _DetailCard extends StatelessWidget {
-  const _DetailCard({required this.child});
+class _MetaCard extends StatelessWidget {
+  const _MetaCard({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
 
-  final Widget child;
+  final IconData icon;
+  final String label;
+  final String value;
 
   @override
   Widget build(BuildContext context) {
@@ -81,25 +53,47 @@ class _DetailCard extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: colors.card,
-        borderRadius: BorderRadius.circular(TochRadius.lg),
-        border: Border.all(color: colors.line),
+        borderRadius: BorderRadius.circular(TochRadius.md),
+        boxShadow: TochShadows.card(colors),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(TochSpacing.md),
-        child: child,
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: colors.green100,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: SizedBox.square(
+                dimension: 36,
+                child: Icon(icon, color: colors.green, size: 18),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TochSectionLabel(label),
+                  const SizedBox(height: 2),
+                  Text(
+                    value,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: colors.ink,
+                      fontWeight: FontWeight.w900,
+                      height: 1.25,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
-    );
-  }
-}
-
-class _DetailDivider extends StatelessWidget {
-  const _DetailDivider();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: TochSpacing.sm),
-      child: Divider(height: 1, color: context.toch.line),
     );
   }
 }

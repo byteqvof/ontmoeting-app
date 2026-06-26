@@ -51,7 +51,11 @@ class ActivityAgenda extends Equatable {
       ...hostedActivities.where((activity) => activity.isCompleted),
       ...joinedActivities.where((activity) => activity.isCompleted),
     ]) {
-      completedById.putIfAbsent(activity.id, () => activity);
+      final current = completedById[activity.id];
+      if (current == null ||
+          _activityContextScore(activity) > _activityContextScore(current)) {
+        completedById[activity.id] = activity;
+      }
     }
     return completedById.values.toList();
   }
@@ -113,6 +117,23 @@ class ActivityAgenda extends Equatable {
     );
   }
 
+  ActivityAgenda withActivityUpdated(HomeActivity updatedActivity) {
+    List<HomeActivity> updateActivities(List<HomeActivity> activities) {
+      return activities
+          .map(
+            (activity) =>
+                activity.id == updatedActivity.id ? updatedActivity : activity,
+          )
+          .toList();
+    }
+
+    return ActivityAgenda(
+      hostedActivities: updateActivities(hostedActivities),
+      joinedActivities: updateActivities(joinedActivities),
+      completedActivities: updateActivities(completedActivities),
+    );
+  }
+
   @override
   List<Object?> get props => [
     hostedActivities,
@@ -147,4 +168,26 @@ List<HomeActivity> _uniqueActivities(Iterable<HomeActivity> activities) {
     activitiesById.putIfAbsent(activity.id, () => activity);
   }
   return activitiesById.values.toList();
+}
+
+int _activityContextScore(HomeActivity activity) {
+  var score = 0;
+  if (activity.isOwnedByCurrentUser) {
+    score += 8;
+  }
+  if (activity.isJoined) {
+    score += 6;
+  }
+  if (activity.canSendChat) {
+    score += 3;
+  }
+  if (activity.hostFeedbackSubmitted) {
+    score += 2;
+  }
+  score += activity.participants.length * 4;
+  score += activity.participants.where((participant) {
+    return participant.attendanceStatus != null ||
+        participant.feedbackSubmitted;
+  }).length;
+  return score;
 }

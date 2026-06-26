@@ -4,10 +4,11 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_router.dart';
 import '../../../../app/theme/toch_theme.dart';
-import '../../../../app/widgets/toch_mark.dart';
 import '../../../../core/utils/input_validators.dart';
+import '../../../../core/widgets/toch_snack_bar.dart';
 import '../../domain/entities/auth_oauth_provider.dart';
 import '../bloc/auth_bloc.dart';
+import '../widgets/auth_screen_shell.dart';
 import '../widgets/auth_submit_button.dart';
 import '../widgets/auth_text_field.dart';
 import '../widgets/email_auth_divider.dart';
@@ -64,116 +65,102 @@ class _RegisterPageState extends State<RegisterPage> {
           return;
         }
         if (state is AuthError) {
-          ScaffoldMessenger.of(
+          showTochSnackBar(
             context,
-          ).showSnackBar(SnackBar(content: Text(state.message)));
+            state.message,
+            type: TochSnackBarType.error,
+          );
         }
       },
       builder: (context, state) {
         final isLoading = state is AuthLoading;
 
-        return Scaffold(
-          body: SafeArea(
-            child: Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(TochSpacing.lg),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 460),
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: context.toch.card,
-                      border: Border.all(color: context.toch.line),
-                      borderRadius: BorderRadius.circular(TochRadius.lg),
+        return AuthScreenShell(
+          title: 'Maak je\naccount aan',
+          subtitle: 'Gratis meedoen in jouw buurt. Geen abonnement nodig.',
+          children: [
+            SocialAuthButton(
+              icon: Icons.apple,
+              label: 'Inloggen met Apple',
+              dark: true,
+              onPressed: isLoading
+                  ? null
+                  : () => context.read<AuthBloc>().add(
+                      const AuthOAuthSignInRequested(AuthOAuthProvider.apple),
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(TochSpacing.xl),
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            const TochMark(size: 56),
-                            const SizedBox(height: TochSpacing.lg),
-                            Text(
-                              'Maak je\naccount aan',
-                              style: Theme.of(context).textTheme.displayLarge
-                                  ?.copyWith(fontSize: 42, height: 1.04),
-                            ),
-                            const SizedBox(height: TochSpacing.sm),
-                            Text(
-                              'Een minuut werk. Daarna zie je meteen wat er bij jou in de buurt gebeurt.',
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            ),
-                            const SizedBox(height: TochSpacing.lg),
-                            SocialAuthButton(
-                              icon: Icons.apple,
-                              label: 'Doorgaan met Apple',
-                              onPressed: isLoading
-                                  ? null
-                                  : () => context.read<AuthBloc>().add(
-                                      const AuthOAuthSignInRequested(
-                                        AuthOAuthProvider.apple,
-                                      ),
-                                    ),
-                            ),
-                            const SizedBox(height: TochSpacing.sm),
-                            SocialAuthButton(
-                              icon: Icons.g_mobiledata,
-                              label: 'Doorgaan met Google',
-                              onPressed: isLoading
-                                  ? null
-                                  : () => context.read<AuthBloc>().add(
-                                      const AuthOAuthSignInRequested(
-                                        AuthOAuthProvider.google,
-                                      ),
-                                    ),
-                            ),
-                            const EmailAuthDivider(),
-                            AuthTextField(
-                              controller: _nameController,
-                              label: 'Je naam',
-                              keyboardType: TextInputType.name,
-                              validator: _validateName,
-                            ),
-                            const SizedBox(height: TochSpacing.md),
-                            AuthTextField(
-                              controller: _emailController,
-                              label: 'E-mailadres',
-                              keyboardType: TextInputType.emailAddress,
-                              validator: InputValidators.email,
-                            ),
-                            const SizedBox(height: TochSpacing.md),
-                            AuthTextField(
-                              controller: _passwordController,
-                              label: 'Wachtwoord',
-                              keyboardType: TextInputType.visiblePassword,
-                              obscureText: true,
-                              validator: InputValidators.password,
-                            ),
-                            const SizedBox(height: TochSpacing.lg),
-                            AuthSubmitButton(
-                              label: 'Account aanmaken',
-                              isLoading: isLoading,
-                              onPressed: _submit,
-                            ),
-                            const SizedBox(height: TochSpacing.sm),
-                            TextButton(
-                              onPressed: isLoading
-                                  ? null
-                                  : () => context.go(AppRoutes.login),
-                              child: const Text(
-                                'Heb je al een account? Inloggen',
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+            ),
+            const SizedBox(height: TochSpacing.sm),
+            SocialAuthButton(
+              icon: Icons.g_mobiledata_rounded,
+              label: 'Doorgaan met Google',
+              onPressed: isLoading
+                  ? null
+                  : () => context.read<AuthBloc>().add(
+                      const AuthOAuthSignInRequested(AuthOAuthProvider.google),
+                    ),
+            ),
+            const EmailAuthDivider(),
+            Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  AuthTextField(
+                    controller: _nameController,
+                    label: 'Naam',
+                    keyboardType: TextInputType.name,
+                    validator: _validateName,
+                  ),
+                  const SizedBox(height: TochSpacing.md),
+                  AuthTextField(
+                    controller: _emailController,
+                    label: 'E-mailadres',
+                    keyboardType: TextInputType.emailAddress,
+                    validator: InputValidators.email,
+                  ),
+                  const SizedBox(height: TochSpacing.md),
+                  AuthTextField(
+                    controller: _passwordController,
+                    label: 'Wachtwoord',
+                    keyboardType: TextInputType.visiblePassword,
+                    obscureText: true,
+                    validator: InputValidators.password,
+                  ),
+                  const SizedBox(height: TochSpacing.lg),
+                  AuthSubmitButton(
+                    label: 'Account aanmaken',
+                    isLoading: isLoading,
+                    onPressed: _submit,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: TochSpacing.md),
+            Row(
+              children: [
+                Icon(
+                  Icons.shield_outlined,
+                  size: 16,
+                  color: context.toch.green,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Telefoonbevestiging helpt wegwerpaccounts beperken.',
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: context.toch.ink3,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
                 ),
-              ),
+              ],
             ),
-          ),
+            const SizedBox(height: TochSpacing.sm),
+            TextButton(
+              onPressed: isLoading ? null : () => context.go(AppRoutes.login),
+              child: const Text('Heb je al een account? Inloggen'),
+            ),
+          ],
         );
       },
     );

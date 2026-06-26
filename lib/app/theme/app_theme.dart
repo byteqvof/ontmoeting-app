@@ -7,7 +7,7 @@ class AppTheme {
   const AppTheme._();
 
   static ThemeData get light {
-    final textTheme = GoogleFonts.nunitoSansTextTheme().apply(
+    final textTheme = GoogleFonts.nunitoTextTheme().apply(
       bodyColor: TochColors.ink,
       displayColor: TochColors.green,
     );
@@ -86,7 +86,7 @@ class AppTheme {
         color: TochColors.card,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(TochRadius.lg)),
+          borderRadius: BorderRadius.all(Radius.circular(TochRadius.xl)),
           side: BorderSide(color: TochColors.line),
         ),
       ),

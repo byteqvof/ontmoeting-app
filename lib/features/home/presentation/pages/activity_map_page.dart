@@ -1,15 +1,22 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_router.dart';
 import '../../../../app/theme/toch_theme.dart';
+import '../../../../app/widgets/toch_design_system.dart';
 import '../../../../core/di/injection_container.dart';
+import '../../../../core/widgets/toch_snack_bar.dart';
 import '../../domain/entities/home_activity.dart';
 import '../../domain/entities/home_feed_filters.dart';
 import '../../domain/entities/home_location.dart';
+import '../../domain/entities/meeting_location_suggestion.dart';
 import '../../domain/usecases/get_current_location.dart';
 import '../../domain/usecases/get_home_feed.dart';
+import '../../domain/usecases/search_meeting_locations.dart';
 import '../widgets/activity_map_canvas.dart';
+import '../widgets/home_bottom_nav.dart';
 
 class ActivityMapPageArgs {
   const ActivityMapPageArgs({
@@ -145,11 +152,25 @@ class ActivityMapPage extends StatefulWidget {
 class _ActivityMapPageState extends State<ActivityMapPage> {
   final GetHomeFeed _getHomeFeed = sl();
   final GetCurrentLocation _getCurrentLocation = sl();
+  final SearchMeetingLocations _searchLocations = sl();
+  final TextEditingController _searchController = TextEditingController();
   late HomeLocation _location = widget.args.location;
   late List<HomeActivity> _activities = widget.args.activities;
   HomeLocation? _pendingSearchLocation;
+  Timer? _searchDebounce;
+  List<MeetingLocationSuggestion> _locationResults = const [];
+  bool _hasLocationSearch = false;
+  bool _isLocationSearching = false;
   bool _isSearching = false;
   bool _isLocating = false;
+  String? _locationSearchError;
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -170,49 +191,46 @@ class _ActivityMapPageState extends State<ActivityMapPage> {
             SafeArea(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
-                child: Row(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    IconButton.filled(
-                      onPressed: () {
-                        if (context.canPop()) {
-                          context.pop();
-                          return;
-                        }
-                        context.go(AppRoutes.home);
-                      },
-                      icon: const Icon(Icons.arrow_back_rounded),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _MapSearchField(
+                            controller: _searchController,
+                            isSearching: _isLocationSearching,
+                            onChanged: _onSearchChanged,
+                            onSubmitted: _searchLocationText,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton.filled(
+                          tooltip: 'Filters',
+                          onPressed: () => context.go(AppRoutes.home),
+                          style: IconButton.styleFrom(
+                            backgroundColor: colors.card.withValues(alpha: .96),
+                            foregroundColor: colors.ink,
+                            fixedSize: const Size.square(48),
+                          ),
+                          icon: const Icon(Icons.tune_rounded),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: TochSpacing.sm),
-                    Expanded(
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: colors.card.withValues(alpha: .94),
-                          borderRadius: BorderRadius.circular(TochRadius.pill),
-                          boxShadow: [
-                            BoxShadow(
-                              color: colors.ink.withValues(alpha: .10),
-                              blurRadius: 16,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                          child: Text(
-                            '${_activities.length} activiteiten rond ${_location.cityName}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.labelLarge
-                                ?.copyWith(
-                                  color: colors.ink,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                          ),
-                        ),
+                    if (_shouldShowLocationResults) ...[
+                      const SizedBox(height: TochSpacing.xs),
+                      _LocationSearchResults(
+                        isLoading: _isLocationSearching,
+                        hasSearched: _hasLocationSearch,
+                        errorMessage: _locationSearchError,
+                        results: _locationResults,
+                        onSelected: _selectSearchResult,
                       ),
+                    ],
+                    const SizedBox(height: 12),
+                    _MapFilterChips(
+                      count: _activities.length,
+                      cityName: _location.cityName,
                     ),
                   ],
                 ),
@@ -257,10 +275,22 @@ class _ActivityMapPageState extends State<ActivityMapPage> {
             Positioned(
               left: 14,
               right: 14,
-              bottom: 16,
+              bottom: 128,
               child: SafeArea(
                 top: false,
-                child: _MapActivityTray(activities: _activities),
+                child: _MapActivityTray(
+                  activities: _activities,
+                  onActivityUpdated: _replaceActivity,
+                ),
+              ),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: HomeBottomNav(
+                location: _location,
+                selected: HomeNavDestination.map,
               ),
             ),
           ],
@@ -284,39 +314,7 @@ class _ActivityMapPageState extends State<ActivityMapPage> {
       return;
     }
 
-    setState(() {
-      _isSearching = true;
-    });
-
-    final result = await _getHomeFeed(
-      GetHomeFeedParams(
-        location: searchLocation,
-        filters: widget.args.filters,
-        forceRefresh: true,
-      ),
-    );
-    if (!mounted) {
-      return;
-    }
-
-    result.fold(
-      (failure) {
-        setState(() {
-          _isSearching = false;
-        });
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(failure.message)));
-      },
-      (feed) {
-        setState(() {
-          _location = searchLocation;
-          _activities = feed.activities;
-          _pendingSearchLocation = null;
-          _isSearching = false;
-        });
-      },
-    );
+    await _loadActivitiesForLocation(searchLocation);
   }
 
   Future<void> _recenterOnDeviceLocation() async {
@@ -339,17 +337,175 @@ class _ActivityMapPageState extends State<ActivityMapPage> {
         setState(() {
           _isLocating = false;
         });
-        ScaffoldMessenger.of(
+        showTochSnackBar(
           context,
-        ).showSnackBar(SnackBar(content: Text(failure.message)));
+          failure.message,
+          type: TochSnackBarType.error,
+        );
       },
-      (location) {
+      (location) async {
         setState(() {
-          _location = location;
-          _pendingSearchLocation = location;
           _isLocating = false;
         });
+        await _loadActivitiesForLocation(location);
       },
+    );
+  }
+
+  bool get _shouldShowLocationResults =>
+      _isLocationSearching ||
+      _locationSearchError != null ||
+      _locationResults.isNotEmpty ||
+      _hasLocationSearch && _searchController.text.trim().length >= 3;
+
+  void _onSearchChanged(String value) {
+    _searchDebounce?.cancel();
+    final query = value.trim();
+    if (query.length < 3) {
+      setState(() {
+        _hasLocationSearch = false;
+        _isLocationSearching = false;
+        _locationSearchError = null;
+        _locationResults = const [];
+      });
+      return;
+    }
+    _searchDebounce = Timer(const Duration(milliseconds: 450), () {
+      _searchLocationText(query);
+    });
+  }
+
+  Future<void> _searchLocationText([String? submittedQuery]) async {
+    final query = (submittedQuery ?? _searchController.text).trim();
+    if (query.length < 3 || _isLocationSearching) {
+      return;
+    }
+
+    setState(() {
+      _hasLocationSearch = true;
+      _isLocationSearching = true;
+      _locationSearchError = null;
+    });
+
+    final result = await _searchLocations(
+      SearchMeetingLocationsParams(query: query, nearLocation: _location),
+    );
+    if (!mounted) {
+      return;
+    }
+
+    result.fold(
+      (failure) {
+        setState(() {
+          _isLocationSearching = false;
+          _locationSearchError = failure.message;
+          _locationResults = const [];
+        });
+      },
+      (results) {
+        setState(() {
+          _isLocationSearching = false;
+          _locationSearchError = null;
+          _locationResults = results;
+        });
+      },
+    );
+  }
+
+  Future<void> _selectSearchResult(MeetingLocationSuggestion suggestion) async {
+    _searchController.text = suggestion.addressLine;
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _hasLocationSearch = false;
+      _locationSearchError = null;
+      _locationResults = const [];
+    });
+    await _loadActivitiesForLocation(
+      HomeLocation(
+        cityName: suggestion.city.isEmpty ? suggestion.label : suggestion.city,
+        latitude: suggestion.latitude,
+        longitude: suggestion.longitude,
+      ),
+    );
+  }
+
+  Future<void> _loadActivitiesForLocation(HomeLocation location) async {
+    if (_isSearching) {
+      return;
+    }
+
+    setState(() {
+      _isSearching = true;
+    });
+
+    final result = await _getHomeFeed(
+      GetHomeFeedParams(
+        location: location,
+        filters: widget.args.filters,
+        forceRefresh: true,
+      ),
+    );
+    if (!mounted) {
+      return;
+    }
+
+    result.fold(
+      (failure) {
+        setState(() {
+          _isSearching = false;
+        });
+        showTochSnackBar(
+          context,
+          failure.message,
+          type: TochSnackBarType.error,
+        );
+      },
+      (feed) {
+        setState(() {
+          _location = location;
+          _activities = feed.activities;
+          _pendingSearchLocation = null;
+          _isSearching = false;
+        });
+      },
+    );
+  }
+
+  void _replaceActivity(HomeActivity updatedActivity) {
+    setState(() {
+      _activities = [
+        for (final activity in _activities)
+          if (activity.id == updatedActivity.id) updatedActivity else activity,
+      ];
+    });
+  }
+}
+
+class _MapFilterChips extends StatelessWidget {
+  const _MapFilterChips({required this.count, required this.cityName});
+
+  final int count;
+  final String cityName;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          TochPill(
+            label: '$count rond $cityName',
+            active: true,
+            icon: Icons.radio_button_checked_rounded,
+            backgroundColor: context.toch.green,
+            foregroundColor: Colors.white,
+          ),
+          const SizedBox(width: 8),
+          const TochPill(label: 'Vandaag'),
+          const SizedBox(width: 8),
+          const TochPill(label: 'Dit weekend'),
+        ],
+      ),
     );
   }
 }
@@ -358,6 +514,190 @@ bool _isMeaningfullyDifferent(HomeLocation left, HomeLocation right) {
   final latitudeDelta = (left.latitude - right.latitude).abs();
   final longitudeDelta = (left.longitude - right.longitude).abs();
   return latitudeDelta > 0.003 || longitudeDelta > 0.003;
+}
+
+class _MapSearchField extends StatelessWidget {
+  const _MapSearchField({
+    required this.controller,
+    required this.isSearching,
+    required this.onChanged,
+    required this.onSubmitted,
+  });
+
+  final TextEditingController controller;
+  final bool isSearching;
+  final ValueChanged<String> onChanged;
+  final ValueChanged<String> onSubmitted;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.toch;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.card.withValues(alpha: .96),
+        borderRadius: BorderRadius.circular(TochRadius.pill),
+        boxShadow: [
+          BoxShadow(
+            color: colors.ink.withValues(alpha: .10),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: controller,
+        onChanged: onChanged,
+        onSubmitted: onSubmitted,
+        textInputAction: TextInputAction.search,
+        decoration: InputDecoration(
+          hintText: 'Zoek plaats of adres',
+          prefixIcon: Icon(Icons.search_rounded, color: colors.green),
+          suffixIcon: isSearching
+              ? Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: colors.green,
+                    ),
+                  ),
+                )
+              : IconButton(
+                  tooltip: 'Zoeken',
+                  onPressed: () => onSubmitted(controller.text),
+                  icon: const Icon(Icons.arrow_forward_rounded),
+                ),
+          filled: true,
+          fillColor: Colors.transparent,
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 4,
+            vertical: 14,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LocationSearchResults extends StatelessWidget {
+  const _LocationSearchResults({
+    required this.isLoading,
+    required this.hasSearched,
+    required this.errorMessage,
+    required this.results,
+    required this.onSelected,
+  });
+
+  final bool isLoading;
+  final bool hasSearched;
+  final String? errorMessage;
+  final List<MeetingLocationSuggestion> results;
+  final ValueChanged<MeetingLocationSuggestion> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.toch;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.card.withValues(alpha: .97),
+        borderRadius: BorderRadius.circular(TochRadius.lg),
+        border: Border.all(color: colors.line),
+        boxShadow: [
+          BoxShadow(
+            color: colors.ink.withValues(alpha: .12),
+            blurRadius: 20,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxHeight: 260),
+        child: _buildContent(context),
+      ),
+    );
+  }
+
+  Widget _buildContent(BuildContext context) {
+    final colors = context.toch;
+    if (isLoading) {
+      return const Padding(
+        padding: EdgeInsets.all(TochSpacing.md),
+        child: Row(
+          children: [
+            SizedBox.square(
+              dimension: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            SizedBox(width: TochSpacing.sm),
+            Expanded(child: Text('Locaties zoeken...')),
+          ],
+        ),
+      );
+    }
+
+    if (errorMessage != null) {
+      return Padding(
+        padding: const EdgeInsets.all(TochSpacing.md),
+        child: Row(
+          children: [
+            Icon(Icons.error_outline_rounded, color: colors.orange),
+            const SizedBox(width: TochSpacing.sm),
+            Expanded(child: Text(errorMessage!)),
+          ],
+        ),
+      );
+    }
+
+    if (hasSearched && results.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(TochSpacing.md),
+        child: Row(
+          children: [
+            Icon(Icons.location_off_rounded),
+            SizedBox(width: TochSpacing.sm),
+            Expanded(
+              child: Text(
+                'Geen locatie gevonden. Probeer een adres of plaatsnaam.',
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.separated(
+      shrinkWrap: true,
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      itemCount: results.length,
+      separatorBuilder: (_, _) => Divider(height: 1, color: colors.line),
+      itemBuilder: (context, index) {
+        final result = results[index];
+        return ListTile(
+          dense: true,
+          leading: Icon(Icons.place_rounded, color: colors.green),
+          title: Text(
+            result.label.isEmpty ? result.addressLine : result.label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontWeight: FontWeight.w900),
+          ),
+          subtitle: Text(
+            [
+              if (result.addressLine.isNotEmpty) result.addressLine,
+              if (result.postcode != null) result.postcode!,
+            ].join(' - '),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          onTap: () => onSelected(result),
+        );
+      },
+    );
+  }
 }
 
 class MissingActivityMapPage extends StatelessWidget {
@@ -403,9 +743,13 @@ class MissingActivityMapPage extends StatelessWidget {
 }
 
 class _MapActivityTray extends StatelessWidget {
-  const _MapActivityTray({required this.activities});
+  const _MapActivityTray({
+    required this.activities,
+    required this.onActivityUpdated,
+  });
 
   final List<HomeActivity> activities;
+  final ValueChanged<HomeActivity> onActivityUpdated;
 
   @override
   Widget build(BuildContext context) {
@@ -441,11 +785,15 @@ class _MapActivityTray extends StatelessWidget {
               borderRadius: BorderRadius.circular(TochRadius.lg),
               child: InkWell(
                 borderRadius: BorderRadius.circular(TochRadius.lg),
-                onTap: () {
-                  context.push(
+                onTap: () async {
+                  final updatedActivity = await context.push<HomeActivity>(
                     AppRoutes.activityDetailPath(activity.id),
                     extra: activity,
                   );
+                  if (!context.mounted || updatedActivity == null) {
+                    return;
+                  }
+                  onActivityUpdated(updatedActivity);
                 },
                 child: Padding(
                   padding: const EdgeInsets.all(TochSpacing.md),

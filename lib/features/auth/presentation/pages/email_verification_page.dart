@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/app_router.dart';
 import '../../../../app/theme/toch_theme.dart';
 import '../../../../app/widgets/toch_mark.dart';
+import '../../../../core/widgets/toch_snack_bar.dart';
 import '../bloc/auth_bloc.dart';
 import '../widgets/auth_submit_button.dart';
 
@@ -22,15 +23,19 @@ class EmailVerificationPage extends StatelessWidget {
       listener: (context, state) {
         if (state is AuthEmailVerificationPending &&
             state.errorMessage != null) {
-          ScaffoldMessenger.of(
+          showTochSnackBar(
             context,
-          ).showSnackBar(SnackBar(content: Text(state.errorMessage!)));
+            state.errorMessage!,
+            type: TochSnackBarType.error,
+          );
         }
         if (state is AuthEmailVerificationPending &&
             state.noticeMessage != null) {
-          ScaffoldMessenger.of(
+          showTochSnackBar(
             context,
-          ).showSnackBar(SnackBar(content: Text(state.noticeMessage!)));
+            state.noticeMessage!,
+            type: TochSnackBarType.success,
+          );
         }
       },
       builder: (context, state) {
@@ -38,21 +43,23 @@ class EmailVerificationPage extends StatelessWidget {
             ? state
             : null;
         final resolvedEmail = email ?? pendingState?.email ?? '';
+        final colors = context.toch;
         return Scaffold(
-          body: SafeArea(
-            child: Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(TochSpacing.lg),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 460),
+          backgroundColor: colors.cream,
+          body: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: SafeArea(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 34),
                   child: DecoratedBox(
                     decoration: BoxDecoration(
-                      color: context.toch.card,
-                      border: Border.all(color: context.toch.line),
-                      borderRadius: BorderRadius.circular(TochRadius.lg),
+                      color: colors.card,
+                      borderRadius: BorderRadius.circular(30),
+                      boxShadow: TochShadows.raised(colors),
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.all(TochSpacing.xl),
+                      padding: const EdgeInsets.all(24),
                       child: mode == EmailVerificationPageMode.success
                           ? _EmailVerifiedContent()
                           : _EmailVerificationPendingContent(
@@ -88,7 +95,7 @@ class _EmailVerificationPendingContent extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const TochMark(size: 56),
+        TochMark(size: 64, backgroundColor: colors.green),
         const SizedBox(height: TochSpacing.lg),
         Text(
           'Check je\nmail',
@@ -101,20 +108,35 @@ class _EmailVerificationPendingContent extends StatelessWidget {
           email.isEmpty
               ? 'We hebben je een verificatielink gestuurd. Open de link op dit toestel om je account te activeren.'
               : 'We hebben een verificatielink gestuurd naar $email. Open de link op dit toestel om je account te activeren.',
-          style: Theme.of(context).textTheme.bodyMedium,
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            color: colors.ink3,
+            height: 1.35,
+            fontWeight: FontWeight.w700,
+          ),
         ),
         const SizedBox(height: TochSpacing.lg),
         DecoratedBox(
           decoration: BoxDecoration(
-            color: colors.green100.withValues(alpha: .55),
-            borderRadius: BorderRadius.circular(TochRadius.md),
-            border: Border.all(color: colors.green200),
+            color: colors.green100,
+            borderRadius: BorderRadius.circular(22),
           ),
           child: Padding(
             padding: const EdgeInsets.all(TochSpacing.md),
             child: Row(
               children: [
-                Icon(Icons.mark_email_read_rounded, color: colors.green),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: colors.card,
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  child: SizedBox.square(
+                    dimension: 42,
+                    child: Icon(
+                      Icons.mark_email_read_rounded,
+                      color: colors.green,
+                    ),
+                  ),
+                ),
                 const SizedBox(width: TochSpacing.sm),
                 Expanded(
                   child: Text(
@@ -157,10 +179,10 @@ class _EmailVerifiedContent extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const TochMark(size: 56),
+        TochMark(size: 64, backgroundColor: colors.green),
         const SizedBox(height: TochSpacing.lg),
         Text(
-          'Email\nbevestigd',
+          'E-mail\nbevestigd',
           style: Theme.of(
             context,
           ).textTheme.displayLarge?.copyWith(fontSize: 42, height: 1.04),
@@ -168,10 +190,23 @@ class _EmailVerifiedContent extends StatelessWidget {
         const SizedBox(height: TochSpacing.sm),
         Text(
           'Je e-mailadres is bevestigd. Je kunt nu verder met je account.',
-          style: Theme.of(context).textTheme.bodyMedium,
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            color: colors.ink3,
+            height: 1.35,
+            fontWeight: FontWeight.w700,
+          ),
         ),
         const SizedBox(height: TochSpacing.lg),
-        Icon(Icons.verified_rounded, color: colors.green, size: 64),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            color: colors.green100,
+            shape: BoxShape.circle,
+          ),
+          child: SizedBox.square(
+            dimension: 90,
+            child: Icon(Icons.verified_rounded, color: colors.green, size: 58),
+          ),
+        ),
         const SizedBox(height: TochSpacing.lg),
         AuthSubmitButton(
           label: 'Doorgaan',

@@ -42,22 +42,16 @@ class HomeBottomNav extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
+          padding: const EdgeInsets.fromLTRB(14, 8, 14, 30),
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: .86),
+              color: Colors.white.withValues(alpha: .78),
               borderRadius: BorderRadius.circular(26),
-              border: Border.all(color: Colors.white.withValues(alpha: .72)),
-              boxShadow: [
-                BoxShadow(
-                  color: colors.ink.withValues(alpha: .10),
-                  blurRadius: 26,
-                  offset: const Offset(0, 14),
-                ),
-              ],
+              border: Border.all(color: Colors.white.withValues(alpha: .70)),
+              boxShadow: TochShadows.raised(colors),
             ),
             child: SizedBox(
-              height: 64,
+              height: 66,
               child: Row(
                 children: [
                   _HomeNavItem(
@@ -68,12 +62,21 @@ class HomeBottomNav extends StatelessWidget {
                         ? null
                         : () => context.go(AppRoutes.home),
                   ),
+                  _HomeNavItem(
+                    icon: Icons.map_rounded,
+                    label: 'Kaart',
+                    selected: selected == HomeNavDestination.map,
+                    onTap: selected == HomeNavDestination.map
+                        ? null
+                        : () => context.go(AppRoutes.activityMap),
+                  ),
+                  _HomeCreateButton(location: location, categories: categories),
                   ValueListenableBuilder<int>(
                     valueListenable: chatNotices.unreadCountListenable,
                     builder: (context, unreadCount, _) {
                       return _HomeNavItem(
                         icon: Icons.chat_bubble_rounded,
-                        label: 'Berichten',
+                        label: 'Chats',
                         selected: selected == HomeNavDestination.messages,
                         badgeCount: selected == HomeNavDestination.messages
                             ? 0
@@ -86,15 +89,6 @@ class HomeBottomNav extends StatelessWidget {
                               },
                       );
                     },
-                  ),
-                  _HomeCreateButton(location: location, categories: categories),
-                  _HomeNavItem(
-                    icon: Icons.calendar_month_rounded,
-                    label: 'Agenda',
-                    selected: selected == HomeNavDestination.agenda,
-                    onTap: selected == HomeNavDestination.agenda
-                        ? null
-                        : () => context.go(AppRoutes.activityAgenda),
                   ),
                   _ProfileHomeNavItem(
                     selected: selected == HomeNavDestination.profile,
@@ -112,7 +106,7 @@ class HomeBottomNav extends StatelessWidget {
   }
 }
 
-enum HomeNavDestination { discover, messages, agenda, profile }
+enum HomeNavDestination { discover, map, messages, agenda, profile }
 
 class _HomeNavItem extends StatelessWidget {
   const _HomeNavItem({
@@ -192,42 +186,48 @@ class _HomeNavItemButton extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(TochRadius.md),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Icon(
-                icon,
-                size: 23,
-                color: selected
-                    ? colors.green
-                    : colors.green700.withValues(alpha: .45),
-              ),
-              if (badgeCount > 0)
-                Positioned(
-                  right: -10,
-                  top: -8,
-                  child: _UnreadBadge(count: badgeCount),
+      borderRadius: BorderRadius.circular(22),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 170),
+        curve: Curves.easeOutCubic,
+        margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 7),
+        decoration: BoxDecoration(
+          color: selected ? colors.green100 : Colors.transparent,
+          borderRadius: BorderRadius.circular(22),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(
+                  icon,
+                  size: selected ? 24 : 22,
+                  color: selected ? colors.green : colors.ink4,
                 ),
-            ],
-          ),
-          const SizedBox(height: 3),
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: selected
-                  ? colors.green
-                  : colors.green700.withValues(alpha: .45),
-              fontSize: 10,
-              fontWeight: FontWeight.w900,
+                if (badgeCount > 0)
+                  Positioned(
+                    right: -10,
+                    top: -8,
+                    child: _UnreadBadge(count: badgeCount),
+                  ),
+              ],
             ),
-          ),
-        ],
+            const SizedBox(height: 3),
+            Text(
+            label.toUpperCase(),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: selected ? colors.green : colors.ink4,
+                fontSize: 9.5,
+                fontWeight: FontWeight.w800,
+                letterSpacing: .2,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -284,7 +284,7 @@ class _HomeCreateButton extends StatelessWidget {
       child: Center(
         child: Material(
           color: colors.green,
-          borderRadius: BorderRadius.circular(TochRadius.md),
+          borderRadius: BorderRadius.circular(17),
           child: InkWell(
             onTap: () {
               final currentLocation = location;
@@ -300,19 +300,13 @@ class _HomeCreateButton extends StatelessWidget {
                 ),
               );
             },
-            borderRadius: BorderRadius.circular(TochRadius.md),
+            borderRadius: BorderRadius.circular(17),
             child: Ink(
-              width: 52,
-              height: 40,
+              width: 54,
+              height: 42,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(TochRadius.md),
-                boxShadow: [
-                  BoxShadow(
-                    color: colors.green.withValues(alpha: .28),
-                    blurRadius: 16,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
+                borderRadius: BorderRadius.circular(17),
+                boxShadow: TochShadows.button(colors),
               ),
               child: const Icon(
                 Icons.add_rounded,

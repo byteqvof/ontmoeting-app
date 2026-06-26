@@ -7,28 +7,37 @@ class SocialAuthButton extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onPressed,
+    this.dark = false,
     super.key,
   });
 
   final IconData icon;
   final String label;
   final VoidCallback? onPressed;
+  final bool dark;
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.toch;
+    final background = dark ? colors.ink : colors.card;
+    final foreground = dark ? Colors.white : colors.ink;
+
     return SizedBox(
       width: double.infinity,
-      child: OutlinedButton.icon(
+      height: 56,
+      child: ElevatedButton.icon(
         onPressed: onPressed,
         icon: Icon(icon, size: 22),
         label: Text(label),
-        style: OutlinedButton.styleFrom(
-          foregroundColor: context.toch.ink,
-          disabledForegroundColor: context.toch.ink.withValues(alpha: .44),
-          minimumSize: const Size(0, 48),
-          side: BorderSide(color: context.toch.line),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: background,
+          foregroundColor: foreground,
+          disabledBackgroundColor: background.withValues(alpha: .6),
+          disabledForegroundColor: foreground.withValues(alpha: .46),
+          elevation: 0,
           shape: const StadiumBorder(),
-          textStyle: const TextStyle(fontWeight: FontWeight.w800),
+          side: BorderSide(color: dark ? Colors.transparent : colors.line),
+          textStyle: const TextStyle(fontWeight: FontWeight.w900),
         ),
       ),
     );

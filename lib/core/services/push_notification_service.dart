@@ -22,8 +22,24 @@ class PushNotificationService {
 
   Stream<String> get chatNotificationOpens => _chatNotificationOpens.stream;
 
+  static Map<String, Object> diagnosticSummary() {
+    return {
+      'enabled_by_flag': tochPushEnabled,
+      'is_web': kIsWeb,
+      'platform': _pushPlatform.isEmpty ? 'unsupported' : _pushPlatform,
+      'has_firebase_api_key': firebaseApiKey.isNotEmpty,
+      'has_firebase_app_id': firebaseAppId.isNotEmpty,
+      'has_firebase_sender_id': firebaseMessagingSenderId.isNotEmpty,
+      'has_firebase_project_id': firebaseProjectId.isNotEmpty,
+      'can_use_push': _canUsePush,
+    };
+  }
+
   static Future<void> initializeFirebaseMessaging() {
     if (!_canUsePush) {
+      AppLogger.debug(
+        'Push Firebase initialization disabled: ${diagnosticSummary()}',
+      );
       return Future<void>.value();
     }
     return _firebaseInitialization ??= _initializeFirebaseMessaging()
@@ -76,13 +92,16 @@ class PushNotificationService {
 
   Future<void> registerForCurrentUser() async {
     if (!_canUsePush) {
-      AppLogger.debug('Push registration disabled by config or platform');
+      AppLogger.debug('Push registration disabled: ${diagnosticSummary()}');
       return;
     }
 
     try {
       await _ensureInitialized();
       final settings = await FirebaseMessaging.instance.requestPermission();
+      AppLogger.debug(
+        'Push permission status: ${settings.authorizationStatus.name}',
+      );
       if (settings.authorizationStatus == AuthorizationStatus.denied) {
         return;
       }

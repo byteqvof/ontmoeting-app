@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/toch_theme.dart';
 import '../../../../core/di/injection_container.dart';
+import '../../../../core/widgets/toch_snack_bar.dart';
 import '../../domain/entities/create_activity_draft.dart';
 import '../../domain/entities/home_activity.dart';
 import '../../domain/usecases/update_activity.dart';
@@ -192,9 +193,7 @@ class _EditActivityPageState extends State<EditActivityPage> {
   }
 
   void _showMessage(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    showTochSnackBar(context, message, type: TochSnackBarType.error);
   }
 
   @override
