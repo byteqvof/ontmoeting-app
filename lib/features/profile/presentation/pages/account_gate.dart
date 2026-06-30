@@ -377,17 +377,7 @@ class _AccountGateLoading extends StatelessWidget {
             padding: const EdgeInsets.all(22),
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(color: colors.green),
-                const SizedBox(height: 14),
-                Text(
-                  'Account controleren',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: colors.ink,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ],
+              children: [CircularProgressIndicator(color: colors.green)],
             ),
           ),
         ),
