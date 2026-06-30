@@ -413,7 +413,6 @@ class _CreateActivityLocationFieldState
             CreateActivityLocationSearchStatus.searching;
         final hasSelectedLocation = state.hasSelectedMeetingLocation;
         final canSearch = state.location.trim().length >= 3 && !isSearching;
-        final hasLocationText = _controller.text.isNotEmpty;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1224,33 +1223,8 @@ class _CreateActivityActionRow extends StatelessWidget {
   final String? warning;
 
   @override
-  State<_LabeledField> createState() => _LabeledFieldState();
-}
-
-class _LabeledFieldState extends State<_LabeledField> {
-  late final TextEditingController _controller = TextEditingController()
-    ..addListener(_handleTextChanged);
-
-  @override
-  void dispose() {
-    _controller
-      ..removeListener(_handleTextChanged)
-      ..dispose();
-    super.dispose();
-  }
-
-  void _handleTextChanged() {
-    setState(() {});
-  }
-
-  void _onChanged(String value) {
-    widget.onChanged(value);
-  }
-
-  @override
   Widget build(BuildContext context) {
     final colors = context.toch;
-    final hasText = _controller.text.isNotEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
