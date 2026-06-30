@@ -33,8 +33,11 @@ Copy-Item config\dev.example.json config\dev.local.json
 - `TOCH_ENABLE_PUSH`: zet FCM-tokenregistratie aan.
 - `SUPABASE_URL` en `SUPABASE_ANON_KEY`: Supabase projectconfig.
 - `POSTHOG_API_KEY`, `POSTHOG_HOST`, `SENTRY_DSN`: observability.
-- `FIREBASE_PROJECT_ID`, `FIREBASE_MESSAGING_SENDER_ID`, `FIREBASE_APP_ID`,
-  `FIREBASE_API_KEY`: Firebase clientconfig.
+- `FIREBASE_PROJECT_ID`, `FIREBASE_MESSAGING_SENDER_ID`, `FIREBASE_API_KEY`:
+  gedeelde Firebase clientconfig.
+- `FIREBASE_ANDROID_APP_ID`, `FIREBASE_IOS_APP_ID`: platform-specifieke
+  Firebase app-id. `FIREBASE_APP_ID` blijft alleen als legacy fallback bestaan.
+- `FIREBASE_IOS_BUNDLE_ID`: iOS bundle id, standaard `nl.gatoch.toch`.
 
 Voor productie mag fake phone verification nooit aan staan. De code negeert die
 flag buiten `TOCH_ENV=dev`, maar controleer buildconfig alsnog expliciet.
@@ -52,7 +55,20 @@ fvm flutter build apk --debug
 ## Push-notificaties
 
 Plaats `google-services.json` alleen in de Android app wanneer je FCM lokaal wilt
-testen. Beperk Firebase API keys in Google Cloud waar mogelijk.
+testen. De Android Firebase app moet package `com.toch.app` gebruiken. Beperk
+Firebase API keys in Google Cloud waar mogelijk.
+
+Voor Android lokaal moet `config/dev.local.json` minimaal bevatten:
+
+```json
+{
+  "TOCH_ENABLE_PUSH": true,
+  "FIREBASE_PROJECT_ID": "toch-1dcaf",
+  "FIREBASE_MESSAGING_SENDER_ID": "724429202361",
+  "FIREBASE_ANDROID_APP_ID": "1:724429202361:android:28b9277d3ba5dd0c7f8c68",
+  "FIREBASE_API_KEY": "<android/web api key>"
+}
+```
 
 Voor iOS push moet `nl.gatoch.toch` onder een betaald Apple Developer Program
 team vallen. Apple Personal Teams kunnen geen provisioning profile maken met de
@@ -65,7 +81,9 @@ Copy-Item ios\Flutter\Signing.xcconfig.example ios\Flutter\Signing.xcconfig
 Vul in `ios/Flutter/Signing.xcconfig` de betaalde Apple Team ID in bij
 `TOCH_DEVELOPMENT_TEAM`. Controleer daarna in Apple Developer dat App ID
 `nl.gatoch.toch` de Push Notifications capability heeft en dat Firebase voor iOS
-de juiste APNs key/certificaten gebruikt.
+de juiste APNs key/certificaten gebruikt. Voeg in Firebase ook een iOS app toe
+met bundle id `nl.gatoch.toch` en zet de iOS app-id in `FIREBASE_IOS_APP_ID`;
+gebruik niet de Android app-id voor TestFlight.
 
 Een Firebase service-account private key hoort nooit in deze repo. Sla die alleen
 als Supabase secret op aan backendzijde en roteer hem direct als hij ooit in chat,

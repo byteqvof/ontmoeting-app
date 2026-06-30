@@ -91,16 +91,16 @@ class TochPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.toch;
-    final background =
-        backgroundColor ?? (active ? colors.green : colors.card);
-    final foreground =
-        foregroundColor ?? (active ? Colors.white : colors.ink2);
+    final background = backgroundColor ?? (active ? colors.green : colors.card);
+    final foreground = foregroundColor ?? (active ? Colors.white : colors.ink2);
 
     final child = DecoratedBox(
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(TochRadius.pill),
-        boxShadow: active ? TochShadows.button(colors) : TochShadows.card(colors),
+        boxShadow: active
+            ? TochShadows.button(colors)
+            : TochShadows.card(colors),
       ),
       child: Padding(
         padding: EdgeInsets.symmetric(
@@ -287,6 +287,10 @@ class TochPhotoPanel extends StatelessWidget {
     this.distanceLabel,
     this.live = false,
     this.height = 176,
+    this.showLiveBadge = true,
+    this.showDistance = true,
+    this.showCategory = true,
+    this.showTitle = true,
     super.key,
   });
 
@@ -297,9 +301,17 @@ class TochPhotoPanel extends StatelessWidget {
   final String? distanceLabel;
   final bool live;
   final double height;
+  final bool showLiveBadge;
+  final bool showDistance;
+  final bool showCategory;
+  final bool showTitle;
 
   @override
   Widget build(BuildContext context) {
+    final showTopMeta =
+        (showLiveBadge && live) || (showDistance && distanceLabel != null);
+    final showBottomMeta = showCategory || showTitle;
+
     return SizedBox(
       height: height,
       child: Stack(
@@ -327,91 +339,93 @@ class TochPhotoPanel extends StatelessWidget {
               ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    if (live)
-                      const TochPill(
-                        label: 'Live',
-                        active: true,
-                        compact: true,
-                        backgroundColor: Color(0xFFE0913A),
-                        foregroundColor: Colors.white,
-                      ),
-                    const Spacer(),
-                    if (distanceLabel != null)
-                      DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: .38),
-                          borderRadius: BorderRadius.circular(TochRadius.pill),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                          child: Text(
-                            distanceLabel!,
-                            style: Theme.of(context)
-                                .textTheme
-                                .labelSmall
-                                ?.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                const Spacer(),
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: skin.color.withValues(alpha: .84),
-                    borderRadius: BorderRadius.circular(TochRadius.pill),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 7,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
+          if (showTopMeta || showBottomMeta)
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (showTopMeta)
+                    Row(
                       children: [
-                        Icon(icon, size: 15, color: Colors.white),
-                        const SizedBox(width: 6),
-                        Text(
-                          categoryLabel,
-                          style: Theme.of(context)
-                              .textTheme
-                              .labelSmall
-                              ?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w900,
+                        if (showLiveBadge && live)
+                          const TochPill(
+                            label: 'Live',
+                            active: true,
+                            compact: true,
+                            backgroundColor: Color(0xFFE0913A),
+                            foregroundColor: Colors.white,
+                          ),
+                        const Spacer(),
+                        if (showDistance && distanceLabel != null)
+                          DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: .38),
+                              borderRadius: BorderRadius.circular(
+                                TochRadius.pill,
                               ),
-                        ),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              child: Text(
+                                distanceLabel!,
+                                style: Theme.of(context).textTheme.labelSmall
+                                    ?.copyWith(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                              ),
+                            ),
+                          ),
                       ],
                     ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                    height: 1.08,
-                  ),
-                ),
-              ],
+                  const Spacer(),
+                  if (showCategory)
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: skin.color.withValues(alpha: .84),
+                        borderRadius: BorderRadius.circular(TochRadius.pill),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 7,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(icon, size: 15, color: Colors.white),
+                            const SizedBox(width: 6),
+                            Text(
+                              categoryLabel,
+                              style: Theme.of(context).textTheme.labelSmall
+                                  ?.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  if (showCategory && showTitle) const SizedBox(height: 8),
+                  if (showTitle)
+                    Text(
+                      title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        height: 1.08,
+                      ),
+                    ),
+                ],
+              ),
             ),
-          ),
         ],
       ),
     );

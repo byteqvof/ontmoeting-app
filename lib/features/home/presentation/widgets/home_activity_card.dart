@@ -24,7 +24,9 @@ class HomeActivityCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.toch;
-    final skin = tochCategorySkin('${activity.category.id} ${activity.category.label}');
+    final skin = tochCategorySkin(
+      '${activity.category.id} ${activity.category.label}',
+    );
     final borderRadius = BorderRadius.circular(TochRadius.lg);
     final isLarge = activity.isFeatured || activity.distanceKm <= 2;
 
@@ -51,6 +53,7 @@ class HomeActivityCard extends StatelessWidget {
                 distanceLabel: activity.distanceLabel,
                 live: _isLive(activity),
                 height: isLarge ? 176 : 120,
+                showTitle: false,
               ),
               Padding(
                 padding: const EdgeInsets.all(14),
@@ -88,9 +91,7 @@ class HomeActivityCard extends StatelessWidget {
                             _participantsLabel(activity),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context)
-                                .textTheme
-                                .labelMedium
+                            style: Theme.of(context).textTheme.labelMedium
                                 ?.copyWith(
                                   color: colors.ink3,
                                   fontWeight: FontWeight.w700,
@@ -163,7 +164,11 @@ class _HostRow extends StatelessWidget {
           const SizedBox(width: 4),
           Tooltip(
             message: 'Deze gebruiker heeft zijn identiteit geverifieerd.',
-            child: Icon(Icons.verified_rounded, color: colors.verified, size: 14),
+            child: Icon(
+              Icons.verified_rounded,
+              color: colors.verified,
+              size: 14,
+            ),
           ),
         ],
         const SizedBox(width: 8),
@@ -191,29 +196,30 @@ class _MetaRow extends StatelessWidget {
     return Wrap(
       spacing: 12,
       runSpacing: 6,
-      children: [
-        _MetaItem(
-          icon: Icons.calendar_today_rounded,
-          label: '${activity.dateLabel} ${activity.timeLabel}',
-        ),
-        _MetaItem(
-          icon: Icons.place_outlined,
-          label: activity.meetingPoint.isEmpty
-              ? activity.locationName
-              : activity.meetingPoint,
-        ),
-      ].map((item) {
-        return IconTheme(
-          data: IconThemeData(color: colors.ink3, size: 13),
-          child: DefaultTextStyle.merge(
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: colors.ink3,
-              fontWeight: FontWeight.w700,
+      children:
+          [
+            _MetaItem(
+              icon: Icons.calendar_today_rounded,
+              label: '${activity.dateLabel} ${activity.timeLabel}',
             ),
-            child: item,
-          ),
-        );
-      }).toList(),
+            _MetaItem(
+              icon: Icons.place_outlined,
+              label: activity.meetingPoint.isEmpty
+                  ? activity.locationName
+                  : activity.meetingPoint,
+            ),
+          ].map((item) {
+            return IconTheme(
+              data: IconThemeData(color: colors.ink3, size: 13),
+              child: DefaultTextStyle.merge(
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: colors.ink3,
+                  fontWeight: FontWeight.w700,
+                ),
+                child: item,
+              ),
+            );
+          }).toList(),
     );
   }
 }
@@ -232,11 +238,7 @@ class _MetaItem extends StatelessWidget {
         Icon(icon),
         const SizedBox(width: 5),
         Flexible(
-          child: Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
+          child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
         ),
       ],
     );
@@ -274,10 +276,7 @@ class _JoinButton extends StatelessWidget {
           disabledBackgroundColor: colors.surface2,
           padding: const EdgeInsets.symmetric(horizontal: 15),
           shape: const StadiumBorder(),
-          textStyle: const TextStyle(
-            fontWeight: FontWeight.w900,
-            fontSize: 13,
-          ),
+          textStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13),
         ),
         child: isPending
             ? SizedBox.square(

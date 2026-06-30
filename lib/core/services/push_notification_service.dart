@@ -28,7 +28,11 @@ class PushNotificationService {
       'is_web': kIsWeb,
       'platform': _pushPlatform.isEmpty ? 'unsupported' : _pushPlatform,
       'has_firebase_api_key': firebaseApiKey.isNotEmpty,
-      'has_firebase_app_id': firebaseAppId.isNotEmpty,
+      'has_firebase_app_id': _firebaseAppId.isNotEmpty,
+      'has_legacy_firebase_app_id': firebaseAppId.isNotEmpty,
+      'has_android_firebase_app_id': firebaseAndroidAppId.isNotEmpty,
+      'has_ios_firebase_app_id': firebaseIosAppId.isNotEmpty,
+      'uses_legacy_firebase_app_id': _usesLegacyFirebaseAppId,
       'has_firebase_sender_id': firebaseMessagingSenderId.isNotEmpty,
       'has_firebase_project_id': firebaseProjectId.isNotEmpty,
       'can_use_push': _canUsePush,
@@ -208,6 +212,11 @@ Future<void> _initializeFirebaseMessaging() async {
     await Firebase.initializeApp(options: _firebaseOptions);
   }
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
+    alert: true,
+    badge: true,
+    sound: true,
+  );
 }
 
 @pragma('vm:entry-point')
@@ -218,11 +227,12 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 }
 
 FirebaseOptions get _firebaseOptions {
-  return const FirebaseOptions(
+  return FirebaseOptions(
     apiKey: firebaseApiKey,
-    appId: firebaseAppId,
+    appId: _firebaseAppId,
     messagingSenderId: firebaseMessagingSenderId,
     projectId: firebaseProjectId,
+    iosBundleId: _pushPlatform == 'ios' ? firebaseIosBundleId : null,
   );
 }
 
@@ -238,8 +248,29 @@ bool get _canUsePush {
   return tochPushEnabled &&
       !kIsWeb &&
       _pushPlatform.isNotEmpty &&
-      firebaseApiKey.isNotEmpty &&
-      firebaseAppId.isNotEmpty &&
-      firebaseMessagingSenderId.isNotEmpty &&
-      firebaseProjectId.isNotEmpty;
+      isFirebaseClientConfigComplete(
+        apiKey: firebaseApiKey,
+        platformAppId: _firebaseAppId,
+        messagingSenderId: firebaseMessagingSenderId,
+        projectId: firebaseProjectId,
+      );
+}
+
+String get _firebaseAppId {
+  return firebaseAppIdForTargetPlatform(
+    platform: defaultTargetPlatform,
+    fallbackAppId: firebaseAppId,
+    androidAppId: firebaseAndroidAppId,
+    iosAppId: firebaseIosAppId,
+  );
+}
+
+bool get _usesLegacyFirebaseAppId {
+  return _firebaseAppId.isNotEmpty &&
+      _firebaseAppId == firebaseAppId &&
+      switch (defaultTargetPlatform) {
+        TargetPlatform.android => firebaseAndroidAppId.isEmpty,
+        TargetPlatform.iOS => firebaseIosAppId.isEmpty,
+        _ => false,
+      };
 }

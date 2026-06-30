@@ -38,8 +38,10 @@ class _ActivityChatMembersPageState extends State<ActivityChatMembersPage> {
         : null;
     final members = _chatMembersFor(_activity, currentUserId: currentUserId);
 
+    final canPop = context.canPop();
+
     return PopScope(
-      canPop: false,
+      canPop: canPop,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) {
           return;

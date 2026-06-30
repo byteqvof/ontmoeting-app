@@ -11,6 +11,7 @@ class ProfileInterestsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.toch;
+    final uniqueInterests = _uniqueInterests(interests);
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -34,7 +35,7 @@ class ProfileInterestsCard extends StatelessWidget {
             Wrap(
               spacing: TochSpacing.xs,
               runSpacing: TochSpacing.xs,
-              children: interests.map((interest) {
+              children: uniqueInterests.map((interest) {
                 return _InterestChip(interest: interest);
               }).toList(),
             ),
@@ -85,6 +86,23 @@ class _InterestChip extends StatelessWidget {
       ),
     );
   }
+}
+
+List<ProfileInterest> _uniqueInterests(List<ProfileInterest> interests) {
+  final seen = <String>{};
+  final unique = <ProfileInterest>[];
+
+  for (final interest in interests) {
+    final key = interest.id.trim().toLowerCase().isEmpty
+        ? interest.label.trim().toLowerCase()
+        : interest.id.trim().toLowerCase();
+    if (key.isEmpty || !seen.add(key)) {
+      continue;
+    }
+    unique.add(interest);
+  }
+
+  return unique;
 }
 
 Color _colorFromHex(String hex, {required Color fallback}) {

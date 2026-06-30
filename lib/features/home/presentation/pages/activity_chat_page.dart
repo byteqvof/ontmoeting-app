@@ -333,8 +333,10 @@ class _ActivityChatPageState extends State<ActivityChatPage>
         ? authState.user.id
         : null;
 
+    final canPop = context.canPop();
+
     return PopScope(
-      canPop: false,
+      canPop: canPop,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) {
           return;

@@ -20,7 +20,9 @@ class ActivityDetailHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.toch;
-    final skin = tochCategorySkin('${activity.category.id} ${activity.category.label}');
+    final skin = tochCategorySkin(
+      '${activity.category.id} ${activity.category.label}',
+    );
 
     return SizedBox(
       height: 280,
@@ -35,6 +37,10 @@ class ActivityDetailHero extends StatelessWidget {
             distanceLabel: activity.distanceLabel,
             live: _isLive(activity),
             height: 280,
+            showLiveBadge: false,
+            showDistance: false,
+            showCategory: false,
+            showTitle: false,
           ),
           DecoratedBox(
             decoration: BoxDecoration(
@@ -118,9 +124,7 @@ class ActivityDetailHero extends StatelessWidget {
                           activity.title,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context)
-                              .textTheme
-                              .headlineSmall
+                          style: Theme.of(context).textTheme.headlineSmall
                               ?.copyWith(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w900,
@@ -141,9 +145,7 @@ class ActivityDetailHero extends StatelessWidget {
                           ),
                           child: Text(
                             activity.distanceLabel,
-                            style: Theme.of(context)
-                                .textTheme
-                                .labelSmall
+                            style: Theme.of(context).textTheme.labelSmall
                                 ?.copyWith(
                                   color: colors.card,
                                   fontWeight: FontWeight.w800,

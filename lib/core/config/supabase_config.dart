@@ -20,7 +20,15 @@ const tochFakePhoneVerificationEnabled =
     tochFakePhoneVerificationRequested && appEnvironment == 'dev';
 const tochPushEnabled = bool.fromEnvironment('TOCH_ENABLE_PUSH');
 const firebaseApiKey = String.fromEnvironment('FIREBASE_API_KEY');
+
+/// Legacy fallback for older local commands. Prefer the platform-specific ids.
 const firebaseAppId = String.fromEnvironment('FIREBASE_APP_ID');
+const firebaseAndroidAppId = String.fromEnvironment('FIREBASE_ANDROID_APP_ID');
+const firebaseIosAppId = String.fromEnvironment('FIREBASE_IOS_APP_ID');
+const firebaseIosBundleId = String.fromEnvironment(
+  'FIREBASE_IOS_BUNDLE_ID',
+  defaultValue: 'nl.gatoch.toch',
+);
 const firebaseMessagingSenderId = String.fromEnvironment(
   'FIREBASE_MESSAGING_SENDER_ID',
 );
@@ -73,11 +81,18 @@ class SupabaseConfig {
 
   static void logStartupConfiguration() {
     final supabaseHost = Uri.tryParse(supabaseUrl)?.host;
-    final firebaseConfigured =
-        firebaseApiKey.isNotEmpty &&
-        firebaseAppId.isNotEmpty &&
-        firebaseMessagingSenderId.isNotEmpty &&
-        firebaseProjectId.isNotEmpty;
+    final platformFirebaseAppId = firebaseAppIdForTargetPlatform(
+      platform: defaultTargetPlatform,
+      fallbackAppId: firebaseAppId,
+      androidAppId: firebaseAndroidAppId,
+      iosAppId: firebaseIosAppId,
+    );
+    final firebaseConfigured = isFirebaseClientConfigComplete(
+      apiKey: firebaseApiKey,
+      platformAppId: platformFirebaseAppId,
+      messagingSenderId: firebaseMessagingSenderId,
+      projectId: firebaseProjectId,
+    );
 
     AppLogger.debug(
       'Startup config: '
@@ -86,6 +101,8 @@ class SupabaseConfig {
       'fakePhoneEnabled=$tochFakePhoneVerificationEnabled, '
       'pushEnabled=$tochPushEnabled, '
       'firebaseConfigured=$firebaseConfigured, '
+      'firebasePlatformAppId=${_redactConfigValue(platformFirebaseAppId)}, '
+      'firebaseUsesLegacyAppId=${platformFirebaseAppId.isNotEmpty && platformFirebaseAppId == firebaseAppId}, '
       'posthogConfigured=${posthogApiKey.trim().isNotEmpty}, '
       'sentryConfigured=${sentryDsn.trim().isNotEmpty}, '
       'supabaseHost=${supabaseHost ?? '<invalid>'}, '
@@ -118,6 +135,35 @@ bool isFakePhoneVerificationAllowed({
   required bool requested,
 }) {
   return requested && environment.trim().toLowerCase() == 'dev';
+}
+
+String firebaseAppIdForTargetPlatform({
+  required TargetPlatform platform,
+  required String fallbackAppId,
+  required String androidAppId,
+  required String iosAppId,
+}) {
+  final platformAppId = switch (platform) {
+    TargetPlatform.android => androidAppId,
+    TargetPlatform.iOS => iosAppId,
+    _ => '',
+  }.trim();
+  if (platformAppId.isNotEmpty) {
+    return platformAppId;
+  }
+  return fallbackAppId.trim();
+}
+
+bool isFirebaseClientConfigComplete({
+  required String apiKey,
+  required String platformAppId,
+  required String messagingSenderId,
+  required String projectId,
+}) {
+  return apiKey.trim().isNotEmpty &&
+      platformAppId.trim().isNotEmpty &&
+      messagingSenderId.trim().isNotEmpty &&
+      projectId.trim().isNotEmpty;
 }
 
 String _redactConfigValue(String value) {
