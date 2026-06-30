@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:meetings_app/core/errors/failures.dart';
 import 'package:meetings_app/core/services/account_trust_service.dart';
 import 'package:meetings_app/features/home/data/datasources/home_location_data_source.dart';
@@ -70,6 +71,27 @@ void main() {
       );
     }, (_) => fail('Expected location failure.'));
   });
+
+  test(
+    'does not map disabled device location service as permission denied',
+    () async {
+      final repository = HomeRepositoryImpl(
+        _ThrowingHomeRemoteDataSource(Exception('unused')),
+        _ThrowingLocationDataSource(const LocationServiceDisabledException()),
+      );
+
+      final result = await repository.getCurrentLocation();
+
+      result.fold((failure) {
+        expect(failure, isA<ServerFailure>());
+        expect(failure, isNot(isA<PermissionFailure>()));
+        expect(
+          failure.message,
+          'Zet locatievoorzieningen aan om je plaats automatisch te vinden.',
+        );
+      }, (_) => fail('Expected location failure.'));
+    },
+  );
 
   test('does not wait for a hanging device location lookup', () async {
     final repository = HomeRepositoryImpl(

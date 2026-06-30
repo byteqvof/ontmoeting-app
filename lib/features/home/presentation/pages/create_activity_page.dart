@@ -416,6 +416,7 @@ class _CreateActivityLocationFieldState
             CreateActivityLocationSearchStatus.searching;
         final hasSelectedLocation = state.hasSelectedMeetingLocation;
         final canSearch = state.location.trim().length >= 3 && !isSearching;
+        final hasLocationText = _controller.text.isNotEmpty;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -452,13 +453,17 @@ class _CreateActivityLocationFieldState
                         textInputAction: TextInputAction.search,
                         onChanged: _onLocationChanged,
                         onSubmitted: (_) => _searchNow(),
-                        decoration: const InputDecoration(
-                          border: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          focusedBorder: InputBorder.none,
-                          hintText: 'Typ een plek of adres',
-                          contentPadding: EdgeInsets.zero,
-                        ),
+                        decoration:
+                            const InputDecoration(
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              contentPadding: EdgeInsets.zero,
+                            ).copyWith(
+                              hintText: hasLocationText
+                                  ? null
+                                  : 'Typ een plek of adres',
+                            ),
                         style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(
                               color: colors.ink,
@@ -1277,7 +1282,7 @@ class _AccessChoiceChip extends StatelessWidget {
   }
 }
 
-class _LabeledField extends StatelessWidget {
+class _LabeledField extends StatefulWidget {
   const _LabeledField({
     required this.label,
     required this.hintText,
@@ -1297,19 +1302,44 @@ class _LabeledField extends StatelessWidget {
   final int maxLines;
 
   @override
+  State<_LabeledField> createState() => _LabeledFieldState();
+}
+
+class _LabeledFieldState extends State<_LabeledField> {
+  late final TextEditingController _controller = TextEditingController()
+    ..addListener(_handleTextChanged);
+
+  @override
+  void dispose() {
+    _controller
+      ..removeListener(_handleTextChanged)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _handleTextChanged() {
+    setState(() {});
+  }
+
+  void _onChanged(String value) {
+    widget.onChanged(value);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final colors = context.toch;
+    final hasText = _controller.text.isNotEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            _SectionLabel(label),
-            if (suffixLabel != null) ...[
+            _SectionLabel(widget.label),
+            if (widget.suffixLabel != null) ...[
               const SizedBox(width: 5),
               Text(
-                suffixLabel!,
+                widget.suffixLabel!,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                   color: colors.green700.withValues(alpha: .55),
                   fontWeight: FontWeight.w800,
@@ -1326,13 +1356,18 @@ class _LabeledField extends StatelessWidget {
             boxShadow: TochShadows.card(colors),
           ),
           child: Padding(
-            padding: EdgeInsets.fromLTRB(14, maxLines == 1 ? 8 : 12, 14, 8),
+            padding: EdgeInsets.fromLTRB(
+              14,
+              widget.maxLines == 1 ? 8 : 12,
+              14,
+              8,
+            ),
             child: Row(
-              crossAxisAlignment: maxLines == 1
+              crossAxisAlignment: widget.maxLines == 1
                   ? CrossAxisAlignment.center
                   : CrossAxisAlignment.start,
               children: [
-                if (icon != null) ...[
+                if (widget.icon != null) ...[
                   DecoratedBox(
                     decoration: BoxDecoration(
                       color: colors.green100,
@@ -1340,25 +1375,26 @@ class _LabeledField extends StatelessWidget {
                     ),
                     child: SizedBox.square(
                       dimension: 44,
-                      child: Icon(icon, color: colors.green, size: 21),
+                      child: Icon(widget.icon, color: colors.green, size: 21),
                     ),
                   ),
                   const SizedBox(width: 12),
                 ],
                 Expanded(
                   child: TextField(
-                    minLines: minLines,
-                    maxLines: maxLines,
-                    onChanged: onChanged,
-                    textInputAction: maxLines == 1
+                    controller: _controller,
+                    minLines: widget.minLines,
+                    maxLines: widget.maxLines,
+                    onChanged: _onChanged,
+                    textInputAction: widget.maxLines == 1
                         ? TextInputAction.next
                         : TextInputAction.newline,
                     decoration: InputDecoration(
                       border: InputBorder.none,
                       enabledBorder: InputBorder.none,
                       focusedBorder: InputBorder.none,
-                      hintText: hintText,
-                      contentPadding: maxLines == 1
+                      hintText: hasText ? null : widget.hintText,
+                      contentPadding: widget.maxLines == 1
                           ? EdgeInsets.zero
                           : const EdgeInsets.only(top: 2),
                     ),

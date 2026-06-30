@@ -1,0 +1,14 @@
+{
+  "TOCH_ENV": "dev",
+  "TOCH_FAKE_PHONE_VERIFICATION": true,
+  "TOCH_ENABLE_PUSH": true,
+  "SUPABASE_URL": "https://pmnymluxikcmqehlbxlt.supabase.co",
+  "SUPABASE_ANON_KEY": "sb_publishable_q9O8Q1jmRZ-9PVGdj_9dYg_S24tTwwt",
+  "POSTHOG_API_KEY": "",
+  "POSTHOG_HOST": "https://eu.i.posthog.com",
+  "SENTRY_DSN": "",
+  "FIREBASE_PROJECT_ID": "toch-1dcaf",
+  "FIREBASE_MESSAGING_SENDER_ID": "724429202361",
+  "FIREBASE_APP_ID": "1:724429202361:android:28b9277d3ba5dd0c7f8c68",
+  "FIREBASE_API_KEY": "AIzaSyBQnYmZ4c0mW1dcF82Xmvq_WseK9OA3JdQ"
+}

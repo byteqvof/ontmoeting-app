@@ -40,6 +40,44 @@ void main() {
     await bloc.close();
   });
 
+  test('blocks startup when device location lookup fails', () async {
+    final repository = _HomeRepositoryStub()
+      ..currentLocationResult = left(
+        const ServerFailure('We kunnen je locatie niet bepalen.'),
+      );
+    final bloc = HomeBloc(
+      GetHomeFeed(repository),
+      GetCurrentLocation(repository),
+      SetActivityParticipation(repository),
+      WatchCurrentLocation(repository),
+    );
+
+    bloc.add(const HomeStarted());
+
+    await expectLater(bloc.stream, emitsThrough(isA<HomeLocationBlocked>()));
+    expect(repository.feedLoadCount, 0);
+    await bloc.close();
+  });
+
+  test('blocks startup when location permission is denied', () async {
+    final repository = _HomeRepositoryStub()
+      ..currentLocationResult = left(
+        const PermissionFailure('Locatietoegang is nodig.'),
+      );
+    final bloc = HomeBloc(
+      GetHomeFeed(repository),
+      GetCurrentLocation(repository),
+      SetActivityParticipation(repository),
+      WatchCurrentLocation(repository),
+    );
+
+    bloc.add(const HomeStarted());
+
+    await expectLater(bloc.stream, emitsThrough(isA<HomeLocationBlocked>()));
+    expect(repository.feedLoadCount, 0);
+    await bloc.close();
+  });
+
   test(
     'ignores small watcher location changes without reloading feed',
     () async {
@@ -104,8 +142,10 @@ void main() {
 class _HomeRepositoryStub implements HomeRepository {
   final _locationController =
       StreamController<Either<Failure, HomeLocation>>.broadcast();
+  Either<Failure, HomeLocation>? currentLocationResult;
   bool? lastForceRefresh;
   int feedLoadCount = 0;
+  HomeLocation? lastFeedLocation;
 
   void emitWatchedLocation(HomeLocation location) {
     _locationController.add(right(location));
@@ -116,7 +156,7 @@ class _HomeRepositoryStub implements HomeRepository {
     bool forceRefresh = false,
   }) async {
     lastForceRefresh = forceRefresh;
-    return right(_location);
+    return currentLocationResult ?? right(_location);
   }
 
   @override
@@ -126,6 +166,7 @@ class _HomeRepositoryStub implements HomeRepository {
     bool forceRefresh = false,
   }) async {
     feedLoadCount += 1;
+    lastFeedLocation = location;
     return right(
       HomeFeed(
         locationName: location.cityName,

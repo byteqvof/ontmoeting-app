@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:dartz/dartz.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/errors/failures.dart';
@@ -278,7 +279,9 @@ class HomeRepositoryImpl implements HomeRepository {
       _cachedLocation = location;
       return right(location);
     } catch (error) {
-      return left(_mapLocationError(error));
+      final failure = _mapLocationError(error);
+      _logMappedLocationError(error, failure, source: 'getCurrentLocation');
+      return left(failure);
     }
   }
 
@@ -298,19 +301,24 @@ class HomeRepositoryImpl implements HomeRepository {
         yield right(location);
       }
     } catch (error) {
-      yield left(_mapLocationError(error));
+      final failure = _mapLocationError(error);
+      _logMappedLocationError(error, failure, source: 'watchCurrentLocation');
+      yield left(failure);
     }
   }
 
   Failure _mapLocationError(Object error) {
     final message = error.toString().toLowerCase();
-    if (message.contains('permission')) {
+    if (_looksLikeLocationPermissionDenied(error)) {
       return const PermissionFailure(
         'Locatietoegang is nodig om activiteiten in je plaats te tonen.',
       );
     }
-    if (message.contains('disabled')) {
-      return const PermissionFailure(
+    if (error is LocationServiceDisabledException ||
+        message.contains('location services are disabled') ||
+        message.contains('location service disabled') ||
+        message.contains('disabled')) {
+      return const ServerFailure(
         'Zet locatievoorzieningen aan om je plaats automatisch te vinden.',
       );
     }
@@ -325,6 +333,32 @@ class HomeRepositoryImpl implements HomeRepository {
     }
     return const ServerFailure(
       'We kunnen je locatie niet bepalen. Controleer de locatie van je toestel en probeer opnieuw.',
+    );
+  }
+
+  bool _looksLikeLocationPermissionDenied(Object error) {
+    if (error is PermissionDeniedException) {
+      return true;
+    }
+
+    final message = error.toString().toLowerCase();
+    return message.contains('permission_denied') ||
+        message.contains('permission denied') ||
+        message.contains('permission permanently denied');
+  }
+
+  void _logMappedLocationError(
+    Object error,
+    Failure failure, {
+    required String source,
+  }) {
+    AppLogger.debug(
+      'Location error mapped '
+      'source=$source '
+      'errorType=${error.runtimeType} '
+      'failureType=${failure.runtimeType} '
+      'failureMessage="${failure.message}"',
+      error: error,
     );
   }
 

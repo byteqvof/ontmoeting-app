@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_router.dart';
@@ -664,6 +665,9 @@ class _LocationBlocked extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.toch;
+    final isLocationServiceDisabled = message.toLowerCase().contains(
+      'locatievoorzieningen',
+    );
 
     return SafeArea(
       child: Padding(
@@ -697,13 +701,20 @@ class _LocationBlocked extends StatelessWidget {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
-                      onPressed: () {
-                        context.read<HomeBloc>().add(
-                          const HomeLocationRequested(forceRefresh: true),
-                        );
-                      },
-                      icon: const Icon(Icons.my_location_rounded),
-                      label: const Text('Locatie toestaan'),
+                      onPressed: () => _handleLocationAction(
+                        context,
+                        openLocationSettings: isLocationServiceDisabled,
+                      ),
+                      icon: Icon(
+                        isLocationServiceDisabled
+                            ? Icons.settings_rounded
+                            : Icons.my_location_rounded,
+                      ),
+                      label: Text(
+                        isLocationServiceDisabled
+                            ? 'Locatie-instellingen openen'
+                            : 'Locatie toestaan',
+                      ),
                     ),
                   ),
                 ],
@@ -712,6 +723,21 @@ class _LocationBlocked extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Future<void> _handleLocationAction(
+    BuildContext context, {
+    required bool openLocationSettings,
+  }) async {
+    if (openLocationSettings) {
+      await Geolocator.openLocationSettings();
+    }
+    if (!context.mounted) {
+      return;
+    }
+    context.read<HomeBloc>().add(
+      const HomeLocationRequested(forceRefresh: true),
     );
   }
 }

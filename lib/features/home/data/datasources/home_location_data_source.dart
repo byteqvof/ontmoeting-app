@@ -24,6 +24,13 @@ class HomeLocationDataSourceImpl implements HomeLocationDataSource {
 
   @override
   Future<HomeLocation> getCurrentLocation({bool forceRefresh = false}) async {
+    AppLogger.debug(
+      'Location lookup started '
+      'forceRefresh=$forceRefresh '
+      'platform=${_platformLabel()} '
+      'preferAndroidLocationManager=$_preferAndroidLocationManager '
+      'timeout=${currentPositionTimeout.inSeconds}s',
+    );
     await _ensureLocationAccess();
 
     final position = await _getQuickPosition(forceRefresh: forceRefresh);
@@ -32,6 +39,11 @@ class HomeLocationDataSourceImpl implements HomeLocationDataSource {
 
   @override
   Stream<HomeLocation> watchCurrentLocation() async* {
+    AppLogger.debug(
+      'Location watcher starting '
+      'platform=${_platformLabel()} '
+      'preferAndroidLocationManager=$_preferAndroidLocationManager',
+    );
     await _ensureLocationAccess();
     await for (final position in Geolocator.getPositionStream(
       locationSettings: _locationSettings(
@@ -107,38 +119,54 @@ class HomeLocationDataSourceImpl implements HomeLocationDataSource {
     } on TimeoutException catch (error) {
       AppLogger.debug('Current location quick lookup timed out', error: error);
       if (forceAndroidLocationManager && _preferAndroidLocationManager) {
+        AppLogger.debug(
+          'Retrying current location with fused provider after '
+          'Android LocationManager timeout',
+        );
         return _requestCurrentPosition(forceAndroidLocationManager: false);
       }
       throw TimeoutException(
         'Location timed out before the device returned a fix.',
         currentPositionTimeout,
       );
+    } catch (error, stackTrace) {
+      AppLogger.debug(
+        'Current location request failed',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      rethrow;
     }
   }
 
   Future<void> _ensureLocationAccess() async {
-    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    AppLogger.debug('Location service enabled: $serviceEnabled');
-    if (!serviceEnabled) {
-      throw const LocationServiceDisabledException();
-    }
-
+    AppLogger.debug('Checking location access on ${_platformLabel()}');
     var permission = await Geolocator.checkPermission();
     AppLogger.debug('Location permission before request: ${permission.name}');
     if (permission == LocationPermission.denied) {
+      AppLogger.debug('Requesting location permission from platform');
       permission = await Geolocator.requestPermission();
       AppLogger.debug('Location permission after request: ${permission.name}');
     }
 
     if (permission == LocationPermission.denied) {
+      AppLogger.debug('Location permission denied by user/platform');
       throw const PermissionDeniedException('Location permission denied.');
     }
 
     if (permission == LocationPermission.deniedForever) {
+      AppLogger.debug('Location permission denied forever');
       throw const PermissionDeniedException(
         'Location permission permanently denied.',
       );
     }
+
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    AppLogger.debug('Location service enabled: $serviceEnabled');
+    if (!serviceEnabled) {
+      throw const LocationServiceDisabledException();
+    }
+    AppLogger.debug('Location access granted and service enabled');
   }
 
   Future<HomeLocation> _locationFromPosition(Position position) async {
@@ -216,4 +244,11 @@ class HomeLocationDataSourceImpl implements HomeLocationDataSource {
 
   bool get _preferAndroidLocationManager =>
       !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
+  String _platformLabel() {
+    if (kIsWeb) {
+      return 'web';
+    }
+    return defaultTargetPlatform.name;
+  }
 }

@@ -69,8 +69,22 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       GetCurrentLocationParams(forceRefresh: event.forceRefresh),
     );
     await result.fold(
-      (failure) async => emit(HomeLocationBlocked(failure.message)),
+      (failure) async {
+        AppLogger.debug(
+          'HomeBloc location request blocked '
+          'forceRefresh=${event.forceRefresh} '
+          'failureType=${failure.runtimeType} '
+          'message="${failure.message}"',
+        );
+        emit(HomeLocationBlocked(failure.message));
+      },
       (location) async {
+        AppLogger.debug(
+          'HomeBloc location resolved '
+          'city="${location.cityName}" '
+          'lat=${location.latitude} lon=${location.longitude} '
+          'forceRefresh=${event.forceRefresh}',
+        );
         _lastAutomaticLocationFeedLoadAt = null;
         await _loadFeed(
           emit,
