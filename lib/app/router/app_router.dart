@@ -95,11 +95,11 @@ class AppRoutes {
   }
 }
 
-Widget _protected(Widget child) {
+Widget _protectedShell(Widget child) {
   return AccountGate(child: ProfileCompletionGate(child: child));
 }
 
-Widget _phoneProtected(Widget child) {
+Widget _phoneProtectedShell(Widget child) {
   return AccountGate(child: child);
 }
 
@@ -137,191 +137,193 @@ GoRouter createRouter(AuthBloc authBloc) {
       return null;
     },
     routes: [
-      GoRoute(
-        path: AppRoutes.home,
-        builder: (context, state) {
-          return _protected(const HomePage());
-        },
-      ),
-      GoRoute(
-        path: AppRoutes.createActivity,
-        builder: (context, state) {
-          final args = state.extra;
-          if (args is! CreateActivityPageArgs) {
-            return _protected(const MissingCreateActivityPage());
-          }
-          return _protected(
-            CreateActivityPage(
-              location: args.location,
-              categories: args.categories,
-            ),
-          );
-        },
-      ),
-      GoRoute(
-        path: AppRoutes.search,
-        builder: (context, state) {
-          return _protected(const ActivitySearchPage());
-        },
-      ),
-      GoRoute(
-        path: AppRoutes.activityMessages,
-        builder: (context, state) {
-          return _protected(const ActivityMessagesPage());
-        },
-      ),
-      GoRoute(
-        path: AppRoutes.activityAgenda,
-        builder: (context, state) {
-          return _protected(const ActivityAgendaPage());
-        },
-      ),
-      GoRoute(
-        path: AppRoutes.activityMap,
-        builder: (context, state) {
-          final args = state.extra;
-          if (args is! ActivityMapPageArgs) {
-            return _protected(const ActivityMapLoaderPage());
-          }
-          return _protected(ActivityMapPage(args: args));
-        },
-      ),
-      GoRoute(
-        path: AppRoutes.activityChat,
-        builder: (context, state) {
-          final activity = state.extra;
-          final from = state.uri.queryParameters['from'];
-          final backFallbackRoute = from == 'joined' ? AppRoutes.home : null;
-          if (activity is HomeActivity) {
-            return _protected(
-              ActivityChatPage(
-                activity: activity,
+      ShellRoute(
+        builder: (context, state, child) => _protectedShell(child),
+        routes: [
+          GoRoute(
+            path: AppRoutes.home,
+            builder: (context, state) {
+              return const HomePage();
+            },
+          ),
+          GoRoute(
+            path: AppRoutes.createActivity,
+            builder: (context, state) {
+              final args = state.extra;
+              if (args is! CreateActivityPageArgs) {
+                return const MissingCreateActivityPage();
+              }
+              return CreateActivityPage(
+                location: args.location,
+                categories: args.categories,
+              );
+            },
+          ),
+          GoRoute(
+            path: AppRoutes.search,
+            builder: (context, state) {
+              return const ActivitySearchPage();
+            },
+          ),
+          GoRoute(
+            path: AppRoutes.activityMessages,
+            builder: (context, state) {
+              return const ActivityMessagesPage();
+            },
+          ),
+          GoRoute(
+            path: AppRoutes.activityAgenda,
+            builder: (context, state) {
+              return const ActivityAgendaPage();
+            },
+          ),
+          GoRoute(
+            path: AppRoutes.activityMap,
+            builder: (context, state) {
+              final args = state.extra;
+              if (args is! ActivityMapPageArgs) {
+                return const ActivityMapLoaderPage();
+              }
+              return ActivityMapPage(args: args);
+            },
+          ),
+          GoRoute(
+            path: AppRoutes.activityChat,
+            builder: (context, state) {
+              final activity = state.extra;
+              final from = state.uri.queryParameters['from'];
+              final backFallbackRoute = from == 'joined'
+                  ? AppRoutes.home
+                  : null;
+              if (activity is HomeActivity) {
+                return ActivityChatPage(
+                  activity: activity,
+                  backFallbackRoute: backFallbackRoute,
+                );
+              }
+              return ActivityRouteLoaderPage(
+                activityId: state.pathParameters['activityId'] ?? '',
+                target: ActivityRouteTarget.chat,
                 backFallbackRoute: backFallbackRoute,
-              ),
-            );
-          }
-          return _protected(
-            ActivityRouteLoaderPage(
-              activityId: state.pathParameters['activityId'] ?? '',
-              target: ActivityRouteTarget.chat,
-              backFallbackRoute: backFallbackRoute,
-            ),
-          );
-        },
+              );
+            },
+          ),
+          GoRoute(
+            path: AppRoutes.activityChatMembers,
+            builder: (context, state) {
+              final activity = state.extra;
+              if (activity is HomeActivity) {
+                return ActivityChatMembersPage(activity: activity);
+              }
+              return ActivityRouteLoaderPage(
+                activityId: state.pathParameters['activityId'] ?? '',
+                target: ActivityRouteTarget.members,
+              );
+            },
+          ),
+          GoRoute(
+            path: AppRoutes.activityJoinConfirmation,
+            builder: (context, state) {
+              final activity = state.extra;
+              if (activity is! HomeActivity) {
+                return const MissingActivityDetailPage();
+              }
+              return ActivityJoinConfirmationPage(activity: activity);
+            },
+          ),
+          GoRoute(
+            path: AppRoutes.editActivity,
+            builder: (context, state) {
+              final activity = state.extra;
+              if (activity is! HomeActivity) {
+                return const MissingActivityDetailPage();
+              }
+              return EditActivityPage(activity: activity);
+            },
+          ),
+          GoRoute(
+            path: AppRoutes.activityDetail,
+            builder: (context, state) {
+              final activity = state.extra;
+              if (activity is HomeActivity) {
+                return ActivityDetailPage(activity: activity);
+              }
+              return ActivityRouteLoaderPage(
+                activityId: state.pathParameters['activityId'] ?? '',
+                target: ActivityRouteTarget.detail,
+              );
+            },
+          ),
+          GoRoute(
+            path: AppRoutes.profile,
+            builder: (context, state) {
+              return const ProfilePage();
+            },
+          ),
+          GoRoute(
+            path: AppRoutes.friends,
+            builder: (context, state) {
+              return const FriendsPage();
+            },
+          ),
+          GoRoute(
+            path: AppRoutes.appInfo,
+            builder: (context, state) {
+              return const AppInfoPage();
+            },
+          ),
+          GoRoute(
+            path: AppRoutes.notifications,
+            builder: (context, state) {
+              return const NotificationsPage();
+            },
+          ),
+          GoRoute(
+            path: AppRoutes.privacyLocation,
+            builder: (context, state) {
+              return const PrivacyLocationPage();
+            },
+          ),
+          GoRoute(
+            path: AppRoutes.editProfile,
+            builder: (context, state) {
+              final profile = state.extra;
+              if (profile is! Profile) {
+                return const MissingEditProfilePage();
+              }
+              return EditProfilePage(profile: profile);
+            },
+          ),
+          GoRoute(
+            path: AppRoutes.profileDetail,
+            builder: (context, state) {
+              return ProfilePage(profileId: state.pathParameters['profileId']);
+            },
+          ),
+        ],
       ),
-      GoRoute(
-        path: AppRoutes.activityChatMembers,
-        builder: (context, state) {
-          final activity = state.extra;
-          if (activity is HomeActivity) {
-            return _protected(ActivityChatMembersPage(activity: activity));
-          }
-          return _protected(
-            ActivityRouteLoaderPage(
-              activityId: state.pathParameters['activityId'] ?? '',
-              target: ActivityRouteTarget.members,
-            ),
-          );
-        },
-      ),
-      GoRoute(
-        path: AppRoutes.activityJoinConfirmation,
-        builder: (context, state) {
-          final activity = state.extra;
-          if (activity is! HomeActivity) {
-            return _protected(const MissingActivityDetailPage());
-          }
-          return _protected(ActivityJoinConfirmationPage(activity: activity));
-        },
-      ),
-      GoRoute(
-        path: AppRoutes.editActivity,
-        builder: (context, state) {
-          final activity = state.extra;
-          if (activity is! HomeActivity) {
-            return _protected(const MissingActivityDetailPage());
-          }
-          return _protected(EditActivityPage(activity: activity));
-        },
-      ),
-      GoRoute(
-        path: AppRoutes.activityDetail,
-        builder: (context, state) {
-          final activity = state.extra;
-          if (activity is HomeActivity) {
-            return _protected(ActivityDetailPage(activity: activity));
-          }
-          return _protected(
-            ActivityRouteLoaderPage(
-              activityId: state.pathParameters['activityId'] ?? '',
-              target: ActivityRouteTarget.detail,
-            ),
-          );
-        },
-      ),
-      GoRoute(
-        path: AppRoutes.profile,
-        builder: (context, state) {
-          return _protected(const ProfilePage());
-        },
-      ),
-      GoRoute(
-        path: AppRoutes.accountVerification,
-        builder: (context, state) {
-          return _phoneProtected(const AccountVerificationPage());
-        },
-      ),
-      GoRoute(
-        path: AppRoutes.friends,
-        builder: (context, state) {
-          return _protected(const FriendsPage());
-        },
-      ),
-      GoRoute(
-        path: AppRoutes.appInfo,
-        builder: (context, state) {
-          return _protected(const AppInfoPage());
-        },
-      ),
-      GoRoute(
-        path: AppRoutes.notifications,
-        builder: (context, state) {
-          return _protected(const NotificationsPage());
-        },
-      ),
-      GoRoute(
-        path: AppRoutes.premium,
-        builder: (context, state) {
-          return _phoneProtected(const PremiumPage());
-        },
-      ),
-      GoRoute(
-        path: AppRoutes.privacyLocation,
-        builder: (context, state) {
-          return _protected(const PrivacyLocationPage());
-        },
-      ),
-      GoRoute(
-        path: AppRoutes.profileSetup,
-        builder: (context, state) => _phoneProtected(const ProfileSetupPage()),
-      ),
-      GoRoute(
-        path: AppRoutes.editProfile,
-        builder: (context, state) {
-          final profile = state.extra;
-          if (profile is! Profile) {
-            return _protected(const MissingEditProfilePage());
-          }
-          return _protected(EditProfilePage(profile: profile));
-        },
-      ),
-      GoRoute(
-        path: AppRoutes.profileDetail,
-        builder: (context, state) {
-          return _protected(
-            ProfilePage(profileId: state.pathParameters['profileId']),
-          );
-        },
+      ShellRoute(
+        builder: (context, state, child) => _phoneProtectedShell(child),
+        routes: [
+          GoRoute(
+            path: AppRoutes.accountVerification,
+            builder: (context, state) {
+              return const AccountVerificationPage();
+            },
+          ),
+          GoRoute(
+            path: AppRoutes.premium,
+            builder: (context, state) {
+              return const PremiumPage();
+            },
+          ),
+          GoRoute(
+            path: AppRoutes.profileSetup,
+            builder: (context, state) {
+              return const ProfileSetupPage();
+            },
+          ),
+        ],
       ),
       GoRoute(
         path: AppRoutes.splash,
