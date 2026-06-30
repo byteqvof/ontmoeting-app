@@ -101,9 +101,23 @@ void main() {
 
     expect(activity.isChatClosed, isTrue);
   });
+
+  test('marks only future dated activities as upcoming', () {
+    final future = _activity(
+      startsAt: DateTime.now().add(const Duration(hours: 1)),
+    );
+    final past = _activity(
+      startsAt: DateTime.now().subtract(const Duration(minutes: 1)),
+    );
+    final unknownStart = _activity();
+
+    expect(future.isUpcoming, isTrue);
+    expect(past.isUpcoming, isFalse);
+    expect(unknownStart.isUpcoming, isFalse);
+  });
 }
 
-HomeActivity _activity({String status = 'published'}) {
+HomeActivity _activity({String status = 'published', DateTime? startsAt}) {
   return HomeActivity(
     id: 'activity-1',
     category: HomeCategory(
@@ -118,6 +132,7 @@ HomeActivity _activity({String status = 'published'}) {
     title: 'Wandelen',
     dateLabel: 'vrijdag 5 jun',
     timeLabel: '14:00',
+    startsAt: startsAt,
     locationName: 'Ter Apel',
     meetingPoint: 'Centrum',
     description: 'Een rustige wandeling.',

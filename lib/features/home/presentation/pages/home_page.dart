@@ -342,7 +342,9 @@ class _HostedActivitiesOverviewState extends State<_HostedActivitiesOverview> {
 }
 
 List<HomeActivity> _sortHostedActivities(Iterable<HomeActivity> activities) {
-  return activities.where((activity) => !activity.isCompleted).toList()
+  return activities
+      .where((activity) => !activity.isCompleted && activity.isUpcoming)
+      .toList()
     ..sort((left, right) {
       final leftStart = left.startsAt;
       final rightStart = right.startsAt;

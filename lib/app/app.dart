@@ -36,9 +36,13 @@ class _AppViewState extends State<_AppView> {
   late final _router = createRouter(context.read<AuthBloc>());
   final AppLinks _appLinks = AppLinks();
   StreamSubscription<Uri>? _linkSubscription;
-  StreamSubscription<String>? _pushOpenSubscription;
+  StreamSubscription<String>? _pushChatOpenSubscription;
+  StreamSubscription<String>? _pushActivityOpenSubscription;
+  StreamSubscription<String>? _pushProfileOpenSubscription;
   bool _emailVerificationCallbackSeen = false;
   String? _pendingPushChatActivityId;
+  String? _pendingPushActivityId;
+  String? _pendingPushProfileId;
 
   @override
   void initState() {
@@ -50,7 +54,9 @@ class _AppViewState extends State<_AppView> {
   @override
   void dispose() {
     _linkSubscription?.cancel();
-    _pushOpenSubscription?.cancel();
+    _pushChatOpenSubscription?.cancel();
+    _pushActivityOpenSubscription?.cancel();
+    _pushProfileOpenSubscription?.cancel();
     super.dispose();
   }
 
@@ -129,8 +135,18 @@ class _AppViewState extends State<_AppView> {
 
   void _startPushNotificationLinkListener() {
     final push = sl<PushNotificationService>();
-    _pushOpenSubscription = push.chatNotificationOpens.listen((activityId) {
+    _pushChatOpenSubscription = push.chatNotificationOpens.listen((activityId) {
       _handlePushChatOpen(activityId);
+    });
+    _pushActivityOpenSubscription = push.activityNotificationOpens.listen((
+      activityId,
+    ) {
+      _handlePushActivityOpen(activityId);
+    });
+    _pushProfileOpenSubscription = push.profileNotificationOpens.listen((
+      profileId,
+    ) {
+      _handlePushProfileOpen(profileId);
     });
     unawaited(push.startInteractionHandlers());
   }
@@ -166,6 +182,68 @@ class _AppViewState extends State<_AppView> {
     });
   }
 
+  void _handlePushActivityOpen(String activityId) {
+    final normalizedActivityId = activityId.trim();
+    if (normalizedActivityId.isEmpty) {
+      return;
+    }
+
+    AppLogger.debug('Push activity open requested for $normalizedActivityId');
+    _pendingPushActivityId = normalizedActivityId;
+    _openPendingPushActivityIfReady(context.read<AuthBloc>().state);
+  }
+
+  void _openPendingPushActivityIfReady(AuthState state) {
+    final activityId = _pendingPushActivityId;
+    if (activityId == null || activityId.isEmpty) {
+      return;
+    }
+    if (state is! AuthAuthenticated) {
+      AppLogger.debug('Push activity open waiting for authenticated session');
+      return;
+    }
+
+    _pendingPushActivityId = null;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      AppLogger.debug('Opening activity from push notification');
+      _router.go(AppRoutes.activityDetailPath(activityId));
+    });
+  }
+
+  void _handlePushProfileOpen(String profileId) {
+    final normalizedProfileId = profileId.trim();
+    if (normalizedProfileId.isEmpty) {
+      return;
+    }
+
+    AppLogger.debug('Push profile open requested for $normalizedProfileId');
+    _pendingPushProfileId = normalizedProfileId;
+    _openPendingPushProfileIfReady(context.read<AuthBloc>().state);
+  }
+
+  void _openPendingPushProfileIfReady(AuthState state) {
+    final profileId = _pendingPushProfileId;
+    if (profileId == null || profileId.isEmpty) {
+      return;
+    }
+    if (state is! AuthAuthenticated) {
+      AppLogger.debug('Push profile open waiting for authenticated session');
+      return;
+    }
+
+    _pendingPushProfileId = null;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      AppLogger.debug('Opening profile from push notification');
+      _router.go(AppRoutes.profilePath(profileId));
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
@@ -177,6 +255,8 @@ class _AppViewState extends State<_AppView> {
           unawaited(push.registerForCurrentUser());
           _goToEmailVerifiedIfAuthenticated(state);
           _openPendingPushChatIfReady(state);
+          _openPendingPushActivityIfReady(state);
+          _openPendingPushProfileIfReady(state);
         }
         if (state is AuthUnauthenticated) {
           unawaited(push.unregisterCurrentToken());

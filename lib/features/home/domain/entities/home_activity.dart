@@ -98,6 +98,8 @@ class HomeActivity extends Equatable {
 
   bool get isCompleted => status == 'completed';
 
+  bool get isUpcoming => startsAt != null && startsAt!.isAfter(DateTime.now());
+
   bool get isChatClosed => isCompleted;
 
   bool get hasStarted => startsAt == null || !startsAt!.isAfter(DateTime.now());

@@ -17,10 +17,18 @@ class PushNotificationService {
   StreamSubscription<RemoteMessage>? _messageOpenedSubscription;
   final StreamController<String> _chatNotificationOpens =
       StreamController<String>.broadcast();
+  final StreamController<String> _activityNotificationOpens =
+      StreamController<String>.broadcast();
+  final StreamController<String> _profileNotificationOpens =
+      StreamController<String>.broadcast();
   bool _interactionHandlersStarted = false;
   String? _lastRegisteredToken;
 
   Stream<String> get chatNotificationOpens => _chatNotificationOpens.stream;
+  Stream<String> get activityNotificationOpens =>
+      _activityNotificationOpens.stream;
+  Stream<String> get profileNotificationOpens =>
+      _profileNotificationOpens.stream;
 
   static Map<String, Object> diagnosticSummary() {
     return {
@@ -88,6 +96,38 @@ class PushNotificationService {
       return null;
     }
     return activityId;
+  }
+
+  static String? activityIdFromParticipationRemoteMessage(
+    RemoteMessage? message,
+  ) {
+    if (message == null) {
+      return null;
+    }
+    final data = message.data;
+    if (data['type'] != 'activity_participation') {
+      return null;
+    }
+    final activityId = data['activity_id']?.toString().trim();
+    if (activityId == null || activityId.isEmpty) {
+      return null;
+    }
+    return activityId;
+  }
+
+  static String? profileIdFromFriendshipRemoteMessage(RemoteMessage? message) {
+    if (message == null) {
+      return null;
+    }
+    final data = message.data;
+    if (data['type'] != 'friendship') {
+      return null;
+    }
+    final profileId = data['profile_id']?.toString().trim();
+    if (profileId == null || profileId.isEmpty) {
+      return null;
+    }
+    return profileId;
   }
 
   Future<void> registerForCurrentUser() async {
@@ -193,11 +233,22 @@ class PushNotificationService {
   }
 
   void _handleOpenedMessage(RemoteMessage? message) {
-    final activityId = activityChatIdFromRemoteMessage(message);
-    if (activityId == null) {
+    final chatActivityId = activityChatIdFromRemoteMessage(message);
+    if (chatActivityId != null) {
+      _chatNotificationOpens.add(chatActivityId);
       return;
     }
-    _chatNotificationOpens.add(activityId);
+
+    final activityId = activityIdFromParticipationRemoteMessage(message);
+    if (activityId != null) {
+      _activityNotificationOpens.add(activityId);
+      return;
+    }
+
+    final profileId = profileIdFromFriendshipRemoteMessage(message);
+    if (profileId != null) {
+      _profileNotificationOpens.add(profileId);
+    }
   }
 }
 
