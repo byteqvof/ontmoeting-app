@@ -107,6 +107,16 @@ final class CreateActivityMinReputationSelected extends CreateActivityEvent {
   List<Object?> get props => [reputationLevel];
 }
 
+final class CreateActivityIdentityRequirementToggled
+    extends CreateActivityEvent {
+  const CreateActivityIdentityRequirementToggled(this.requiresIdentityVerified);
+
+  final bool requiresIdentityVerified;
+
+  @override
+  List<Object?> get props => [requiresIdentityVerified];
+}
+
 final class CreateActivityPrivateLocationToggled extends CreateActivityEvent {
   const CreateActivityPrivateLocationToggled(this.isPrivateLocation);
 

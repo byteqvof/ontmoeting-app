@@ -43,9 +43,13 @@ class ProfileModel extends Profile {
       isVerified: trust.identityVerified,
       isPremium: _boolValue(json['is_premium']),
       trust: trust,
-      interests: _listValue(json['interests'])
-          .map((interest) => ProfileInterestModel.fromJson(_mapValue(interest)))
-          .toList(),
+      interests: _uniqueInterests(
+        _listValue(json['interests'])
+            .map(
+              (interest) => ProfileInterestModel.fromJson(_mapValue(interest)),
+            )
+            .where((interest) => interest.id.isNotEmpty),
+      ),
     );
   }
 
@@ -115,6 +119,23 @@ class ProfileInterestModel extends ProfileInterest {
       'background_color': backgroundColorHex,
     };
   }
+}
+
+List<ProfileInterestModel> _uniqueInterests(
+  Iterable<ProfileInterestModel> interests,
+) {
+  final seen = <String>{};
+  final unique = <ProfileInterestModel>[];
+
+  for (final interest in interests) {
+    final key = interest.id.trim().toLowerCase();
+    if (key.isEmpty || !seen.add(key)) {
+      continue;
+    }
+    unique.add(interest);
+  }
+
+  return unique;
 }
 
 Map<String, dynamic> _mapValue(Object? value) {

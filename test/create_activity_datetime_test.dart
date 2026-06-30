@@ -1,6 +1,8 @@
 import 'package:dartz/dartz.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:meetings_app/app/theme/app_theme.dart';
+import 'package:meetings_app/core/di/injection_container.dart';
 import 'package:meetings_app/core/errors/failures.dart';
 import 'package:meetings_app/features/home/domain/entities/activity_agenda.dart';
 import 'package:meetings_app/features/home/domain/entities/activity_chat_message.dart';
@@ -18,8 +20,50 @@ import 'package:meetings_app/features/home/domain/repositories/home_repository.d
 import 'package:meetings_app/features/home/domain/usecases/create_activity.dart';
 import 'package:meetings_app/features/home/domain/usecases/search_meeting_locations.dart';
 import 'package:meetings_app/features/home/presentation/bloc/create_activity_bloc.dart';
+import 'package:meetings_app/features/home/presentation/pages/create_activity_page.dart';
 
 void main() {
+  tearDown(() async {
+    await sl.reset();
+  });
+
+  testWidgets('renders the redesigned compact create activity screen', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final repository = _CapturingHomeRepository();
+    sl
+      ..registerLazySingleton(() => CreateActivity(repository))
+      ..registerLazySingleton(() => SearchMeetingLocations(repository));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: const CreateActivityPage(
+          location: _terApelLocation,
+          categories: [_category],
+        ),
+      ),
+    );
+
+    expect(find.text('Nieuwe activiteit'), findsOneWidget);
+    expect(find.text('Wat ga je\ndoen?'), findsOneWidget);
+    expect(find.text('Kies een categorie om te beginnen'), findsOneWidget);
+    expect(find.text('Titel'), findsOneWidget);
+    expect(find.text('Waar'), findsOneWidget);
+    expect(find.text('Wanneer'), findsOneWidget);
+    expect(find.text('Hoeveel mensen'), findsOneWidget);
+    expect(find.text('Deelname-instellingen'), findsOneWidget);
+    expect(find.text('Geverifieerd profiel nodig'), findsOneWidget);
+    expect(find.text('Goedkeuren wie aansluit'), findsOneWidget);
+    expect(find.text('Locatie privé'), findsOneWidget);
+    expect(find.text('Plaats activiteit'), findsOneWidget);
+    expect(find.textContaining('Ik ga'), findsNothing);
+    expect(find.text('KIES CATEGORIE'), findsNothing);
+  });
+
   test('submits the custom selected date and time', () async {
     final repository = _CapturingHomeRepository();
     final bloc = CreateActivityBloc(

@@ -7,11 +7,16 @@ import '../../../../core/di/injection_container.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/usecases/usecase.dart';
 import '../../domain/usecases/is_profile_onboarding_required.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ProfileCompletionGate extends StatefulWidget {
   const ProfileCompletionGate({required this.child, super.key});
 
   final Widget child;
+
+  static void resetSessionCache() {
+    _ProfileCompletionGateState.resetSessionCache();
+  }
 
   @override
   State<ProfileCompletionGate> createState() => _ProfileCompletionGateState();
@@ -20,7 +25,52 @@ class ProfileCompletionGate extends StatefulWidget {
 class _ProfileCompletionGateState extends State<ProfileCompletionGate> {
   late Future<_ProfileGateResult> _profileRequired = _isProfileRequired();
 
-  Future<_ProfileGateResult> _isProfileRequired() async {
+  static String? _completeUserKey;
+  static _ProfileGateResult? _completeResult;
+  static Future<_ProfileGateResult>? _profileGateFuture;
+
+  static void resetSessionCache() {
+    _completeUserKey = null;
+    _completeResult = null;
+    _profileGateFuture = null;
+  }
+
+  Future<_ProfileGateResult> _isProfileRequired({
+    bool forceRefresh = false,
+  }) async {
+    final userKey = _currentProfileGateUserKey();
+    final cachedResult = _completeResult;
+    if (!forceRefresh &&
+        _completeUserKey == userKey &&
+        cachedResult?.status == _ProfileGateStatus.complete) {
+      return cachedResult!;
+    }
+
+    final currentFuture = _profileGateFuture;
+    if (!forceRefresh && _completeUserKey == userKey && currentFuture != null) {
+      return currentFuture;
+    }
+
+    _completeUserKey = userKey;
+    late final Future<_ProfileGateResult> future;
+    future = _fetchProfileRequired()
+        .then((result) {
+          if (result.status == _ProfileGateStatus.complete) {
+            _completeUserKey = userKey;
+            _completeResult = result;
+          }
+          return result;
+        })
+        .whenComplete(() {
+          if (identical(_profileGateFuture, future)) {
+            _profileGateFuture = null;
+          }
+        });
+    _profileGateFuture = future;
+    return future;
+  }
+
+  Future<_ProfileGateResult> _fetchProfileRequired() async {
     final result = await sl<IsProfileOnboardingRequired>()(const NoParams());
     return result.fold(
       (failure) => failure is NetworkFailure
@@ -34,7 +84,7 @@ class _ProfileCompletionGateState extends State<ProfileCompletionGate> {
 
   void _retry() {
     setState(() {
-      _profileRequired = _isProfileRequired();
+      _profileRequired = _isProfileRequired(forceRefresh: true);
     });
   }
 
@@ -65,6 +115,22 @@ class _ProfileCompletionGateState extends State<ProfileCompletionGate> {
       },
     );
   }
+}
+
+String _currentProfileGateUserKey() {
+  try {
+    if (sl.isRegistered<SupabaseClient>()) {
+      final client = sl<SupabaseClient>();
+      final userId =
+          client.auth.currentSession?.user.id ?? client.auth.currentUser?.id;
+      if (userId != null && userId.isNotEmpty) {
+        return userId;
+      }
+    }
+  } catch (_) {
+    // Tests and early app startup can build the gate before Supabase is registered.
+  }
+  return '__unknown_user__';
 }
 
 enum _ProfileGateStatus { complete, required, error }

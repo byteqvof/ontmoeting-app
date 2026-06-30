@@ -626,170 +626,179 @@ class _AgendaActivityCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(TochRadius.lg),
             boxShadow: TochShadows.card(colors),
           ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Container(
-                width: 68,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                decoration: BoxDecoration(
-                  color: _isToday(activity) ? colors.green100 : colors.card,
-                  border: Border(right: BorderSide(color: colors.line)),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      _agendaDayLabel(activity),
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: colors.ink4,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: .7,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _timeHour(activity.timeLabel),
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: colors.ink,
-                        fontSize: 21,
-                        fontWeight: FontWeight.w900,
-                        height: 1,
-                      ),
-                    ),
-                    Text(
-                      _timeMinute(activity.timeLabel),
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: colors.ink3,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(
+                  width: 68,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  decoration: BoxDecoration(
+                    color: _isToday(activity) ? colors.green100 : colors.card,
+                    border: Border(right: BorderSide(color: colors.line)),
+                  ),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      _StatusPill(activity: activity),
-                      const SizedBox(height: 7),
                       Text(
-                        activity.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleMedium
+                        _agendaDayLabel(activity),
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: colors.ink4,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: .7,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _timeHour(activity.timeLabel),
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: colors.ink,
+                          fontSize: 21,
+                          fontWeight: FontWeight.w900,
+                          height: 1,
+                        ),
+                      ),
+                      Text(
+                        _timeMinute(activity.timeLabel),
+                        style: Theme.of(context).textTheme.labelMedium
                             ?.copyWith(
-                              color: colors.ink,
-                              fontSize: 16,
+                              color: colors.ink3,
                               fontWeight: FontWeight.w900,
-                              height: 1.15,
                             ),
                       ),
-                      const SizedBox(height: 7),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.place_outlined,
-                            color: colors.ink4,
-                            size: 14,
-                          ),
-                          const SizedBox(width: 5),
-                          Expanded(
-                            child: Text(
-                              activity.meetingPoint.isEmpty
-                                  ? activity.locationName
-                                  : activity.meetingPoint,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.labelMedium
-                                  ?.copyWith(
-                                    color: colors.ink3,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(child: _MiniAvatarStack(activity: activity)),
-                          if (onChatPressed != null)
-                            TextButton.icon(
-                              onPressed: onChatPressed,
-                              style: TextButton.styleFrom(
-                                backgroundColor: colors.green100,
-                                foregroundColor: colors.green,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
-                                ),
-                                minimumSize: Size.zero,
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                shape: const StadiumBorder(),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _StatusPill(activity: activity),
+                        const SizedBox(height: 7),
+                        Text(
+                          activity.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                color: colors.ink,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w900,
+                                height: 1.15,
                               ),
-                              icon: const Icon(
-                                Icons.chat_bubble_outline_rounded,
-                                size: 14,
-                              ),
-                              label: const Text('Chat'),
-                            ),
-                        ],
-                      ),
-                      if (selectedTab == _AgendaTab.hosted &&
-                          activity.isOwnedByCurrentUser) ...[
-                        const SizedBox(height: 10),
+                        ),
+                        const SizedBox(height: 7),
                         Row(
                           children: [
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: onPressed,
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: colors.green,
-                                  side: BorderSide(color: colors.green200),
-                                  minimumSize: const Size(0, 42),
-                                  shape: const StadiumBorder(),
-                                  textStyle: const TextStyle(
-                                    fontWeight: FontWeight.w900,
-                                  ),
-                                ),
-                                icon: const Icon(
-                                  Icons.manage_accounts_rounded,
-                                  size: 17,
-                                ),
-                                label: const Text('Beheer'),
-                              ),
+                            Icon(
+                              Icons.place_outlined,
+                              color: colors.ink4,
+                              size: 14,
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 5),
                             Expanded(
-                              child: FilledButton.icon(
-                                onPressed: onEditPressed,
-                                style: FilledButton.styleFrom(
-                                  backgroundColor: colors.green,
-                                  foregroundColor: Colors.white,
-                                  disabledBackgroundColor: colors.green100,
-                                  disabledForegroundColor: colors.green700
-                                      .withValues(alpha: .45),
-                                  minimumSize: const Size(0, 42),
-                                  shape: const StadiumBorder(),
-                                  textStyle: const TextStyle(
-                                    fontWeight: FontWeight.w900,
-                                  ),
-                                ),
-                                icon: const Icon(Icons.edit_rounded, size: 17),
-                                label: const Text('Bewerk'),
+                              child: Text(
+                                activity.meetingPoint.isEmpty
+                                    ? activity.locationName
+                                    : activity.meetingPoint,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.labelMedium
+                                    ?.copyWith(
+                                      color: colors.ink3,
+                                      fontWeight: FontWeight.w700,
+                                    ),
                               ),
                             ),
                           ],
                         ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _MiniAvatarStack(activity: activity),
+                            ),
+                            if (onChatPressed != null)
+                              TextButton.icon(
+                                onPressed: onChatPressed,
+                                style: TextButton.styleFrom(
+                                  backgroundColor: colors.green100,
+                                  foregroundColor: colors.green,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                  minimumSize: Size.zero,
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                  shape: const StadiumBorder(),
+                                ),
+                                icon: const Icon(
+                                  Icons.chat_bubble_outline_rounded,
+                                  size: 14,
+                                ),
+                                label: const Text('Chat'),
+                              ),
+                          ],
+                        ),
+                        if (selectedTab == _AgendaTab.hosted &&
+                            activity.isOwnedByCurrentUser) ...[
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: onPressed,
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: colors.green,
+                                    side: BorderSide(color: colors.green200),
+                                    minimumSize: const Size(0, 42),
+                                    shape: const StadiumBorder(),
+                                    textStyle: const TextStyle(
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                  icon: const Icon(
+                                    Icons.manage_accounts_rounded,
+                                    size: 17,
+                                  ),
+                                  label: const Text('Beheer'),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: FilledButton.icon(
+                                  onPressed: onEditPressed,
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: colors.green,
+                                    foregroundColor: Colors.white,
+                                    disabledBackgroundColor: colors.green100,
+                                    disabledForegroundColor: colors.green700
+                                        .withValues(alpha: .45),
+                                    minimumSize: const Size(0, 42),
+                                    shape: const StadiumBorder(),
+                                    textStyle: const TextStyle(
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                  icon: const Icon(
+                                    Icons.edit_rounded,
+                                    size: 17,
+                                  ),
+                                  label: const Text('Bewerk'),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -1232,11 +1241,15 @@ class _ExploreMoreCard extends StatelessWidget {
               children: [
                 Icon(Icons.add_rounded, color: colors.ink4, size: 18),
                 const SizedBox(width: 8),
-                Text(
-                  'Meer activiteiten ontdekken',
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: colors.ink4,
-                    fontWeight: FontWeight.w800,
+                Flexible(
+                  child: Text(
+                    'Meer activiteiten ontdekken',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: colors.ink4,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
               ],

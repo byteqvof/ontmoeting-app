@@ -15,6 +15,7 @@ import 'package:meetings_app/features/profile/presentation/pages/profile_complet
 
 void main() {
   tearDown(() async {
+    ProfileCompletionGate.resetSessionCache();
     await sl.reset();
   });
 
@@ -39,6 +40,42 @@ void main() {
       expect(find.text('Profielstatus onbekend'), findsNothing);
     },
   );
+
+  testWidgets(
+    'does not recheck profile completion after it passed during the same session',
+    (tester) async {
+      final repository = _CountingCompleteProfileRepository();
+      sl.registerLazySingleton(() => IsProfileOnboardingRequired(repository));
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(extensions: [TochTokens.light()]),
+          home: const ProfileCompletionGate(
+            key: ValueKey('route-one'),
+            child: Text('route one'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('route one'), findsOneWidget);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(extensions: [TochTokens.light()]),
+          home: const ProfileCompletionGate(
+            key: ValueKey('route-two'),
+            child: Text('route two'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('route two'), findsOneWidget);
+      expect(find.text('Profiel controleren'), findsNothing);
+      expect(repository.calls, 1);
+    },
+  );
 }
 
 class _NetworkFailingProfileRepository implements ProfileRepository {
@@ -49,6 +86,48 @@ class _NetworkFailingProfileRepository implements ProfileRepository {
     return left(
       const NetworkFailure('De verbinding hapert. Probeer het opnieuw.'),
     );
+  }
+
+  @override
+  Future<Either<Failure, Profile>> createProfile(
+    CreateProfileDraft draft,
+  ) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Either<Failure, List<ProfileInterest>>> getAvailableInterests() async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Either<Failure, List<ProfileActivity>>> getActivitiesForUser({
+    String? profileId,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Either<Failure, Profile>> getProfile({String? profileId}) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Either<Failure, Profile>> updateProfile(
+    UpdateProfileDraft draft,
+  ) async {
+    throw UnimplementedError();
+  }
+}
+
+class _CountingCompleteProfileRepository implements ProfileRepository {
+  int calls = 0;
+
+  @override
+  Future<Either<Failure, bool>> isProfileOnboardingRequired() async {
+    calls++;
+    await Future<void>.delayed(const Duration(milliseconds: 1));
+    return right(false);
   }
 
   @override

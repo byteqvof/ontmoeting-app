@@ -441,11 +441,7 @@ class _ProfileStatTile extends StatelessWidget {
 }
 
 String _profileBioLine(Profile profile) {
-  if (profile.interests.isEmpty) {
-    return 'Open voor laagdrempelige ontmoetingen en nieuwe plannen in de buurt.';
-  }
-  final labels = profile.interests.take(3).map((interest) => interest.label);
-  return 'Interesse in ${labels.join(', ')} en spontane plannen in de buurt.';
+  return 'Open voor laagdrempelige ontmoetingen en spontane plannen in de buurt.';
 }
 
 String _profileMemberSinceLabel(DateTime date) {

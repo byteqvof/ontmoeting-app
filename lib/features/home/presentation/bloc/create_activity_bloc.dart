@@ -39,6 +39,7 @@ class CreateActivityBloc
     on<CreateActivityCapacityIncremented>(_onCapacityIncremented);
     on<CreateActivityGroupTypeSelected>(_onGroupTypeSelected);
     on<CreateActivityMinReputationSelected>(_onMinReputationSelected);
+    on<CreateActivityIdentityRequirementToggled>(_onIdentityRequirementToggled);
     on<CreateActivityPrivateLocationToggled>(_onPrivateLocationToggled);
     on<CreateActivityTargetAgeBandToggled>(_onTargetAgeBandToggled);
     on<CreateActivityTargetGenderToggled>(_onTargetGenderToggled);
@@ -322,6 +323,18 @@ class CreateActivityBloc
     );
   }
 
+  void _onIdentityRequirementToggled(
+    CreateActivityIdentityRequirementToggled event,
+    Emitter<CreateActivityState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        requiresIdentityVerified: event.requiresIdentityVerified,
+        submissionStatus: CreateActivitySubmissionStatus.idle,
+      ),
+    );
+  }
+
   void _onPrivateLocationToggled(
     CreateActivityPrivateLocationToggled event,
     Emitter<CreateActivityState> emit,
@@ -508,6 +521,7 @@ class CreateActivityBloc
       maxParticipants: state.capacity,
       groupType: state.groupType,
       minReputationLevel: state.minReputationLevel,
+      requiresIdentityVerified: state.requiresIdentityVerified,
       isPrivateLocation: state.isPrivateLocation,
       targetAgeBands: state.targetAgeBands,
       targetGenders: state.targetGenders,
@@ -566,6 +580,7 @@ Map<String, Object> _activityAnalyticsProperties(CreateActivityState state) {
     'capacity': state.capacity,
     'group_type': state.groupType,
     'min_reputation_level': state.minReputationLevel,
+    'requires_identity_verified': state.requiresIdentityVerified,
     'is_private_location': state.isPrivateLocation,
     'target_age_band_count': state.targetAgeBands.length,
     'target_gender_count': state.targetGenders.length,

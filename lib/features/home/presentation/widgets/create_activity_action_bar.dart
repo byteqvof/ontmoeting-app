@@ -26,7 +26,7 @@ class CreateActivityActionBar extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 22),
           child: BlocBuilder<CreateActivityBloc, CreateActivityState>(
             buildWhen: (previous, current) =>
                 previous.isValid != current.isValid ||
@@ -50,14 +50,31 @@ class CreateActivityActionBar extends StatelessWidget {
                     disabledForegroundColor: colors.green700.withValues(
                       alpha: .45,
                     ),
-                    minimumSize: const Size(0, 54),
+                    backgroundColor: colors.green,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(0, 56),
+                    elevation: 0,
+                    shadowColor: Colors.transparent,
+                    shape: const StadiumBorder(),
+                    textStyle: Theme.of(context).textTheme.titleMedium
+                        ?.copyWith(fontSize: 16.5, fontWeight: FontWeight.w900),
                   ),
                   child: isSubmitting
                       ? const SizedBox.square(
                           dimension: 18,
                           child: CircularProgressIndicator(strokeWidth: 2.2),
                         )
-                      : const Text('Plaats activiteit'),
+                      : const FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.near_me_rounded, size: 18),
+                              SizedBox(width: 10),
+                              Text('Plaats activiteit'),
+                            ],
+                          ),
+                        ),
                 ),
               );
             },
