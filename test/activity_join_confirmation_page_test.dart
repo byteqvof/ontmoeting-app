@@ -6,6 +6,7 @@ import 'package:meetings_app/app/router/app_router.dart';
 import 'package:meetings_app/features/home/domain/entities/home_activity.dart';
 import 'package:meetings_app/features/home/domain/entities/home_category.dart';
 import 'package:meetings_app/features/home/presentation/pages/activity_join_confirmation_page.dart';
+import 'package:meetings_app/core/services/push_notification_service.dart';
 
 void main() {
   testWidgets('shows joined confirmation with activity and actions', (
@@ -30,67 +31,99 @@ void main() {
   });
 
   testWidgets(
-    'opens chat from confirmation so back returns to home',
+    'shows contextual notification opt-in and requests permission after tap',
     (tester) async {
-      final activity = _activity();
-      final router = GoRouter(
-        initialLocation: AppRoutes.activityJoinConfirmationPath(activity.id),
-        routes: [
-          GoRoute(
-            path: AppRoutes.home,
-            builder: (context, state) => const Scaffold(
-              body: SafeArea(child: Text('Home geopend')),
-            ),
-          ),
-          GoRoute(
-            path: AppRoutes.activityJoinConfirmation,
-            builder: (context, state) =>
-                ActivityJoinConfirmationPage(activity: activity),
-          ),
-          GoRoute(
-            path: AppRoutes.activityChat,
-            builder: (context, state) {
-              final fromJoined =
-                  state.uri.queryParameters['from'] == 'joined';
-              return Scaffold(
-                body: SafeArea(
-                  child: Column(
-                    children: [
-                      IconButton(
-                        onPressed: () {
-                          if (fromJoined) {
-                            context.go(AppRoutes.home);
-                            return;
-                          }
-                          context.pop();
-                        },
-                        icon: const Icon(Icons.arrow_back_rounded),
-                      ),
-                      const Text('Chat geopend'),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
-      );
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      var requestCount = 0;
 
       await tester.pumpWidget(
-        MaterialApp.router(theme: AppTheme.light, routerConfig: router),
+        MaterialApp(
+          theme: AppTheme.light,
+          home: ActivityJoinConfirmationPage(
+            activity: _activity(),
+            onOpenChat: () {},
+            onBackToDiscover: () {},
+            requestPushPermission: () async {
+              requestCount += 1;
+              return PushNotificationPermissionResult.authorized;
+            },
+          ),
+        ),
       );
 
-      await tester.tap(find.text('Open de chat'));
+      expect(requestCount, 0);
+      expect(find.text('Mis geen chatbericht'), findsOneWidget);
+      expect(find.text('Chatmeldingen aanzetten'), findsOneWidget);
+
+      await tester.tap(find.text('Chatmeldingen aanzetten'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Chat geopend'), findsOneWidget);
-
-      await tester.tap(find.byIcon(Icons.arrow_back_rounded));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Home geopend'), findsOneWidget);
+      expect(requestCount, 1);
+      expect(find.text('Chatmeldingen staan aan.'), findsOneWidget);
     },
   );
+
+  testWidgets('opens chat from confirmation so back returns to home', (
+    tester,
+  ) async {
+    final activity = _activity();
+    final router = GoRouter(
+      initialLocation: AppRoutes.activityJoinConfirmationPath(activity.id),
+      routes: [
+        GoRoute(
+          path: AppRoutes.home,
+          builder: (context, state) =>
+              const Scaffold(body: SafeArea(child: Text('Home geopend'))),
+        ),
+        GoRoute(
+          path: AppRoutes.activityJoinConfirmation,
+          builder: (context, state) =>
+              ActivityJoinConfirmationPage(activity: activity),
+        ),
+        GoRoute(
+          path: AppRoutes.activityChat,
+          builder: (context, state) {
+            final fromJoined = state.uri.queryParameters['from'] == 'joined';
+            return Scaffold(
+              body: SafeArea(
+                child: Column(
+                  children: [
+                    IconButton(
+                      onPressed: () {
+                        if (fromJoined) {
+                          context.go(AppRoutes.home);
+                          return;
+                        }
+                        context.pop();
+                      },
+                      icon: const Icon(Icons.arrow_back_rounded),
+                    ),
+                    const Text('Chat geopend'),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp.router(theme: AppTheme.light, routerConfig: router),
+    );
+
+    await tester.tap(find.text('Open de chat'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Chat geopend'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.arrow_back_rounded));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Home geopend'), findsOneWidget);
+  });
 }
 
 HomeActivity _activity() {

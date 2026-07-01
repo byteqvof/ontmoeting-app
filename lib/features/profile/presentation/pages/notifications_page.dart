@@ -3,9 +3,48 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/toch_theme.dart';
 import '../../../../app/widgets/toch_design_system.dart';
+import '../../../../core/di/injection_container.dart';
+import '../../../../core/services/push_notification_service.dart';
 
-class NotificationsPage extends StatelessWidget {
-  const NotificationsPage({super.key});
+class NotificationsPage extends StatefulWidget {
+  const NotificationsPage({this.requestPushPermission, super.key});
+
+  final Future<PushNotificationPermissionResult> Function()?
+  requestPushPermission;
+
+  @override
+  State<NotificationsPage> createState() => _NotificationsPageState();
+}
+
+class _NotificationsPageState extends State<NotificationsPage> {
+  bool _isRequestingPush = false;
+  String? _pushStatusMessage;
+
+  Future<void> _requestPushPermission() async {
+    if (_isRequestingPush) {
+      return;
+    }
+
+    setState(() {
+      _isRequestingPush = true;
+      _pushStatusMessage = null;
+    });
+
+    final request =
+        widget.requestPushPermission ??
+        sl<PushNotificationService>()
+            .requestPermissionAndRegisterForCurrentUser;
+
+    final result = await request();
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _isRequestingPush = false;
+      _pushStatusMessage = _pushMessageFor(result);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,17 +86,17 @@ class NotificationsPage extends StatelessWidget {
                 Expanded(
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(20, 14, 20, 30),
-                    children: const [
-                      _NotificationHero(),
-                      SizedBox(height: 18),
-                      _NotificationTile(
+                    children: [
+                      const _NotificationHero(),
+                      const SizedBox(height: 18),
+                      const _NotificationTile(
                         icon: Icons.chat_bubble_outline_rounded,
                         title: 'Chatmeldingen',
                         body:
                             'Je krijgt meldingen voor nieuwe chatberichten bij activiteiten waar je aan meedoet.',
                         active: true,
                       ),
-                      _NotificationTile(
+                      const _NotificationTile(
                         icon: Icons.event_available_outlined,
                         title: 'Activiteiten',
                         body:
@@ -69,8 +108,12 @@ class NotificationsPage extends StatelessWidget {
                         title: 'Push toestaan',
                         body:
                             'Push werkt alleen als je toestemming geeft op je telefoon. Je kunt dit later aanpassen in Android-instellingen.',
+                        actionLabel: 'Push toestaan',
+                        isBusy: _isRequestingPush,
+                        statusMessage: _pushStatusMessage,
+                        onActionPressed: _requestPushPermission,
                       ),
-                      _NotificationTile(
+                      const _NotificationTile(
                         icon: Icons.privacy_tip_outlined,
                         title: 'Privacy',
                         body:
@@ -86,6 +129,20 @@ class NotificationsPage extends StatelessWidget {
       ),
     );
   }
+}
+
+String _pushMessageFor(PushNotificationPermissionResult result) {
+  return switch (result) {
+    PushNotificationPermissionResult.authorized => 'Pushmeldingen staan aan.',
+    PushNotificationPermissionResult.provisional =>
+      'Pushmeldingen zijn voorlopig toegestaan.',
+    PushNotificationPermissionResult.denied =>
+      'Pushmeldingen zijn geweigerd. Je kunt dit later in de instellingen aanpassen.',
+    PushNotificationPermissionResult.unavailable =>
+      'Pushmeldingen zijn nu niet beschikbaar.',
+    PushNotificationPermissionResult.failed =>
+      'Pushmeldingen inschakelen lukt nu niet. Probeer het later opnieuw.',
+  };
 }
 
 class _NotificationHero extends StatelessWidget {
@@ -156,12 +213,20 @@ class _NotificationTile extends StatelessWidget {
     required this.title,
     required this.body,
     this.active = false,
+    this.actionLabel,
+    this.statusMessage,
+    this.isBusy = false,
+    this.onActionPressed,
   });
 
   final IconData icon;
   final String title;
   final String body;
   final bool active;
+  final String? actionLabel;
+  final String? statusMessage;
+  final bool isBusy;
+  final VoidCallback? onActionPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -227,6 +292,35 @@ class _NotificationTile extends StatelessWidget {
                         fontWeight: FontWeight.w700,
                       ),
                     ),
+                    if (statusMessage != null) ...[
+                      const SizedBox(height: 10),
+                      Text(
+                        statusMessage!,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: colors.green,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
+                    if (actionLabel != null) ...[
+                      const SizedBox(height: 12),
+                      FilledButton(
+                        onPressed: isBusy ? null : onActionPressed,
+                        style: FilledButton.styleFrom(
+                          minimumSize: const Size(0, 42),
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          shape: const StadiumBorder(),
+                        ),
+                        child: isBusy
+                            ? const SizedBox.square(
+                                dimension: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Text(actionLabel!),
+                      ),
+                    ],
                   ],
                 ),
               ),

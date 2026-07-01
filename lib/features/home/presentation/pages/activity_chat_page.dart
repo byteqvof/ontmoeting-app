@@ -753,14 +753,66 @@ class _ChatBody extends StatelessWidget {
 
     return ListView.builder(
       controller: scrollController,
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: const EdgeInsets.fromLTRB(14, 18, 14, 18),
       itemCount: messages.length,
       itemBuilder: (context, index) {
-        return _MessageBubble(
-          message: messages[index],
-          onProfilePressed: onProfilePressed,
+        final message = messages[index];
+        final showDateSeparator =
+            index == 0 ||
+            !_isSameLocalDate(messages[index - 1].createdAt, message.createdAt);
+
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (showDateSeparator)
+              _MessageDateSeparator(
+                label: _formatMessageDateSeparator(message.createdAt),
+              ),
+            _MessageBubble(
+              message: message,
+              onProfilePressed: onProfilePressed,
+            ),
+          ],
         );
       },
+    );
+  }
+}
+
+class _MessageDateSeparator extends StatelessWidget {
+  const _MessageDateSeparator({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.toch;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Center(
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: colors.card.withValues(alpha: .92),
+            borderRadius: BorderRadius.circular(TochRadius.pill),
+            border: Border.all(color: colors.line),
+            boxShadow: TochShadows.card(colors),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: colors.ink3,
+                fontWeight: FontWeight.w900,
+                letterSpacing: .2,
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -994,6 +1046,9 @@ class _MessageComposer extends StatelessWidget {
                     enabled: canSend,
                     minLines: 1,
                     maxLines: 4,
+                    onTapOutside: (_) {
+                      FocusManager.instance.primaryFocus?.unfocus();
+                    },
                     textInputAction: TextInputAction.newline,
                     decoration: InputDecoration(
                       hintText: canSend ? 'Bericht' : 'Chat alleen lezen',
@@ -1166,6 +1221,70 @@ String _formatMessageTime(DateTime value) {
   final minute = local.minute.toString().padLeft(2, '0');
   return '$hour:$minute';
 }
+
+String _formatMessageDateSeparator(DateTime value, {DateTime? now}) {
+  final local = value.toLocal();
+  final today = _localDateOnly((now ?? DateTime.now()).toLocal());
+  final messageDate = _localDateOnly(local);
+
+  if (_isSameDate(messageDate, today)) {
+    return 'Vandaag';
+  }
+
+  if (_isSameDate(messageDate, today.subtract(const Duration(days: 1)))) {
+    return 'Gisteren';
+  }
+
+  final date =
+      '${_weekdays[local.weekday - 1]} ${local.day} '
+      '${_months[local.month - 1]}';
+  if (local.year == today.year) {
+    return date;
+  }
+  return '$date ${local.year}';
+}
+
+bool _isSameLocalDate(DateTime left, DateTime right) {
+  return _isSameDate(
+    _localDateOnly(left.toLocal()),
+    _localDateOnly(right.toLocal()),
+  );
+}
+
+bool _isSameDate(DateTime left, DateTime right) {
+  return left.year == right.year &&
+      left.month == right.month &&
+      left.day == right.day;
+}
+
+DateTime _localDateOnly(DateTime value) {
+  return DateTime(value.year, value.month, value.day);
+}
+
+const _weekdays = [
+  'maandag',
+  'dinsdag',
+  'woensdag',
+  'donderdag',
+  'vrijdag',
+  'zaterdag',
+  'zondag',
+];
+
+const _months = [
+  'januari',
+  'februari',
+  'maart',
+  'april',
+  'mei',
+  'juni',
+  'juli',
+  'augustus',
+  'september',
+  'oktober',
+  'november',
+  'december',
+];
 
 bool _isChatPermissionFailure(String message) {
   final normalized = message.toLowerCase();

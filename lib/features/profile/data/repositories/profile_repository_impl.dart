@@ -101,7 +101,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
     }
     if (error is FunctionException && error.status >= 500) {
       return const ServerFailure(
-        'De profielservice is tijdelijk niet beschikbaar.',
+        'Profiel laden lukt nu niet. Probeer het later opnieuw.',
       );
     }
     return UnknownFailure(error.toString());

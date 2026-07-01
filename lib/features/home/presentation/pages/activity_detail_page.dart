@@ -178,13 +178,27 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
           _isParticipationPending = false;
         });
         if (wasJoining && updatedActivity.isJoined) {
-          context.push(
-            AppRoutes.activityJoinConfirmationPath(updatedActivity.id),
-            extra: updatedActivity,
-          );
+          _openJoinConfirmation(updatedActivity);
         }
       },
     );
+  }
+
+  Future<void> _openJoinConfirmation(HomeActivity updatedActivity) async {
+    final confirmedActivity = await context.push<HomeActivity>(
+      AppRoutes.activityJoinConfirmationPath(updatedActivity.id),
+      extra: updatedActivity,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    if (context.canPop()) {
+      context.pop(confirmedActivity ?? updatedActivity);
+      return;
+    }
+    context.go(AppRoutes.home);
   }
 
   Future<void> _completeActivity() async {

@@ -64,6 +64,35 @@ void main() {
     expect(find.text('KIES CATEGORIE'), findsNothing);
   });
 
+  testWidgets('shows date and time controls directly on the create screen', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final repository = _CapturingHomeRepository();
+    sl
+      ..registerLazySingleton(() => CreateActivity(repository))
+      ..registerLazySingleton(() => SearchMeetingLocations(repository));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: const CreateActivityPage(
+          location: _terApelLocation,
+          categories: [_category],
+        ),
+      ),
+    );
+
+    expect(find.text('Wanneer'), findsOneWidget);
+    expect(find.widgetWithText(ChoiceChip, 'Vandaag'), findsOneWidget);
+    expect(find.widgetWithText(ChoiceChip, 'Morgen'), findsOneWidget);
+    expect(find.widgetWithText(ChoiceChip, 'Weekend'), findsOneWidget);
+    expect(find.text('Datum'), findsOneWidget);
+    expect(find.text('Tijd'), findsOneWidget);
+  });
+
   test('submits the custom selected date and time', () async {
     final repository = _CapturingHomeRepository();
     final bloc = CreateActivityBloc(

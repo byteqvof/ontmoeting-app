@@ -20,6 +20,7 @@ import '../../domain/entities/profile.dart';
 import '../../domain/entities/profile_activity.dart';
 import '../bloc/profile_bloc.dart';
 import '../widgets/profile_activities_card.dart';
+import '../widgets/profile_agenda_shortcut_card.dart';
 import '../widgets/profile_interests_card.dart';
 import '../widgets/profile_menu_list.dart';
 import '../widgets/profile_premium_card.dart';
@@ -122,6 +123,12 @@ class _ProfileContent extends StatelessWidget {
               children: [
                 if (!isOwnProfile) ...[
                   _FriendshipActionCard(profile: profile),
+                  const SizedBox(height: TochSpacing.md),
+                ],
+                if (isOwnProfile) ...[
+                  ProfileAgendaShortcutCard(
+                    onPressed: () => context.push(AppRoutes.activityAgenda),
+                  ),
                   const SizedBox(height: TochSpacing.md),
                 ],
                 _ProfileStatsGrid(profile: profile),
@@ -475,11 +482,7 @@ class _AppVersionFooter extends StatelessWidget {
       future: PackageInfo.fromPlatform(),
       builder: (context, snapshot) {
         final info = snapshot.data;
-        final version = info == null
-            ? null
-            : info.buildNumber.isEmpty
-            ? info.version
-            : '${info.version} (${info.buildNumber})';
+        final version = info?.version;
         if (version == null || version.trim().isEmpty) {
           return const SizedBox.shrink();
         }
@@ -530,6 +533,9 @@ class _ProfileMenu extends StatelessWidget {
       onSignOutPressed: () => _confirmSignOut(context),
       onAccountVerificationPressed: isOwnProfile
           ? () => context.push(AppRoutes.accountVerification)
+          : null,
+      onAgendaPressed: isOwnProfile
+          ? () => context.push(AppRoutes.activityAgenda)
           : null,
       onFriendsPressed: isOwnProfile
           ? () => context.push(AppRoutes.friends)
@@ -710,7 +716,7 @@ class _FriendshipStatusError extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'We kunnen de vriendschapstatus nu niet ophalen. Probeer opnieuw na de backend-update.',
+                    'We kunnen de vriendschapstatus nu niet ophalen. Probeer het later opnieuw.',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: colors.green700.withValues(alpha: .72),
                       fontWeight: FontWeight.w700,
@@ -940,7 +946,7 @@ Future<void> _blockProfile(BuildContext context, Profile profile) async {
       return AlertDialog(
         title: const Text('Gebruiker blokkeren?'),
         content: Text(
-          '${profile.displayName} kan dan niet meer in je blokkeerlijst ontbreken. Je kunt dit later via Supabase/moderatie terugdraaien.',
+          '${profile.displayName} kan jou dan niet meer benaderen. Je kunt dit later weer aanpassen.',
         ),
         actions: [
           TextButton(

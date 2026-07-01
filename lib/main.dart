@@ -11,7 +11,14 @@ import 'core/utils/app_logger.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  runApp(_StartupApp(initialization: _initializeApplication()));
+  try {
+    await _initializeApplication();
+    runApp(const App());
+  } catch (error, stackTrace) {
+    debugPrint('[Startup] Fatal startup failure: $error');
+    debugPrintStack(stackTrace: stackTrace);
+    runApp(_StartupErrorApp(error: error));
+  }
 }
 
 Future<void> _initializeApplication() async {
@@ -72,55 +79,6 @@ class StartupException implements Exception {
 
   @override
   String toString() => '$step startup failed: $cause';
-}
-
-class _StartupApp extends StatelessWidget {
-  const _StartupApp({required this.initialization});
-
-  final Future<void> initialization;
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<void>(
-      future: initialization,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.done) {
-          final error = snapshot.error;
-          if (error != null) {
-            return _StartupErrorApp(error: error);
-          }
-          return const App();
-        }
-
-        return const _StartupSplashApp();
-      },
-    );
-  }
-}
-
-class _StartupSplashApp extends StatelessWidget {
-  const _StartupSplashApp();
-
-  @override
-  Widget build(BuildContext context) {
-    return const MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: Scaffold(
-        backgroundColor: Color(0xFF16473C),
-        body: Center(
-          child: Text(
-            'TOCH.',
-            style: TextStyle(
-              color: Color(0xFFFFF4DF),
-              fontSize: 64,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 class _StartupErrorApp extends StatelessWidget {

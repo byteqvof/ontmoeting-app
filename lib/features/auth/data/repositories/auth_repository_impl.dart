@@ -118,24 +118,30 @@ class AuthRepositoryImpl implements AuthRepository {
     );
 
     if (error is supabase.AuthRetryableFetchException) {
-      return NetworkFailure(error.message);
+      return const NetworkFailure('De verbinding hapert. Probeer het opnieuw.');
     }
     if (_looksLikeNetworkPermissionError(error)) {
-      return NetworkFailure(error.toString());
+      return const NetworkFailure('De verbinding hapert. Probeer het opnieuw.');
     }
     if (error is supabase.AuthException) {
-      return AuthFailure(error.message);
+      return AuthFailure(_authErrorMessage(error.message));
     }
     if (error is supabase.PostgrestException) {
-      return ServerFailure(error.message);
+      return const ServerFailure(
+        'Je account bijwerken lukt nu niet. Probeer het later opnieuw.',
+      );
     }
     if (error is supabase.StorageException) {
-      return ServerFailure(error.message);
+      return const ServerFailure(
+        'Je gegevens opslaan lukt nu niet. Probeer het later opnieuw.',
+      );
     }
     if (error is supabase.FunctionException) {
-      return ServerFailure(error.reasonPhrase ?? 'Supabase function failed.');
+      return const ServerFailure(
+        'Deze actie lukt nu niet. Probeer het later opnieuw.',
+      );
     }
-    return UnknownFailure(error.toString());
+    return const UnknownFailure('Er ging iets mis. Probeer het later opnieuw.');
   }
 
   bool _looksLikeNetworkPermissionError(Object error) {
@@ -144,5 +150,24 @@ class AuthRepositoryImpl implements AuthRepository {
         message.contains('connection failed') ||
         message.contains('socketexception') ||
         message.contains('clientexception');
+  }
+
+  String _authErrorMessage(String message) {
+    final normalized = message.toLowerCase();
+    if (normalized.contains('invalid') ||
+        normalized.contains('credentials') ||
+        normalized.contains('password')) {
+      return 'E-mailadres of wachtwoord klopt niet.';
+    }
+    if (normalized.contains('confirm') || normalized.contains('verified')) {
+      return 'Bevestig eerst je e-mailadres.';
+    }
+    if (normalized.contains('already') || normalized.contains('exists')) {
+      return 'Er bestaat al een account met dit e-mailadres.';
+    }
+    if (normalized.contains('rate') || normalized.contains('too many')) {
+      return 'Je hebt dit te vaak geprobeerd. Wacht even en probeer opnieuw.';
+    }
+    return 'Inloggen of registreren lukt nu niet. Probeer het opnieuw.';
   }
 }

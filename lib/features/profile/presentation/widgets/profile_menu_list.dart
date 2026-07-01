@@ -7,6 +7,7 @@ class ProfileMenuList extends StatelessWidget {
     required this.isOwnProfile,
     required this.onSignOutPressed,
     this.onAccountVerificationPressed,
+    this.onAgendaPressed,
     this.onFriendsPressed,
     this.onPrivacyPressed,
     this.onNotificationsPressed,
@@ -21,6 +22,7 @@ class ProfileMenuList extends StatelessWidget {
   final bool isOwnProfile;
   final VoidCallback onSignOutPressed;
   final VoidCallback? onAccountVerificationPressed;
+  final VoidCallback? onAgendaPressed;
   final VoidCallback? onFriendsPressed;
   final VoidCallback? onPrivacyPressed;
   final VoidCallback? onNotificationsPressed;
@@ -39,6 +41,12 @@ class ProfileMenuList extends StatelessWidget {
             label: 'Account & verificatie',
             icon: Icons.verified_user_outlined,
             onTap: onAccountVerificationPressed,
+          ),
+        if (isOwnProfile)
+          _MenuItem(
+            label: 'Agenda',
+            icon: Icons.event_note_outlined,
+            onTap: onAgendaPressed,
           ),
         if (isOwnProfile)
           _MenuItem(

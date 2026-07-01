@@ -377,7 +377,7 @@ void main() {
     }, (_) => fail('Expected closed chat failure.'));
   });
 
-  test('maps chat server errors to chat service copy', () async {
+  test('maps chat server errors to user-friendly chat copy', () async {
     final repository = HomeRepositoryImpl(
       _ThrowingHomeRemoteDataSource(
         const FunctionException(
@@ -398,8 +398,11 @@ void main() {
 
     result.fold((failure) {
       expect(failure, isA<ServerFailure>());
-      expect(failure.message, 'De chatservice is tijdelijk niet beschikbaar.');
-    }, (_) => fail('Expected chat service failure.'));
+      expect(
+        failure.message,
+        'Chat openen lukt nu niet. Probeer het later opnieuw.',
+      );
+    }, (_) => fail('Expected chat failure.'));
   });
 
   test('maps location search outage to address search copy', () async {

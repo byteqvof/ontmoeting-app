@@ -259,7 +259,7 @@ class _AppViewState extends State<_AppView> {
       listener: (context, state) {
         final push = sl<PushNotificationService>();
         if (state is AuthAuthenticated) {
-          unawaited(push.registerForCurrentUser());
+          unawaited(push.registerForCurrentUserIfPermissionAlreadyGranted());
           _goToEmailVerifiedIfAuthenticated(state);
           _openPendingPushChatIfReady(state);
           _openPendingPushActivityIfReady(state);
