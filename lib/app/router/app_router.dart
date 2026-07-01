@@ -33,6 +33,7 @@ import '../../features/profile/presentation/pages/profile_completion_gate.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/profile/presentation/pages/profile_setup_page.dart';
 import '../../features/profile/presentation/pages/privacy_location_page.dart';
+import '../../core/utils/activity_deep_links.dart';
 
 class AppRoutes {
   const AppRoutes._();
@@ -112,6 +113,14 @@ GoRouter createRouter(AuthBloc authBloc) {
     initialLocation: AppRoutes.splash,
     refreshListenable: GoRouterRefreshStream(authBloc.stream),
     redirect: (context, state) {
+      final activityDeepLinkRoute = activityRoutePathFromActivityDetailDeepLink(
+        state.uri,
+      );
+      if (activityDeepLinkRoute != null &&
+          state.uri.toString() != activityDeepLinkRoute) {
+        return activityDeepLinkRoute;
+      }
+
       final authState = authBloc.state;
       final isAuthRoute =
           state.matchedLocation == AppRoutes.login ||

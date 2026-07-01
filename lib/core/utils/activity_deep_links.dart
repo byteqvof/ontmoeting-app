@@ -76,6 +76,14 @@ String? activityIdFromActivityDetailDeepLink(Uri uri) {
   return fromPath.isEmpty ? null : fromPath;
 }
 
+String? activityRoutePathFromActivityDetailDeepLink(Uri uri) {
+  final activityId = activityIdFromActivityDetailDeepLink(uri);
+  if (activityId == null || activityId.isEmpty) {
+    return null;
+  }
+  return '/activities/${Uri.encodeComponent(activityId)}';
+}
+
 Uri _appendActivityPath(String baseUrl, String activityId) {
   final baseUri = Uri.parse(baseUrl);
   final existingSegments = baseUri.pathSegments

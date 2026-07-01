@@ -36,6 +36,17 @@ void main() {
 
     expect(activityIdFromActivityDetailDeepLink(uri), 'activity-1');
   });
+
+  test('maps custom scheme activity links to an app route', () {
+    final uri = Uri.parse(
+      'meetingsapp://activity/7e075f49-b851-414d-bbcb-4fbe3fe268a1',
+    );
+
+    expect(
+      activityRoutePathFromActivityDetailDeepLink(uri),
+      '/activities/7e075f49-b851-414d-bbcb-4fbe3fe268a1',
+    );
+  });
 }
 
 HomeActivity _activity() {
