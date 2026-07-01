@@ -25,8 +25,10 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     this._getHomeFeed,
     this._getCurrentLocation,
     this._setActivityParticipation,
-    this._watchLocation,
-  ) : super(const HomeInitial()) {
+    this._watchLocation, {
+    String Function()? cacheKeyProvider,
+  }) : _cacheKeyProvider = cacheKeyProvider,
+       super(const HomeInitial()) {
     on<HomeStarted>(_onStarted);
     on<HomeLocationRequested>(_onLocationRequested);
     on<HomeLocationChanged>(_onLocationChanged);
@@ -49,14 +51,27 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   final GetCurrentLocation _getCurrentLocation;
   final SetActivityParticipation _setActivityParticipation;
   final WatchCurrentLocation _watchLocation;
+  final String Function()? _cacheKeyProvider;
 
   StreamSubscription? _locationSubscription;
   DateTime? _lastAutomaticLocationFeedLoadAt;
 
+  static final Map<String, HomeLoaded> _loadedCache = {};
   static const double _automaticLocationMinDistanceMeters = 1000;
   static const Duration _automaticLocationMinInterval = Duration(seconds: 90);
 
+  static void clearCachedLoadedForTesting() {
+    _loadedCache.clear();
+  }
+
   Future<void> _onStarted(HomeStarted event, Emitter<HomeState> emit) async {
+    final cached = _loadedCache[_cacheKey];
+    if (cached != null) {
+      emit(cached.copyWith(isRefreshing: true));
+      await _startLocationWatcher(restart: true);
+      await _refreshCachedFeed(emit, current: cached);
+      return;
+    }
     add(const HomeLocationRequested());
   }
 
@@ -438,6 +453,46 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     );
   }
 
+  Future<void> _refreshCachedFeed(
+    Emitter<HomeState> emit, {
+    required HomeLoaded current,
+  }) async {
+    final result = await _getHomeFeed(
+      GetHomeFeedParams(
+        location: current.location,
+        filters: current.filters,
+        forceRefresh: true,
+      ),
+    );
+
+    final latest = state;
+    if (latest is! HomeLoaded) {
+      return;
+    }
+
+    result.fold(
+      (failure) {
+        AppLogger.debug('HomeBloc cached refresh failed: ${failure.message}');
+        AnalyticsService.instance.track(
+          'feed_load_failed',
+          properties: {'source': 'tab_cache'},
+        );
+        emit(latest.copyWith(isRefreshing: false));
+      },
+      (feed) {
+        AnalyticsService.instance.track(
+          'feed_loaded',
+          properties: {
+            'source': 'tab_cache',
+            'activity_count': feed.activities.length,
+            'distance_km': latest.filters.distanceKm,
+          },
+        );
+        emit(latest.copyWith(feed: feed, isRefreshing: false));
+      },
+    );
+  }
+
   bool _shouldSoftRefreshForAutomaticLocation(
     HomeLocation current,
     HomeLocation next,
@@ -475,6 +530,22 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       );
     });
   }
+
+  @override
+  void onChange(Change<HomeState> change) {
+    super.onChange(change);
+    final nextState = change.nextState;
+    if (nextState is HomeLoaded) {
+      _loadedCache[_cacheKey] = nextState.copyWith(
+        isRefreshing: false,
+        pendingActivityIds: const [],
+        participationError: null,
+        joinedActivityConfirmation: null,
+      );
+    }
+  }
+
+  String get _cacheKey => _cacheKeyProvider?.call() ?? '__home_default__';
 
   @override
   Future<void> close() {

@@ -23,6 +23,8 @@ import 'package:meetings_app/features/home/domain/usecases/watch_current_locatio
 import 'package:meetings_app/features/home/presentation/bloc/home_bloc.dart';
 
 void main() {
+  tearDown(HomeBloc.clearCachedLoadedForTesting);
+
   test('loads startup location without forcing a fresh GPS fix', () async {
     final repository = _HomeRepositoryStub();
     final bloc = HomeBloc(

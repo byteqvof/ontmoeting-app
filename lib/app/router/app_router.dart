@@ -103,6 +103,10 @@ Widget _phoneProtectedShell(Widget child) {
   return AccountGate(child: child);
 }
 
+Page<void> _noTransitionPage(GoRouterState state, Widget child) {
+  return NoTransitionPage<void>(key: state.pageKey, child: child);
+}
+
 GoRouter createRouter(AuthBloc authBloc) {
   return GoRouter(
     initialLocation: AppRoutes.splash,
@@ -142,8 +146,8 @@ GoRouter createRouter(AuthBloc authBloc) {
         routes: [
           GoRoute(
             path: AppRoutes.home,
-            builder: (context, state) {
-              return const HomePage();
+            pageBuilder: (context, state) {
+              return _noTransitionPage(state, const HomePage());
             },
           ),
           GoRoute(
@@ -167,24 +171,24 @@ GoRouter createRouter(AuthBloc authBloc) {
           ),
           GoRoute(
             path: AppRoutes.activityMessages,
-            builder: (context, state) {
-              return const ActivityMessagesPage();
+            pageBuilder: (context, state) {
+              return _noTransitionPage(state, const ActivityMessagesPage());
             },
           ),
           GoRoute(
             path: AppRoutes.activityAgenda,
-            builder: (context, state) {
-              return const ActivityAgendaPage();
+            pageBuilder: (context, state) {
+              return _noTransitionPage(state, const ActivityAgendaPage());
             },
           ),
           GoRoute(
             path: AppRoutes.activityMap,
-            builder: (context, state) {
+            pageBuilder: (context, state) {
               final args = state.extra;
               if (args is! ActivityMapPageArgs) {
-                return const ActivityMapLoaderPage();
+                return _noTransitionPage(state, const ActivityMapLoaderPage());
               }
-              return ActivityMapPage(args: args);
+              return _noTransitionPage(state, ActivityMapPage(args: args));
             },
           ),
           GoRoute(
@@ -256,8 +260,8 @@ GoRouter createRouter(AuthBloc authBloc) {
           ),
           GoRoute(
             path: AppRoutes.profile,
-            builder: (context, state) {
-              return const ProfilePage();
+            pageBuilder: (context, state) {
+              return _noTransitionPage(state, const ProfilePage());
             },
           ),
           GoRoute(

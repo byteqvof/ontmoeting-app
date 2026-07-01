@@ -8,6 +8,7 @@ import '../../../../app/theme/toch_theme.dart';
 import '../../../../app/widgets/pip_mascot.dart';
 import '../../../../app/widgets/toch_design_system.dart';
 import '../../../../core/di/injection_container.dart';
+import '../../../../core/services/session_scope.dart';
 import '../../../../core/usecases/usecase.dart';
 import '../../domain/entities/activity_agenda.dart';
 import '../../domain/entities/activity_chat_notice.dart';
@@ -17,6 +18,25 @@ import '../../domain/services/activity_chat_notice_service.dart';
 import '../../domain/usecases/get_activity_agenda.dart';
 import '../widgets/home_category_style.dart';
 import '../widgets/home_bottom_nav.dart';
+
+class _ActivityAgendaCache {
+  static final Map<String, ActivityAgenda> _agendaBySession = {};
+
+  static ActivityAgenda? agendaFor(String cacheKey) =>
+      _agendaBySession[cacheKey];
+
+  static void store(String cacheKey, ActivityAgenda agenda) {
+    _agendaBySession[cacheKey] = agenda;
+  }
+}
+
+String _sessionCacheKey() {
+  try {
+    return sl<SessionScope>().cacheKey;
+  } on Object {
+    return SessionScope.anonymousCacheKey;
+  }
+}
 
 class ActivityAgendaPage extends StatefulWidget {
   const ActivityAgendaPage({super.key});
@@ -28,6 +48,7 @@ class ActivityAgendaPage extends StatefulWidget {
 class _ActivityAgendaPageState extends State<ActivityAgendaPage> {
   final GetActivityAgenda _getActivityAgenda = sl();
 
+  late final String _cacheKey;
   ActivityAgenda? _agenda;
   _AgendaTab _selectedTab = _AgendaTab.joined;
   bool _isLoading = true;
@@ -36,14 +57,23 @@ class _ActivityAgendaPageState extends State<ActivityAgendaPage> {
   @override
   void initState() {
     super.initState();
-    _loadAgenda();
+    _cacheKey = _sessionCacheKey();
+    _agenda = _ActivityAgendaCache.agendaFor(_cacheKey);
+    _isLoading = _agenda == null;
+    unawaited(_loadAgenda(showLoading: _agenda == null));
   }
 
-  Future<void> _loadAgenda() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+  Future<void> _loadAgenda({bool showLoading = true}) async {
+    if (showLoading && _agenda == null) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    } else if (showLoading) {
+      setState(() {
+        _errorMessage = null;
+      });
+    }
 
     final result = await _getActivityAgenda(const NoParams());
     if (!mounted) {
@@ -54,13 +84,15 @@ class _ActivityAgendaPageState extends State<ActivityAgendaPage> {
       (failure) {
         setState(() {
           _isLoading = false;
-          _errorMessage = failure.message;
+          _errorMessage = _agenda == null ? failure.message : null;
         });
       },
       (agenda) {
+        _ActivityAgendaCache.store(_cacheKey, agenda);
         setState(() {
           _agenda = agenda;
           _isLoading = false;
+          _errorMessage = null;
         });
       },
     );
@@ -74,8 +106,12 @@ class _ActivityAgendaPageState extends State<ActivityAgendaPage> {
     if (!mounted || updated == null) {
       return;
     }
+    final agenda = _agenda?.withActivityUpdated(updated);
+    if (agenda != null) {
+      _ActivityAgendaCache.store(_cacheKey, agenda);
+    }
     setState(() {
-      _agenda = _agenda?.withActivityUpdated(updated);
+      _agenda = agenda;
     });
   }
 
@@ -87,8 +123,12 @@ class _ActivityAgendaPageState extends State<ActivityAgendaPage> {
     if (!mounted || updated == null) {
       return;
     }
+    final agenda = _agenda?.withActivityUpdated(updated);
+    if (agenda != null) {
+      _ActivityAgendaCache.store(_cacheKey, agenda);
+    }
     setState(() {
-      _agenda = _agenda?.withActivityUpdated(updated);
+      _agenda = agenda;
     });
   }
 
@@ -151,6 +191,7 @@ class _ActivityMessagesPageState extends State<ActivityMessagesPage>
   final GetActivityAgenda _getActivityAgenda = sl();
   final ActivityChatNoticeService _chatNotices = sl();
 
+  late final String _cacheKey;
   ActivityAgenda? _agenda;
   StreamSubscription<ActivityChatNotice>? _noticeSubscription;
   bool _isLoading = true;
@@ -160,12 +201,15 @@ class _ActivityMessagesPageState extends State<ActivityMessagesPage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _cacheKey = _sessionCacheKey();
+    _agenda = _ActivityAgendaCache.agendaFor(_cacheKey);
+    _isLoading = _agenda == null;
     _chatNotices.clearUnread();
     _noticeSubscription = _chatNotices.notices.listen((notice) {
       _chatNotices.clearUnread();
       _applyChatNotice(notice);
     });
-    _loadAgenda();
+    unawaited(_loadAgenda(showLoading: _agenda == null));
   }
 
   @override
@@ -183,9 +227,13 @@ class _ActivityMessagesPageState extends State<ActivityMessagesPage>
   }
 
   Future<void> _loadAgenda({bool showLoading = true}) async {
-    if (showLoading) {
+    if (showLoading && _agenda == null) {
       setState(() {
         _isLoading = true;
+        _errorMessage = null;
+      });
+    } else if (showLoading) {
+      setState(() {
         _errorMessage = null;
       });
     }
@@ -198,16 +246,16 @@ class _ActivityMessagesPageState extends State<ActivityMessagesPage>
     result.fold(
       (failure) {
         setState(() {
-          if (showLoading) {
-            _isLoading = false;
-          }
-          _errorMessage = failure.message;
+          _isLoading = false;
+          _errorMessage = _agenda == null ? failure.message : null;
         });
       },
       (agenda) {
+        _ActivityAgendaCache.store(_cacheKey, agenda);
         setState(() {
           _agenda = agenda;
           _isLoading = false;
+          _errorMessage = null;
         });
       },
     );
@@ -229,6 +277,7 @@ class _ActivityMessagesPageState extends State<ActivityMessagesPage>
     if (!mounted) {
       return;
     }
+    _ActivityAgendaCache.store(_cacheKey, update.agenda);
     setState(() {
       _agenda = update.agenda;
     });
@@ -236,8 +285,12 @@ class _ActivityMessagesPageState extends State<ActivityMessagesPage>
 
   Future<void> _openChat(HomeActivity activity) async {
     _chatNotices.markActivityRead(activity.id);
+    final agenda = _agenda?.withChatMarkedRead(activity.id);
+    if (agenda != null) {
+      _ActivityAgendaCache.store(_cacheKey, agenda);
+    }
     setState(() {
-      _agenda = _agenda?.withChatMarkedRead(activity.id);
+      _agenda = agenda;
     });
     await context.push(
       AppRoutes.activityChatPath(activity.id),
@@ -246,7 +299,7 @@ class _ActivityMessagesPageState extends State<ActivityMessagesPage>
     if (!mounted) {
       return;
     }
-    await _loadAgenda();
+    await _loadAgenda(showLoading: false);
   }
 
   @override
@@ -440,11 +493,11 @@ class _AgendaBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading) {
+    if (isLoading && agenda == null) {
       return const _LoadingState(message: 'Agenda laden');
     }
 
-    if (errorMessage != null) {
+    if (errorMessage != null && agenda == null) {
       return _ErrorState(message: errorMessage!, onRetry: onRetry);
     }
 
@@ -536,11 +589,11 @@ class _MessagesBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading) {
+    if (isLoading && agenda == null) {
       return const _LoadingState(message: 'Berichten laden');
     }
 
-    if (errorMessage != null) {
+    if (errorMessage != null && agenda == null) {
       return _ErrorState(message: errorMessage!, onRetry: onRetry);
     }
 

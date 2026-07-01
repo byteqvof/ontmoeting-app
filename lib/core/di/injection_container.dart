@@ -57,6 +57,7 @@ import '../services/activity_share_service.dart';
 import '../services/analytics_service.dart';
 import '../services/push_notification_service.dart';
 import '../services/safety_service.dart';
+import '../services/session_scope.dart';
 import '../services/friendship_service.dart';
 import '../utils/app_preferences.dart';
 
@@ -77,6 +78,11 @@ Future<void> configureDependencies() async {
     ..registerLazySingleton(() => const ActivityShareService())
     ..registerLazySingleton(() => SafetyService(sl()))
     ..registerLazySingleton(() => FriendshipService(sl()))
+    ..registerLazySingleton<SessionScope>(
+      () => SessionScope(
+        currentUserId: () => sl<SupabaseClient>().auth.currentUser?.id,
+      ),
+    )
     ..registerLazySingleton<AuthRemoteDataSource>(
       () => AuthRemoteDataSourceImpl(sl()),
     )
@@ -120,7 +126,15 @@ Future<void> configureDependencies() async {
     ..registerLazySingleton(() => UpdateActivity(sl()))
     ..registerLazySingleton(() => WatchCurrentCityName(sl()))
     ..registerLazySingleton(() => WatchCurrentLocation(sl()))
-    ..registerFactory(() => HomeBloc(sl(), sl(), sl(), sl()))
+    ..registerFactory(
+      () => HomeBloc(
+        sl(),
+        sl(),
+        sl(),
+        sl(),
+        cacheKeyProvider: () => sl<SessionScope>().cacheKey,
+      ),
+    )
     ..registerLazySingleton<ProfileDataSource>(
       () => ProfileRemoteDataSource(sl()),
     )
@@ -137,6 +151,12 @@ Future<void> configureDependencies() async {
     ..registerLazySingleton(() => GetProfileActivities(sl()))
     ..registerLazySingleton(() => IsProfileOnboardingRequired(sl()))
     ..registerLazySingleton(() => UpdateProfile(sl()))
-    ..registerFactory(() => ProfileBloc(sl(), sl()))
+    ..registerFactory(
+      () => ProfileBloc(
+        sl(),
+        sl(),
+        cacheKeyProvider: () => sl<SessionScope>().cacheKey,
+      ),
+    )
     ..registerFactory(() => ProfileSetupBloc(sl(), sl()));
 }

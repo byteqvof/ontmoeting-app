@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/app_router.dart';
 import '../../../../app/theme/toch_theme.dart';
 import '../../../../core/di/injection_container.dart';
+import '../../../../core/services/session_scope.dart';
 import '../../../../core/widgets/toch_snack_bar.dart';
 import '../../domain/entities/home_activity.dart';
 import '../../domain/entities/home_feed_filters.dart';
@@ -30,6 +31,25 @@ class ActivityMapPageArgs {
   final HomeFeedFilters filters;
 }
 
+class _ActivityMapCache {
+  static final Map<String, ActivityMapPageArgs> _argsBySession = {};
+
+  static ActivityMapPageArgs? argsFor(String cacheKey) =>
+      _argsBySession[cacheKey];
+
+  static void store(String cacheKey, ActivityMapPageArgs args) {
+    _argsBySession[cacheKey] = args;
+  }
+}
+
+String _sessionCacheKey() {
+  try {
+    return sl<SessionScope>().cacheKey;
+  } on Object {
+    return SessionScope.anonymousCacheKey;
+  }
+}
+
 class ActivityMapLoaderPage extends StatefulWidget {
   const ActivityMapLoaderPage({super.key});
 
@@ -41,19 +61,28 @@ class _ActivityMapLoaderPageState extends State<ActivityMapLoaderPage> {
   final GetCurrentLocation _getCurrentLocation = sl();
   final GetHomeFeed _getHomeFeed = sl();
 
+  late final String _cacheKey;
   ActivityMapPageArgs? _args;
   String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _loadMap();
+    _cacheKey = _sessionCacheKey();
+    _args = _ActivityMapCache.argsFor(_cacheKey);
+    unawaited(_loadMap(showLoading: _args == null));
   }
 
-  Future<void> _loadMap() async {
-    setState(() {
-      _errorMessage = null;
-    });
+  Future<void> _loadMap({bool showLoading = true}) async {
+    if (showLoading && _args == null) {
+      setState(() {
+        _errorMessage = null;
+      });
+    } else if (showLoading) {
+      setState(() {
+        _errorMessage = null;
+      });
+    }
 
     final locationResult = await _getCurrentLocation(
       const GetCurrentLocationParams(forceRefresh: true),
@@ -65,7 +94,7 @@ class _ActivityMapLoaderPageState extends State<ActivityMapLoaderPage> {
     await locationResult.fold(
       (failure) async {
         setState(() {
-          _errorMessage = failure.message;
+          _errorMessage = _args == null ? failure.message : null;
         });
       },
       (location) async {
@@ -82,15 +111,20 @@ class _ActivityMapLoaderPageState extends State<ActivityMapLoaderPage> {
         }
         feedResult.fold(
           (failure) => setState(() {
-            _errorMessage = failure.message;
+            _errorMessage = _args == null ? failure.message : null;
           }),
-          (feed) => setState(() {
-            _args = ActivityMapPageArgs(
+          (feed) {
+            final args = ActivityMapPageArgs(
               location: location,
               activities: feed.activities,
               filters: filters,
             );
-          }),
+            _ActivityMapCache.store(_cacheKey, args);
+            setState(() {
+              _args = args;
+              _errorMessage = null;
+            });
+          },
         );
       },
     );
@@ -154,6 +188,7 @@ class _ActivityMapPageState extends State<ActivityMapPage> {
   final GetCurrentLocation _getCurrentLocation = sl();
   final SearchMeetingLocations _searchLocations = sl();
   final TextEditingController _searchController = TextEditingController();
+  late final String _cacheKey = _sessionCacheKey();
   late HomeLocation _location = widget.args.location;
   late List<HomeActivity> _activities = widget.args.activities;
   HomeLocation? _pendingSearchLocation;
@@ -164,6 +199,24 @@ class _ActivityMapPageState extends State<ActivityMapPage> {
   bool _isSearching = false;
   bool _isLocating = false;
   String? _locationSearchError;
+
+  @override
+  void initState() {
+    super.initState();
+    _ActivityMapCache.store(_cacheKey, widget.args);
+  }
+
+  @override
+  void didUpdateWidget(covariant ActivityMapPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.args == widget.args) {
+      return;
+    }
+    _ActivityMapCache.store(_cacheKey, widget.args);
+    _location = widget.args.location;
+    _activities = widget.args.activities;
+    _pendingSearchLocation = null;
+  }
 
   @override
   void dispose() {
@@ -470,6 +523,14 @@ class _ActivityMapPageState extends State<ActivityMapPage> {
         );
       },
       (feed) {
+        _ActivityMapCache.store(
+          _cacheKey,
+          ActivityMapPageArgs(
+            location: location,
+            activities: feed.activities,
+            filters: widget.args.filters,
+          ),
+        );
         setState(() {
           _location = location;
           _activities = feed.activities;
@@ -481,11 +542,20 @@ class _ActivityMapPageState extends State<ActivityMapPage> {
   }
 
   void _replaceActivity(HomeActivity updatedActivity) {
+    final activities = [
+      for (final activity in _activities)
+        if (activity.id == updatedActivity.id) updatedActivity else activity,
+    ];
+    _ActivityMapCache.store(
+      _cacheKey,
+      ActivityMapPageArgs(
+        location: _location,
+        activities: activities,
+        filters: widget.args.filters,
+      ),
+    );
     setState(() {
-      _activities = [
-        for (final activity in _activities)
-          if (activity.id == updatedActivity.id) updatedActivity else activity,
-      ];
+      _activities = activities;
     });
   }
 }
