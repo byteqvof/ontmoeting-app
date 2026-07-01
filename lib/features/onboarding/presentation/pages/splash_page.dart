@@ -56,9 +56,9 @@ class _SplashPageState extends State<SplashPage> {
             decoration: BoxDecoration(color: colors.green),
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final fontSize = (constraints.maxWidth * .23).clamp(
-                  78.0,
-                  112.0,
+                final wordmarkWidth = (constraints.maxWidth * .68).clamp(
+                  220.0,
+                  320.0,
                 );
                 return Stack(
                   children: [
@@ -87,7 +87,13 @@ class _SplashPageState extends State<SplashPage> {
                             backgroundColor: colors.greenPressed,
                           ),
                           const SizedBox(height: TochSpacing.lg),
-                          TochWordmark(fontSize: fontSize, onDark: true),
+                          SizedBox(
+                            width: wordmarkWidth,
+                            child: const FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: TochWordmark(fontSize: 112, onDark: true),
+                            ),
+                          ),
                         ],
                       ),
                     ),

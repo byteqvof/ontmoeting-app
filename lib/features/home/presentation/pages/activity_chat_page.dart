@@ -753,6 +753,7 @@ class _ChatBody extends StatelessWidget {
 
     return ListView.builder(
       controller: scrollController,
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: const EdgeInsets.fromLTRB(14, 18, 14, 18),
       itemCount: messages.length,
       itemBuilder: (context, index) {
@@ -976,18 +977,6 @@ class _MessageComposer extends StatelessWidget {
             ],
             Row(
               children: [
-                IconButton(
-                  tooltip: 'Toevoegen',
-                  onPressed: canSend ? () {} : null,
-                  style: IconButton.styleFrom(
-                    backgroundColor: colors.card,
-                    foregroundColor: colors.ink3,
-                    fixedSize: const Size.square(40),
-                    disabledBackgroundColor: colors.surface2,
-                  ),
-                  icon: const Icon(Icons.add_rounded),
-                ),
-                const SizedBox(width: 8),
                 Expanded(
                   child: TextField(
                     controller: controller,
@@ -995,6 +984,7 @@ class _MessageComposer extends StatelessWidget {
                     minLines: 1,
                     maxLines: 4,
                     textInputAction: TextInputAction.newline,
+                    onTapOutside: (_) => FocusScope.of(context).unfocus(),
                     decoration: InputDecoration(
                       hintText: canSend ? 'Bericht' : 'Chat alleen lezen',
                       filled: true,
