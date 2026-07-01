@@ -18,9 +18,10 @@ import 'package:meetings_app/features/home/domain/entities/home_feed_filters.dar
 import 'package:meetings_app/features/home/domain/entities/home_location.dart';
 import 'package:meetings_app/features/home/domain/entities/meeting_location_suggestion.dart';
 import 'package:meetings_app/features/home/domain/repositories/home_repository.dart';
+import 'package:meetings_app/features/home/domain/services/activity_chat_notice_service.dart';
 import 'package:meetings_app/features/home/domain/usecases/get_activity_agenda.dart';
-import 'package:meetings_app/features/home/presentation/controllers/activity_chat_notice_controller.dart';
-import 'package:meetings_app/features/home/presentation/controllers/activity_chat_realtime_controller.dart';
+import 'package:meetings_app/features/home/data/controllers/activity_chat_notice_controller.dart';
+import 'package:meetings_app/features/home/data/controllers/activity_chat_realtime_controller.dart';
 import 'package:meetings_app/features/home/presentation/pages/activity_agenda_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -41,7 +42,7 @@ void main() {
           ),
         ),
       );
-      sl.registerLazySingleton(
+      sl.registerLazySingleton<ActivityChatNoticeService>(
         () => ActivityChatNoticeController(
           client,
           ActivityChatRealtimeController(client),
@@ -68,13 +69,7 @@ void main() {
 HomeActivity _hostedActivity() {
   return HomeActivity(
     id: 'activity-hosted-1',
-    category: const HomeCategory(
-      id: 'category-1',
-      label: 'Buiten',
-      icon: Icons.park_rounded,
-      color: Color(0xFF1E5740),
-      backgroundColor: Color(0xFFE6EFE9),
-    ),
+    category: const HomeCategory(id: 'category-1', label: 'Buiten'),
     distanceKm: 1,
     distanceLabel: '1 km',
     title: 'Test activiteit beheren',

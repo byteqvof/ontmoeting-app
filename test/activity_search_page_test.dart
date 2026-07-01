@@ -168,21 +168,9 @@ HomeActivity _coffeeActivity() {
   );
 }
 
-const _fishingCategory = HomeCategory(
-  id: 'fishing',
-  label: 'Vissen',
-  icon: Icons.phishing_rounded,
-  color: Color(0xFF1E5740),
-  backgroundColor: Color(0xFFE6EFE9),
-);
+const _fishingCategory = HomeCategory(id: 'fishing', label: 'Vissen');
 
-const _coffeeCategory = HomeCategory(
-  id: 'coffee',
-  label: 'Koffie',
-  icon: Icons.local_cafe_rounded,
-  color: Color(0xFF9A6238),
-  backgroundColor: Color(0xFFF1E5DC),
-);
+const _coffeeCategory = HomeCategory(id: 'coffee', label: 'Koffie');
 
 class _FakeHomeRepository implements HomeRepository {
   Completer<Either<Failure, HomeFeed>> _feedCompleter = Completer();

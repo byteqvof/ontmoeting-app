@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:meetings_app/core/services/activity_share_service.dart';
 import 'package:meetings_app/core/utils/activity_deep_links.dart';
@@ -42,13 +41,7 @@ void main() {
 HomeActivity _activity() {
   return HomeActivity(
     id: 'activity-1',
-    category: const HomeCategory(
-      id: 'outside',
-      label: 'Buiten',
-      icon: Icons.park_rounded,
-      color: Color(0xFF1E5740),
-      backgroundColor: Color(0xFFE6EFE9),
-    ),
+    category: const HomeCategory(id: 'outside', label: 'Buiten'),
     distanceKm: 1.2,
     distanceLabel: '1,2 km',
     title: 'Avondvissen aan de Maas',

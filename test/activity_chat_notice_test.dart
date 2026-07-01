@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:meetings_app/features/home/data/models/activity_chat_notice_model.dart';
-import 'package:meetings_app/features/home/presentation/controllers/activity_chat_notice_controller.dart';
+import 'package:meetings_app/features/home/data/controllers/activity_chat_notice_controller.dart';
 
 void main() {
   test('parses realtime chat insert records', () {

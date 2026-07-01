@@ -130,7 +130,8 @@ class _FriendTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.toch;
-    final isPending = item.status == FriendshipStatus.pendingReceived ||
+    final isPending =
+        item.status == FriendshipStatus.pendingReceived ||
         item.status == FriendshipStatus.pendingSent;
 
     return DecoratedBox(
@@ -187,9 +188,8 @@ class _FriendTile extends StatelessWidget {
                 ),
                 IconButton(
                   tooltip: 'Open profiel',
-                  onPressed: () => context.push(
-                    AppRoutes.profilePath(item.profileId),
-                  ),
+                  onPressed: () =>
+                      context.push(AppRoutes.profilePath(item.profileId)),
                   icon: const Icon(Icons.chevron_right_rounded),
                 ),
               ],
@@ -286,10 +286,7 @@ class _FriendsStateCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: TochSpacing.lg),
-              ElevatedButton(
-                onPressed: onAction,
-                child: Text(actionLabel),
-              ),
+              ElevatedButton(onPressed: onAction, child: Text(actionLabel)),
             ],
           ),
         ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/widgets/toch_design_system.dart';
 import '../../domain/entities/home_category.dart';
+import 'home_category_style.dart';
 
 class HomeQuickFilterRail extends StatelessWidget {
   const HomeQuickFilterRail({
@@ -35,7 +36,9 @@ class HomeQuickFilterRail extends StatelessWidget {
         .where((category) => category.id != 'all')
         .take(4)
         .toList();
-    final nearestDistance = distances.isEmpty ? selectedDistanceKm : distances.first;
+    final nearestDistance = distances.isEmpty
+        ? selectedDistanceKm
+        : distances.first;
 
     final chips = <Widget>[
       for (final filter in timeFilters.take(2))
@@ -49,11 +52,7 @@ class HomeQuickFilterRail extends StatelessWidget {
         active: selectedDistanceKm == nearestDistance,
         onTap: () => onDistanceSelected(nearestDistance),
       ),
-      TochPill(
-        label: 'Plek vrij',
-        active: false,
-        onTap: onAdvancedFilters,
-      ),
+      TochPill(label: 'Plek vrij', active: false, onTap: onAdvancedFilters),
       for (final category in visibleCategories)
         TochPill(
           label: category.label,

@@ -36,7 +36,11 @@ void main() {
 
     test('falls back to a branded activity icon instead of the old grid', () {
       expect(
-        tochCategoryIcon(id: 'unknown', label: 'Onbekend', iconKey: 'grid_view'),
+        tochCategoryIcon(
+          id: 'unknown',
+          label: 'Onbekend',
+          iconKey: 'grid_view',
+        ),
         Icons.local_activity_rounded,
       );
     });

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/toch_theme.dart';
 import '../../domain/entities/home_category.dart';
+import 'home_category_style.dart';
 
 class HomeCategoryStrip extends StatelessWidget {
   const HomeCategoryStrip({

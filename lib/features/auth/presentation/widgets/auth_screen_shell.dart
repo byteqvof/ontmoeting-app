@@ -98,18 +98,9 @@ class AuthSocialProofCard extends StatelessWidget {
                   child: Stack(
                     children: [
                       Positioned(left: 0, child: _AuthProofAvatar(tone: 0)),
-                      Positioned(
-                        left: 27,
-                        child: _AuthProofAvatar(tone: 1),
-                      ),
-                      Positioned(
-                        left: 54,
-                        child: _AuthProofAvatar(tone: 2),
-                      ),
-                      Positioned(
-                        left: 81,
-                        child: _AuthProofAvatar(tone: 3),
-                      ),
+                      Positioned(left: 27, child: _AuthProofAvatar(tone: 1)),
+                      Positioned(left: 54, child: _AuthProofAvatar(tone: 2)),
+                      Positioned(left: 81, child: _AuthProofAvatar(tone: 3)),
                     ],
                   ),
                 ),

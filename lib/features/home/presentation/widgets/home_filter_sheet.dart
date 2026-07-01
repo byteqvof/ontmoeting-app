@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/toch_theme.dart';
 import '../../domain/entities/home_category.dart';
 import '../../domain/entities/home_feed_filters.dart';
+import 'home_category_style.dart';
 
 Future<HomeFeedFilters?> showHomeFilterSheet({
   required BuildContext context,

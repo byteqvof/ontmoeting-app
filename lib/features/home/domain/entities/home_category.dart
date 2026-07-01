@@ -1,21 +1,20 @@
 import 'package:equatable/equatable.dart';
-import 'package:flutter/material.dart';
 
 class HomeCategory extends Equatable {
   const HomeCategory({
     required this.id,
     required this.label,
-    required this.icon,
-    required this.color,
-    required this.backgroundColor,
+    this.iconKey,
+    this.colorHex,
+    this.backgroundColorHex,
   });
 
   final String id;
   final String label;
-  final IconData icon;
-  final Color color;
-  final Color backgroundColor;
+  final String? iconKey;
+  final String? colorHex;
+  final String? backgroundColorHex;
 
   @override
-  List<Object?> get props => [id, label, icon, color, backgroundColor];
+  List<Object?> get props => [id, label, iconKey, colorHex, backgroundColorHex];
 }

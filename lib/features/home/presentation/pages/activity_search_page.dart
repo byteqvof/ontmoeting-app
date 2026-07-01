@@ -13,6 +13,7 @@ import '../../domain/entities/home_location.dart';
 import '../../domain/usecases/get_current_location.dart';
 import '../../domain/usecases/get_home_feed.dart';
 import '../widgets/home_activity_card.dart';
+import '../widgets/home_category_style.dart';
 
 class ActivitySearchPage extends StatefulWidget {
   const ActivitySearchPage({super.key});
@@ -137,16 +138,19 @@ class _ActivitySearchPageState extends State<ActivitySearchPage> {
       return null;
     }
 
-    return locationResult.fold((failure) {
-      setState(() {
-        _errorMessage ??= failure.message;
-        _discoveryErrorMessage ??= failure.message;
-      });
-      return null;
-    }, (value) {
-      _location = value;
-      return value;
-    });
+    return locationResult.fold(
+      (failure) {
+        setState(() {
+          _errorMessage ??= failure.message;
+          _discoveryErrorMessage ??= failure.message;
+        });
+        return null;
+      },
+      (value) {
+        _location = value;
+        return value;
+      },
+    );
   }
 
   Future<void> _submitSearch([String? rawQuery]) async {

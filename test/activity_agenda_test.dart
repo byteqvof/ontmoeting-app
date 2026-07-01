@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:meetings_app/features/home/domain/entities/activity_agenda.dart';
 import 'package:meetings_app/features/home/domain/entities/home_activity.dart';
@@ -194,13 +193,7 @@ HomeActivity _activity(
 }) {
   return HomeActivity(
     id: id,
-    category: const HomeCategory(
-      id: 'category-1',
-      label: 'Buiten',
-      icon: Icons.park_rounded,
-      color: Color(0xFF1E5740),
-      backgroundColor: Color(0xFFE6EFE9),
-    ),
+    category: const HomeCategory(id: 'category-1', label: 'Buiten'),
     distanceKm: 0,
     distanceLabel: 'Ter Apel',
     title: title,

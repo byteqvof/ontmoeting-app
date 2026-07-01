@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 
 IconData tochCategoryIcon({String? id, String? label, String? iconKey}) {
-  final tokens = {
-    _normalize(id),
-    _normalize(label),
-    _normalize(iconKey),
-  }..remove('');
+  final tokens = {_normalize(id), _normalize(label), _normalize(iconKey)}
+    ..remove('');
 
   bool hasAny(Set<String> aliases) => tokens.any(aliases.contains);
 
@@ -59,12 +56,7 @@ const _walkingAliases = {
   'wandelen',
 };
 
-const _coffeeAliases = {
-  'cafe',
-  'coffee',
-  'koffie',
-  'local_cafe',
-};
+const _coffeeAliases = {'cafe', 'coffee', 'koffie', 'local_cafe'};
 
 const _foodAliases = {
   'dining',
@@ -77,38 +69,15 @@ const _foodAliases = {
   'utensils',
 };
 
-const _cultureAliases = {
-  'culture',
-  'cultuur',
-  'museum',
-  'palette',
-  'theater',
-};
+const _cultureAliases = {'culture', 'cultuur', 'museum', 'palette', 'theater'};
 
-const _musicAliases = {
-  'music',
-  'music_note',
-  'muziek',
-};
+const _musicAliases = {'music', 'music_note', 'muziek'};
 
-const _sportAliases = {
-  'dumbbell',
-  'sport',
-  'sports',
-  'sports_basketball',
-};
+const _sportAliases = {'dumbbell', 'sport', 'sports', 'sports_basketball'};
 
-const _gamingAliases = {
-  'game',
-  'gaming',
-  'sports_esports',
-};
+const _gamingAliases = {'game', 'gaming', 'sports_esports'};
 
-const _motorAliases = {
-  'motor',
-  'motorcycle',
-  'two_wheeler',
-};
+const _motorAliases = {'motor', 'motorcycle', 'two_wheeler'};
 
 const _boardGameAliases = {
   'boardgames',
@@ -119,26 +88,11 @@ const _boardGameAliases = {
   'spelletjes',
 };
 
-const _photoAliases = {
-  'camera',
-  'foto',
-  'photo',
-  'photo_camera',
-};
+const _photoAliases = {'camera', 'foto', 'photo', 'photo_camera'};
 
-const _socialAliases = {
-  'favorite',
-  'groups',
-  'sociaal',
-  'social',
-  'users',
-};
+const _socialAliases = {'favorite', 'groups', 'sociaal', 'social', 'users'};
 
-const _networkingAliases = {
-  'network',
-  'networking',
-  'netwerken',
-};
+const _networkingAliases = {'network', 'networking', 'netwerken'};
 
 const _volunteeringAliases = {
   'heart_handshake',

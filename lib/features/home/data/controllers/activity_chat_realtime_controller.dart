@@ -3,10 +3,11 @@ import 'dart:async';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/utils/app_logger.dart';
-import '../../data/models/activity_chat_message_model.dart';
 import '../../domain/entities/activity_chat_message.dart';
+import '../../domain/services/activity_chat_realtime_service.dart';
+import '../models/activity_chat_message_model.dart';
 
-class ActivityChatRealtimeController {
+class ActivityChatRealtimeController implements ActivityChatRealtimeService {
   ActivityChatRealtimeController(this._client);
 
   final SupabaseClient _client;
@@ -15,8 +16,10 @@ class ActivityChatRealtimeController {
   final Map<String, RealtimeChannel> _channels = <String, RealtimeChannel>{};
   final Set<String> _subscribingActivityIds = <String>{};
 
+  @override
   Stream<ActivityChatMessage> get messages => _messages.stream;
 
+  @override
   Future<void> subscribeToActivity(String activityId) async {
     if (activityId.isEmpty ||
         _channels.containsKey(activityId) ||
@@ -65,6 +68,7 @@ class ActivityChatRealtimeController {
     }
   }
 
+  @override
   Future<void> subscribeToActivities(Iterable<String> activityIds) async {
     for (final activityId in activityIds.where((id) => id.isNotEmpty)) {
       if (_channels.length >= _maxActivityChannels &&
@@ -76,6 +80,7 @@ class ActivityChatRealtimeController {
     }
   }
 
+  @override
   Future<void> unsubscribeFromActivity(String activityId) async {
     final channel = _channels.remove(activityId);
     _subscribingActivityIds.remove(activityId);
@@ -84,6 +89,7 @@ class ActivityChatRealtimeController {
     }
   }
 
+  @override
   Future<void> stopAll() async {
     final channels = _channels.values.toList();
     _channels.clear();

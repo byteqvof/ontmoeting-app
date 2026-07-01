@@ -2,13 +2,11 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/config/supabase_config.dart';
 import '../../../../core/utils/app_logger.dart';
 import '../../../../core/utils/supabase_function_auth.dart';
-import '../../../../core/utils/toch_category_icons.dart';
 import '../../domain/entities/activity_agenda.dart';
 import '../../domain/entities/activity_chat_message.dart';
 import '../../domain/entities/activity_completion_update.dart';
@@ -911,23 +909,25 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
     return HomeCategory(
       id: id,
       label: label,
-      icon: tochCategoryIcon(id: id, label: label, iconKey: iconKey),
-      color: _colorFromHex(
-        _stringValue(
-          json['colorHex'] ?? json['color_hex'] ?? json['foreground_color'],
-        ),
-        fallback: const Color(0xFF1E5740),
+      iconKey: iconKey.isEmpty ? null : iconKey,
+      colorHex: _nullableString(
+        json['colorHex'] ?? json['color_hex'] ?? json['foreground_color'],
       ),
-      backgroundColor: _colorFromHex(
-        _stringValue(
-          json['backgroundColorHex'] ??
-              json['background_color_hex'] ??
-              json['background_color'],
-        ),
-        fallback: const Color(0xFFE6EFE9),
+      backgroundColorHex: _nullableString(
+        json['backgroundColorHex'] ??
+            json['background_color_hex'] ??
+            json['background_color'],
       ),
     );
   }
+}
+
+String? _nullableString(Object? value) {
+  if (value == null) {
+    return null;
+  }
+  final string = value.toString().trim();
+  return string.isEmpty ? null : string;
 }
 
 const _startupFunctionTimeout = Duration(seconds: 5);
@@ -937,9 +937,9 @@ const _functionTimeout = Duration(seconds: 8);
 const _allCategory = HomeCategory(
   id: 'all',
   label: 'Alles',
-  icon: Icons.explore_rounded,
-  color: Color(0xFF19211C),
-  backgroundColor: Color(0xFFFFFFFF),
+  iconKey: 'explore',
+  colorHex: '#19211C',
+  backgroundColorHex: '#FFFFFF',
 );
 
 List<HomeCategory> _sortedCategories(Iterable<HomeCategory> categories) {
@@ -1169,23 +1169,4 @@ String _initialsFor(String name) {
         .toUpperCase();
   }
   return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
-}
-
-String? _nullableString(Object? value) {
-  final text = _stringValue(value);
-  return text.isEmpty ? null : text;
-}
-
-Color _colorFromHex(String hex, {required Color fallback}) {
-  final normalized = hex.replaceFirst('#', '').trim();
-  if (normalized.length != 6 && normalized.length != 8) {
-    return fallback;
-  }
-
-  final value = int.tryParse(normalized, radix: 16);
-  if (value == null) {
-    return fallback;
-  }
-
-  return Color(normalized.length == 6 ? 0xFF000000 | value : value);
 }

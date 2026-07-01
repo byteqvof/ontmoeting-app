@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/toch_theme.dart';
 import '../../../../app/widgets/toch_design_system.dart';
 import '../../domain/entities/home_activity.dart';
+import 'home_category_style.dart';
 import 'home_avatar_stack.dart';
 
 class HomeActivityCard extends StatelessWidget {

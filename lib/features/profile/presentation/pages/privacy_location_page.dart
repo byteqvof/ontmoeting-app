@@ -32,11 +32,10 @@ class PrivacyLocationPage extends StatelessWidget {
                       const SizedBox(width: 12),
                       Text(
                         'Privacy en locatie',
-                        style: Theme.of(context).textTheme.titleLarge
-                            ?.copyWith(
-                              color: colors.ink,
-                              fontWeight: FontWeight.w900,
-                            ),
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: colors.ink,
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
                     ],
                   ),

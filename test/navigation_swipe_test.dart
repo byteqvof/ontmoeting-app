@@ -148,13 +148,7 @@ AuthBloc _authBloc(AuthRepository repository) {
 HomeActivity _activity() {
   return HomeActivity(
     id: 'activity-1',
-    category: const HomeCategory(
-      id: 'outside',
-      label: 'Buiten',
-      icon: Icons.park_rounded,
-      color: Color(0xFF1E5740),
-      backgroundColor: Color(0xFFE6EFE9),
-    ),
+    category: const HomeCategory(id: 'outside', label: 'Buiten'),
     distanceKm: 1.2,
     distanceLabel: '1,2 km',
     title: 'Avondvissen aan de Maas',

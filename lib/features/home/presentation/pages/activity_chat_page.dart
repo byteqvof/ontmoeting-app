@@ -16,12 +16,13 @@ import '../../../../core/widgets/toch_snack_bar.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../domain/entities/activity_chat_message.dart';
 import '../../domain/entities/home_activity.dart';
+import '../../domain/services/activity_chat_notice_service.dart';
+import '../../domain/services/activity_chat_realtime_service.dart';
 import '../../domain/usecases/get_activity_chat_messages.dart';
 import '../../domain/usecases/mark_activity_chat_read.dart';
 import '../../domain/usecases/send_activity_chat_message.dart';
-import '../controllers/activity_chat_notice_controller.dart';
-import '../controllers/activity_chat_realtime_controller.dart';
 import '../widgets/activity_status_labels.dart';
+import '../widgets/home_category_style.dart';
 
 class ActivityChatPage extends StatefulWidget {
   const ActivityChatPage({
@@ -42,8 +43,8 @@ class _ActivityChatPageState extends State<ActivityChatPage>
   final GetActivityChatMessages _getMessages = sl();
   final SendActivityChatMessage _sendMessage = sl();
   final MarkActivityChatRead _markChatRead = sl();
-  final ActivityChatNoticeController _chatNotices = sl();
-  final ActivityChatRealtimeController _realtime = sl();
+  final ActivityChatNoticeService _chatNotices = sl();
+  final ActivityChatRealtimeService _realtime = sl();
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 

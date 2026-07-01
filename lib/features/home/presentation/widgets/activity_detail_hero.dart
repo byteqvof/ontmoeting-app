@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme/toch_theme.dart';
 import '../../../../app/widgets/toch_design_system.dart';
 import '../../domain/entities/home_activity.dart';
+import 'home_category_style.dart';
 
 class ActivityDetailHero extends StatelessWidget {
   const ActivityDetailHero({
@@ -104,9 +105,7 @@ class ActivityDetailHero extends StatelessWidget {
                             : 'Voeg toe aan favorieten',
                         dark: true,
                         size: 40,
-                        onPressed: isFavoritePending
-                            ? null
-                            : onFavoritePressed,
+                        onPressed: isFavoritePending ? null : onFavoritePressed,
                       ),
                     ],
                   ),

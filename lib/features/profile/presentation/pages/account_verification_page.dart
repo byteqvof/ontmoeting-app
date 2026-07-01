@@ -154,9 +154,7 @@ class _TrustScoreCard extends StatelessWidget {
                       children: [
                         Text(
                           '${trust.reputationScore}',
-                          style: Theme.of(context)
-                              .textTheme
-                              .displaySmall
+                          style: Theme.of(context).textTheme.displaySmall
                               ?.copyWith(
                                 color: colors.green,
                                 fontWeight: FontWeight.w900,
@@ -182,20 +180,20 @@ class _TrustScoreCard extends StatelessWidget {
               trust.reputationLabel,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: colors.ink,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                  ),
+                color: colors.ink,
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+              ),
             ),
             const SizedBox(height: 5),
             Text(
               'Gebaseerd op echte deelname, opkomst en moderatiegegevens.',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: colors.ink3,
-                    fontWeight: FontWeight.w700,
-                    height: 1.35,
-                  ),
+                color: colors.ink3,
+                fontWeight: FontWeight.w700,
+                height: 1.35,
+              ),
             ),
           ],
         ),
@@ -307,26 +305,26 @@ class _StatusRow extends StatelessWidget {
                 Text(
                   title,
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: colors.ink,
-                        fontWeight: FontWeight.w900,
-                      ),
+                    color: colors.ink,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   value,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: colors.ink4,
-                        fontWeight: FontWeight.w800,
-                      ),
+                    color: colors.ink4,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   helper,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: colors.ink3,
-                        fontWeight: FontWeight.w700,
-                        height: 1.3,
-                      ),
+                    color: colors.ink3,
+                    fontWeight: FontWeight.w700,
+                    height: 1.3,
+                  ),
                 ),
               ],
             ),
@@ -391,11 +389,7 @@ class _SafetyTipsCard extends StatelessWidget {
 }
 
 class _TipRow extends StatelessWidget {
-  const _TipRow({
-    required this.icon,
-    required this.title,
-    required this.text,
-  });
+  const _TipRow({required this.icon, required this.title, required this.text});
 
   final IconData icon;
   final String title;
@@ -428,18 +422,18 @@ class _TipRow extends StatelessWidget {
                 Text(
                   title,
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: colors.ink,
-                        fontWeight: FontWeight.w900,
-                      ),
+                    color: colors.ink,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
                 const SizedBox(height: 3),
                 Text(
                   text,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: colors.ink3,
-                        fontWeight: FontWeight.w700,
-                        height: 1.35,
-                      ),
+                    color: colors.ink3,
+                    fontWeight: FontWeight.w700,
+                    height: 1.35,
+                  ),
                 ),
               ],
             ),
@@ -475,10 +469,10 @@ class _SafetyNote extends StatelessWidget {
               child: Text(
                 'Bij een noodsituatie: bel altijd 112. TOCH-medewerkers zijn geen vervanging voor hulpdiensten. We bewaren alleen noodzakelijke verificatiestatussen.',
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: const Color(0xFFC0492F),
-                      height: 1.4,
-                      fontWeight: FontWeight.w800,
-                    ),
+                  color: const Color(0xFFC0492F),
+                  height: 1.4,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
           ],
@@ -500,10 +494,10 @@ class _SectionTitle extends StatelessWidget {
       child: Text(
         label,
         style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: context.toch.ink,
-              fontSize: 16.5,
-              fontWeight: FontWeight.w900,
-            ),
+          color: context.toch.ink,
+          fontSize: 16.5,
+          fontWeight: FontWeight.w900,
+        ),
       ),
     );
   }
@@ -547,9 +541,9 @@ class _TrustLoadError extends StatelessWidget {
                   'Status laden lukt niet',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: colors.ink,
-                        fontWeight: FontWeight.w900,
-                      ),
+                    color: colors.ink,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
                 const SizedBox(height: TochSpacing.md),
                 ElevatedButton.icon(

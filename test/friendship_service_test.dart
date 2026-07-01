@@ -48,10 +48,6 @@ FriendshipListItem _friendship({
     status: status,
     direction: direction,
     updatedAt: DateTime(2026, 6, 20),
-    profile: FriendProfile(
-      id: profileId,
-      displayName: 'Tester',
-      initials: 'T',
-    ),
+    profile: FriendProfile(id: profileId, displayName: 'Tester', initials: 'T'),
   );
 }

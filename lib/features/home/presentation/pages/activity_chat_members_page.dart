@@ -7,6 +7,7 @@ import '../../../../app/theme/toch_theme.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../domain/entities/home_activity.dart';
 import '../../domain/entities/home_participant.dart';
+import '../widgets/home_category_style.dart';
 
 class ActivityChatMembersPage extends StatefulWidget {
   const ActivityChatMembersPage({required this.activity, super.key});

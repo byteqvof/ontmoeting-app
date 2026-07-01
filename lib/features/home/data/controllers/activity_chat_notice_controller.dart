@@ -7,10 +7,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/config/supabase_config.dart';
 import '../../../../core/utils/app_logger.dart';
 import '../../../../core/utils/supabase_function_auth.dart';
-import '../../data/models/activity_chat_notice_model.dart';
 import '../../domain/entities/activity_chat_message.dart';
 import '../../domain/entities/activity_chat_notice.dart';
-import 'activity_chat_realtime_controller.dart';
+import '../../domain/services/activity_chat_notice_service.dart';
+import '../../domain/services/activity_chat_realtime_service.dart';
+import '../models/activity_chat_notice_model.dart';
 
 class ActivityChatNoticeTracker {
   ActivityChatNoticeTracker({String? currentUserId, String? activeActivityId})
@@ -115,13 +116,14 @@ class ActivityChatNoticeTracker {
   }
 }
 
-class ActivityChatNoticeController {
+class ActivityChatNoticeController implements ActivityChatNoticeService {
   ActivityChatNoticeController(this._client, this._realtime);
 
   final SupabaseClient _client;
-  final ActivityChatRealtimeController _realtime;
+  final ActivityChatRealtimeService _realtime;
   final ActivityChatNoticeTracker _tracker = ActivityChatNoticeTracker();
   final ValueNotifier<int> _unreadCount = ValueNotifier<int>(0);
+  final StreamController<int> _unreadCounts = StreamController<int>.broadcast();
   final StreamController<ActivityChatNotice> _notices =
       StreamController<ActivityChatNotice>.broadcast();
 
@@ -135,10 +137,19 @@ class ActivityChatNoticeController {
 
   ValueListenable<int> get unreadCountListenable => _unreadCount;
 
+  @override
+  Stream<int> get unreadCounts => _unreadCounts.stream;
+
+  @override
+  int get unreadCount => _unreadCount.value;
+
+  @override
   Stream<ActivityChatNotice> get notices => _notices.stream;
 
+  @override
   bool isActivityOpen(String activityId) => _tracker.isActivityOpen(activityId);
 
+  @override
   Future<void> start() async {
     if (_initialSyncTimer != null ||
         _syncTimer != null ||
@@ -160,6 +171,7 @@ class ActivityChatNoticeController {
     });
   }
 
+  @override
   Future<void> stop() async {
     _initialSyncTimer?.cancel();
     _syncTimer?.cancel();
@@ -175,30 +187,35 @@ class ActivityChatNoticeController {
     await _realtime.stopAll();
   }
 
+  @override
   void markActivityOpen(String activityId) {
     _tracker.activeActivityId = activityId;
     markActivityRead(activityId);
   }
 
+  @override
   void markActivityClosed(String activityId) {
     if (_tracker.isActivityOpen(activityId)) {
       _tracker.activeActivityId = null;
     }
   }
 
+  @override
   void clearUnread() {
     _tracker.clearUnread();
-    _unreadCount.value = _tracker.unreadCount;
+    _setUnreadCount(_tracker.unreadCount);
   }
 
+  @override
   void markActivityRead(String activityId) {
     _tracker.markActivityRead(activityId);
-    _unreadCount.value = _tracker.unreadCount;
+    _setUnreadCount(_tracker.unreadCount);
   }
 
   void dispose() {
     unawaited(stop());
     _unreadCount.dispose();
+    _unreadCounts.close();
     _notices.close();
   }
 
@@ -260,9 +277,17 @@ class ActivityChatNoticeController {
     }
 
     if (_tracker.unreadCount != unreadBefore) {
-      _unreadCount.value = _tracker.unreadCount;
+      _setUnreadCount(_tracker.unreadCount);
     }
     _notices.add(notice);
+  }
+
+  void _setUnreadCount(int value) {
+    if (_unreadCount.value == value) {
+      return;
+    }
+    _unreadCount.value = value;
+    _unreadCounts.add(value);
   }
 }
 

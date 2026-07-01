@@ -13,8 +13,9 @@ import '../../domain/entities/activity_agenda.dart';
 import '../../domain/entities/activity_chat_notice.dart';
 import '../../domain/entities/home_activity.dart';
 import '../../domain/entities/home_participant.dart';
+import '../../domain/services/activity_chat_notice_service.dart';
 import '../../domain/usecases/get_activity_agenda.dart';
-import '../controllers/activity_chat_notice_controller.dart';
+import '../widgets/home_category_style.dart';
 import '../widgets/home_bottom_nav.dart';
 
 class ActivityAgendaPage extends StatefulWidget {
@@ -148,7 +149,7 @@ class ActivityMessagesPage extends StatefulWidget {
 class _ActivityMessagesPageState extends State<ActivityMessagesPage>
     with WidgetsBindingObserver {
   final GetActivityAgenda _getActivityAgenda = sl();
-  final ActivityChatNoticeController _chatNotices = sl();
+  final ActivityChatNoticeService _chatNotices = sl();
 
   ActivityAgenda? _agenda;
   StreamSubscription<ActivityChatNotice>? _noticeSubscription;

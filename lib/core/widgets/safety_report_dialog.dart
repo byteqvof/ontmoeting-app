@@ -65,12 +65,11 @@ Future<SafetyReportDraft?> showSafetyReportDialog(
                       const SizedBox(height: 18),
                       Text(
                         title,
-                        style: Theme.of(context).textTheme.titleLarge
-                            ?.copyWith(
-                              color: colors.ink,
-                              fontSize: 20,
-                              fontWeight: FontWeight.w900,
-                            ),
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: colors.ink,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
                       const SizedBox(height: 5),
                       Text(
@@ -184,9 +183,9 @@ class _ReasonRow extends StatelessWidget {
                   child: Text(
                     reason.label,
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: colors.ink,
-                          fontWeight: FontWeight.w900,
-                        ),
+                      color: colors.ink,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                 ),
                 Icon(

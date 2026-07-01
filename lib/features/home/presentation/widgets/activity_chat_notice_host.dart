@@ -10,7 +10,7 @@ import '../../../../core/di/injection_container.dart';
 import '../../../../core/utils/app_logger.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../domain/entities/activity_chat_notice.dart';
-import '../controllers/activity_chat_notice_controller.dart';
+import '../../domain/services/activity_chat_notice_service.dart';
 
 class ActivityChatNoticeHost extends StatefulWidget {
   const ActivityChatNoticeHost({required this.child, super.key});
@@ -23,7 +23,7 @@ class ActivityChatNoticeHost extends StatefulWidget {
 
 class _ActivityChatNoticeHostState extends State<ActivityChatNoticeHost>
     with SingleTickerProviderStateMixin {
-  final ActivityChatNoticeController _controller = sl();
+  final ActivityChatNoticeService _controller = sl();
   StreamSubscription<ActivityChatNotice>? _noticeSubscription;
   late final AnimationController _toastController;
   Timer? _dismissTimer;

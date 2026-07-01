@@ -16,6 +16,7 @@ import '../../domain/usecases/get_home_feed.dart';
 import '../../domain/usecases/search_meeting_locations.dart';
 import '../widgets/activity_map_canvas.dart';
 import '../widgets/home_bottom_nav.dart';
+import '../widgets/home_category_style.dart';
 
 class ActivityMapPageArgs {
   const ActivityMapPageArgs({

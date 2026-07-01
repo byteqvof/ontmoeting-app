@@ -18,6 +18,7 @@ import '../bloc/home_bloc.dart';
 import 'create_activity_page.dart';
 import '../widgets/home_activity_card.dart';
 import '../widgets/home_bottom_nav.dart';
+import '../widgets/home_category_style.dart';
 import '../widgets/home_feed_summary.dart';
 import '../widgets/home_filter_sheet.dart';
 import '../widgets/home_header.dart';

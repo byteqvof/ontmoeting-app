@@ -17,6 +17,8 @@ import '../../features/home/data/datasources/home_location_data_source.dart';
 import '../../features/home/data/datasources/home_remote_data_source.dart';
 import '../../features/home/data/repositories/home_repository_impl.dart';
 import '../../features/home/domain/repositories/home_repository.dart';
+import '../../features/home/domain/services/activity_chat_notice_service.dart';
+import '../../features/home/domain/services/activity_chat_realtime_service.dart';
 import '../../features/home/domain/usecases/complete_activity.dart';
 import '../../features/home/domain/usecases/create_activity.dart';
 import '../../features/home/domain/usecases/get_activity_agenda.dart';
@@ -33,8 +35,8 @@ import '../../features/home/domain/usecases/submit_activity_feedback.dart';
 import '../../features/home/domain/usecases/update_activity.dart';
 import '../../features/home/domain/usecases/watch_current_location.dart';
 import '../../features/home/domain/usecases/watch_current_city_name.dart';
-import '../../features/home/presentation/controllers/activity_chat_notice_controller.dart';
-import '../../features/home/presentation/controllers/activity_chat_realtime_controller.dart';
+import '../../features/home/data/controllers/activity_chat_notice_controller.dart';
+import '../../features/home/data/controllers/activity_chat_realtime_controller.dart';
 import '../../features/home/presentation/bloc/home_bloc.dart';
 import '../../features/profile/data/datasources/profile_data_source.dart';
 import '../../features/profile/data/datasources/profile_remote_data_source.dart';
@@ -96,8 +98,12 @@ Future<void> configureDependencies() async {
     ..registerLazySingleton<HomeRepository>(
       () => HomeRepositoryImpl(sl(), sl(), accountTrustService: sl()),
     )
-    ..registerLazySingleton(() => ActivityChatRealtimeController(sl()))
-    ..registerLazySingleton(() => ActivityChatNoticeController(sl(), sl()))
+    ..registerLazySingleton<ActivityChatRealtimeService>(
+      () => ActivityChatRealtimeController(sl()),
+    )
+    ..registerLazySingleton<ActivityChatNoticeService>(
+      () => ActivityChatNoticeController(sl(), sl()),
+    )
     ..registerLazySingleton(() => CreateActivity(sl()))
     ..registerLazySingleton(() => CompleteActivity(sl()))
     ..registerLazySingleton(() => GetActivityAgenda(sl()))

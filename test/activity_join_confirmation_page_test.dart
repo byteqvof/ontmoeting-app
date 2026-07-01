@@ -29,80 +29,71 @@ void main() {
     expect(find.text('Terug naar ontdekken'), findsOneWidget);
   });
 
-  testWidgets(
-    'opens chat from confirmation so back returns to home',
-    (tester) async {
-      final activity = _activity();
-      final router = GoRouter(
-        initialLocation: AppRoutes.activityJoinConfirmationPath(activity.id),
-        routes: [
-          GoRoute(
-            path: AppRoutes.home,
-            builder: (context, state) => const Scaffold(
-              body: SafeArea(child: Text('Home geopend')),
-            ),
-          ),
-          GoRoute(
-            path: AppRoutes.activityJoinConfirmation,
-            builder: (context, state) =>
-                ActivityJoinConfirmationPage(activity: activity),
-          ),
-          GoRoute(
-            path: AppRoutes.activityChat,
-            builder: (context, state) {
-              final fromJoined =
-                  state.uri.queryParameters['from'] == 'joined';
-              return Scaffold(
-                body: SafeArea(
-                  child: Column(
-                    children: [
-                      IconButton(
-                        onPressed: () {
-                          if (fromJoined) {
-                            context.go(AppRoutes.home);
-                            return;
-                          }
-                          context.pop();
-                        },
-                        icon: const Icon(Icons.arrow_back_rounded),
-                      ),
-                      const Text('Chat geopend'),
-                    ],
-                  ),
+  testWidgets('opens chat from confirmation so back returns to home', (
+    tester,
+  ) async {
+    final activity = _activity();
+    final router = GoRouter(
+      initialLocation: AppRoutes.activityJoinConfirmationPath(activity.id),
+      routes: [
+        GoRoute(
+          path: AppRoutes.home,
+          builder: (context, state) =>
+              const Scaffold(body: SafeArea(child: Text('Home geopend'))),
+        ),
+        GoRoute(
+          path: AppRoutes.activityJoinConfirmation,
+          builder: (context, state) =>
+              ActivityJoinConfirmationPage(activity: activity),
+        ),
+        GoRoute(
+          path: AppRoutes.activityChat,
+          builder: (context, state) {
+            final fromJoined = state.uri.queryParameters['from'] == 'joined';
+            return Scaffold(
+              body: SafeArea(
+                child: Column(
+                  children: [
+                    IconButton(
+                      onPressed: () {
+                        if (fromJoined) {
+                          context.go(AppRoutes.home);
+                          return;
+                        }
+                        context.pop();
+                      },
+                      icon: const Icon(Icons.arrow_back_rounded),
+                    ),
+                    const Text('Chat geopend'),
+                  ],
                 ),
-              );
-            },
-          ),
-        ],
-      );
+              ),
+            );
+          },
+        ),
+      ],
+    );
 
-      await tester.pumpWidget(
-        MaterialApp.router(theme: AppTheme.light, routerConfig: router),
-      );
+    await tester.pumpWidget(
+      MaterialApp.router(theme: AppTheme.light, routerConfig: router),
+    );
 
-      await tester.tap(find.text('Open de chat'));
-      await tester.pumpAndSettle();
+    await tester.tap(find.text('Open de chat'));
+    await tester.pumpAndSettle();
 
-      expect(find.text('Chat geopend'), findsOneWidget);
+    expect(find.text('Chat geopend'), findsOneWidget);
 
-      await tester.tap(find.byIcon(Icons.arrow_back_rounded));
-      await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.arrow_back_rounded));
+    await tester.pumpAndSettle();
 
-      expect(find.text('Home geopend'), findsOneWidget);
-    },
-  );
+    expect(find.text('Home geopend'), findsOneWidget);
+  });
 }
 
 HomeActivity _activity() {
   return const HomeActivity(
     id: 'activity-1',
-    category: HomeCategory(
-      id: 'category-1',
-      label: 'Vissen',
-      icon: Icons.set_meal_rounded,
-      color: Color(0xFF3E8E8C),
-      backgroundColor: Color(0xFFE1F2EF),
-    ),
+    category: HomeCategory(id: 'category-1', label: 'Vissen'),
     distanceKm: 1.2,
     distanceLabel: '1,2 km',
     title: 'Avondvissen aan de Maas',

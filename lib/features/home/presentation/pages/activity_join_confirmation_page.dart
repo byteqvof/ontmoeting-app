@@ -5,6 +5,7 @@ import '../../../../app/router/app_router.dart';
 import '../../../../app/theme/toch_theme.dart';
 import '../../../../app/widgets/toch_design_system.dart';
 import '../../domain/entities/home_activity.dart';
+import '../widgets/home_category_style.dart';
 
 class ActivityJoinConfirmationPage extends StatelessWidget {
   const ActivityJoinConfirmationPage({

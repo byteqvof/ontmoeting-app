@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../app/theme/toch_theme.dart';
 import '../../domain/entities/home_category.dart';
 import '../bloc/create_activity_bloc.dart';
+import 'home_category_style.dart';
 
 class CreateActivityCategoryPicker extends StatelessWidget {
   const CreateActivityCategoryPicker({super.key});

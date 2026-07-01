@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../app/theme/toch_theme.dart';
 import '../../../../core/config/supabase_config.dart';
@@ -6,8 +7,8 @@ import '../../../../core/di/injection_container.dart';
 import '../../../../core/services/account_trust_service.dart';
 import '../../../../core/services/analytics_service.dart';
 import '../../../../core/utils/app_logger.dart';
+import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../domain/entities/profile_trust.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AccountGate extends StatefulWidget {
   const AccountGate({required this.child, super.key});
@@ -36,7 +37,7 @@ class _AccountGateState extends State<AccountGate> {
   }
 
   Future<ProfileTrust> _syncTrust({bool forceRefresh = false}) {
-    final userKey = _currentGateUserKey();
+    final userKey = _currentGateUserKey(context);
     final cachedTrust = _sessionTrust;
     if (!forceRefresh &&
         _sessionUserKey == userKey &&
@@ -78,7 +79,7 @@ class _AccountGateState extends State<AccountGate> {
 
   void _complete(ProfileTrust trust) {
     if (trust.phoneVerified) {
-      _sessionUserKey = _currentGateUserKey();
+      _sessionUserKey = _currentGateUserKey(context);
       _sessionTrust = trust;
       _sessionTrustFuture = null;
     }
@@ -575,18 +576,14 @@ String _phoneVerifyErrorMessage(Object error) {
   return 'Code controleren lukt niet. Details staan in de debug-console.';
 }
 
-String _currentGateUserKey() {
+String _currentGateUserKey(BuildContext context) {
   try {
-    if (sl.isRegistered<SupabaseClient>()) {
-      final client = sl<SupabaseClient>();
-      final userId =
-          client.auth.currentSession?.user.id ?? client.auth.currentUser?.id;
-      if (userId != null && userId.isNotEmpty) {
-        return userId;
-      }
+    final state = context.read<AuthBloc>().state;
+    if (state is AuthAuthenticated && state.user.id.isNotEmpty) {
+      return state.user.id;
     }
   } catch (_) {
-    // Tests and early app startup can build the gate before Supabase is registered.
+    // Tests and early app startup can build the gate without an AuthBloc.
   }
   return '__unknown_user__';
 }

@@ -18,11 +18,12 @@ import 'package:meetings_app/features/home/domain/entities/home_feed_filters.dar
 import 'package:meetings_app/features/home/domain/entities/home_location.dart';
 import 'package:meetings_app/features/home/domain/entities/meeting_location_suggestion.dart';
 import 'package:meetings_app/features/home/domain/repositories/home_repository.dart';
+import 'package:meetings_app/features/home/domain/services/activity_chat_notice_service.dart';
 import 'package:meetings_app/features/home/domain/usecases/get_current_location.dart';
 import 'package:meetings_app/features/home/domain/usecases/get_home_feed.dart';
 import 'package:meetings_app/features/home/domain/usecases/search_meeting_locations.dart';
-import 'package:meetings_app/features/home/presentation/controllers/activity_chat_notice_controller.dart';
-import 'package:meetings_app/features/home/presentation/controllers/activity_chat_realtime_controller.dart';
+import 'package:meetings_app/features/home/data/controllers/activity_chat_notice_controller.dart';
+import 'package:meetings_app/features/home/data/controllers/activity_chat_realtime_controller.dart';
 import 'package:meetings_app/features/home/presentation/pages/activity_map_page.dart';
 import 'package:meetings_app/features/home/presentation/widgets/activity_map_canvas.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -51,7 +52,7 @@ void main() {
       ..registerLazySingleton(() => GetHomeFeed(repository))
       ..registerLazySingleton(() => GetCurrentLocation(repository))
       ..registerLazySingleton(() => SearchMeetingLocations(repository))
-      ..registerLazySingleton(
+      ..registerLazySingleton<ActivityChatNoticeService>(
         () => ActivityChatNoticeController(
           client,
           ActivityChatRealtimeController(client),
@@ -99,13 +100,7 @@ const _maastrichtLocation = HomeLocation(
 HomeActivity _coffeeActivity() {
   return HomeActivity(
     id: 'activity-coffee',
-    category: const HomeCategory(
-      id: 'coffee',
-      label: 'Koffie',
-      icon: Icons.local_cafe_rounded,
-      color: Color(0xFF9A6238),
-      backgroundColor: Color(0xFFF8E7DA),
-    ),
+    category: const HomeCategory(id: 'coffee', label: 'Koffie'),
     distanceKm: 1.1,
     distanceLabel: '1,1 km',
     title: 'Ochtendkoffie bij Coffeelovers',

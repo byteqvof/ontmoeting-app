@@ -7,7 +7,7 @@ import '../../../../core/di/injection_container.dart';
 import '../../../../core/services/friendship_service.dart';
 import '../../domain/entities/home_category.dart';
 import '../../domain/entities/home_location.dart';
-import '../controllers/activity_chat_notice_controller.dart';
+import '../../domain/services/activity_chat_notice_service.dart';
 import '../pages/create_activity_page.dart';
 
 class HomeBottomNav extends StatelessWidget {
@@ -25,7 +25,7 @@ class HomeBottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.toch;
-    final chatNotices = sl<ActivityChatNoticeController>();
+    final chatNotices = sl<ActivityChatNoticeService>();
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -71,9 +71,11 @@ class HomeBottomNav extends StatelessWidget {
                         : () => context.go(AppRoutes.activityMap),
                   ),
                   _HomeCreateButton(location: location, categories: categories),
-                  ValueListenableBuilder<int>(
-                    valueListenable: chatNotices.unreadCountListenable,
-                    builder: (context, unreadCount, _) {
+                  StreamBuilder<int>(
+                    stream: chatNotices.unreadCounts,
+                    initialData: chatNotices.unreadCount,
+                    builder: (context, snapshot) {
+                      final unreadCount = snapshot.data ?? 0;
                       return _HomeNavItem(
                         icon: Icons.chat_bubble_rounded,
                         label: 'Chats',
@@ -216,7 +218,7 @@ class _HomeNavItemButton extends StatelessWidget {
             ),
             const SizedBox(height: 3),
             Text(
-            label.toUpperCase(),
+              label.toUpperCase(),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(

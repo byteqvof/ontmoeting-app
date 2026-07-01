@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:dartz/dartz.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:meetings_app/core/errors/failures.dart';
 import 'package:meetings_app/features/home/domain/entities/activity_agenda.dart';
@@ -273,10 +272,4 @@ const _location = HomeLocation(
   longitude: 7.034,
 );
 
-const _category = HomeCategory(
-  id: 'category-1',
-  label: 'Buiten',
-  icon: Icons.park_rounded,
-  color: Color(0xFF1E5740),
-  backgroundColor: Color(0xFFE6EFE9),
-);
+const _category = HomeCategory(id: 'category-1', label: 'Buiten');

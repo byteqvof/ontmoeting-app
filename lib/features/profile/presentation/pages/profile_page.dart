@@ -9,7 +9,6 @@ import '../../../../core/di/injection_container.dart';
 import '../../../../core/services/analytics_service.dart';
 import '../../../../core/services/friendship_service.dart';
 import '../../../../core/services/safety_service.dart';
-import '../../../../core/utils/toch_category_icons.dart';
 import '../../../../core/widgets/safety_report_dialog.dart';
 import '../../../../core/widgets/toch_snack_bar.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
@@ -1070,19 +1069,9 @@ HomeActivity _homeActivityFromProfileActivity({
     category: HomeCategory(
       id: activity.category.id,
       label: activity.category.label,
-      icon: tochCategoryIcon(
-        id: activity.category.id,
-        label: activity.category.label,
-        iconKey: activity.category.iconKey,
-      ),
-      color: _colorFromHex(
-        activity.category.foregroundColorHex,
-        fallback: const Color(0xFF1E5740),
-      ),
-      backgroundColor: _colorFromHex(
-        activity.category.backgroundColorHex,
-        fallback: const Color(0xFFE6EFE9),
-      ),
+      iconKey: activity.category.iconKey,
+      colorHex: activity.category.foregroundColorHex,
+      backgroundColorHex: activity.category.backgroundColorHex,
     ),
     distanceKm: 0,
     distanceLabel: activity.locationName,
@@ -1109,64 +1098,6 @@ HomeActivity _homeActivityFromProfileActivity({
     isOwnedByCurrentUser: isOwnProfile,
     status: activity.status,
   );
-}
-
-Color _colorFromHex(String hex, {required Color fallback}) {
-  final normalized = hex.replaceFirst('#', '').trim();
-  if (normalized.length != 6 && normalized.length != 8) {
-    return fallback;
-  }
-
-  final value = int.tryParse(normalized, radix: 16);
-  if (value == null) {
-    return fallback;
-  }
-
-  return Color(normalized.length == 6 ? 0xFF000000 | value : value);
-}
-
-// ignore: unused_element
-class _ProfileTopBar extends StatelessWidget {
-  const _ProfileTopBar({required this.profile, required this.isOwnProfile});
-
-  final Profile profile;
-  final bool isOwnProfile;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.toch;
-
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            'Profiel',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: colors.ink,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-        ),
-        if (isOwnProfile)
-          IconButton(
-            onPressed: () async {
-              final updatedProfile = await context.push<Profile>(
-                AppRoutes.editProfile,
-                extra: profile,
-              );
-              if (updatedProfile != null && context.mounted) {
-                context.read<ProfileBloc>().add(const ProfileStarted());
-              }
-            },
-            style: IconButton.styleFrom(
-              backgroundColor: colors.card,
-              foregroundColor: colors.ink,
-            ),
-            icon: const Icon(Icons.tune_rounded),
-          ),
-      ],
-    );
-  }
 }
 
 class _ProfileLoading extends StatelessWidget {

@@ -310,9 +310,6 @@ void main() {
 const _category = HomeCategory(
   id: '11111111-1111-1111-1111-111111111111',
   label: 'Buiten',
-  icon: Icons.grid_view_rounded,
-  color: Color(0xFF1E5740),
-  backgroundColor: Color(0xFFE6EFE9),
 );
 
 const _terApelLocation = HomeLocation(

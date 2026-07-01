@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_router.dart';
@@ -6,8 +7,8 @@ import '../../../../app/theme/toch_theme.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/usecases/usecase.dart';
+import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../domain/usecases/is_profile_onboarding_required.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ProfileCompletionGate extends StatefulWidget {
   const ProfileCompletionGate({required this.child, super.key});
@@ -38,7 +39,7 @@ class _ProfileCompletionGateState extends State<ProfileCompletionGate> {
   Future<_ProfileGateResult> _isProfileRequired({
     bool forceRefresh = false,
   }) async {
-    final userKey = _currentProfileGateUserKey();
+    final userKey = _currentProfileGateUserKey(context);
     final cachedResult = _completeResult;
     if (!forceRefresh &&
         _completeUserKey == userKey &&
@@ -117,18 +118,14 @@ class _ProfileCompletionGateState extends State<ProfileCompletionGate> {
   }
 }
 
-String _currentProfileGateUserKey() {
+String _currentProfileGateUserKey(BuildContext context) {
   try {
-    if (sl.isRegistered<SupabaseClient>()) {
-      final client = sl<SupabaseClient>();
-      final userId =
-          client.auth.currentSession?.user.id ?? client.auth.currentUser?.id;
-      if (userId != null && userId.isNotEmpty) {
-        return userId;
-      }
+    final state = context.read<AuthBloc>().state;
+    if (state is AuthAuthenticated && state.user.id.isNotEmpty) {
+      return state.user.id;
     }
   } catch (_) {
-    // Tests and early app startup can build the gate before Supabase is registered.
+    // Tests and early app startup can build the gate without an AuthBloc.
   }
   return '__unknown_user__';
 }

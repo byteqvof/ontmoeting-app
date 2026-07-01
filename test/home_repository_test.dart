@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:meetings_app/core/errors/failures.dart';
@@ -783,15 +782,7 @@ HomeFeed _feed() {
     selectedDistanceKm: 10,
     timeFilters: ['Alles'],
     distanceFilters: [10],
-    categories: [
-      HomeCategory(
-        id: 'category-1',
-        label: 'Buiten',
-        icon: Icons.park_rounded,
-        color: Color(0xFF1E5740),
-        backgroundColor: Color(0xFFE6EFE9),
-      ),
-    ],
+    categories: [HomeCategory(id: 'category-1', label: 'Buiten')],
     activities: [],
   );
 }

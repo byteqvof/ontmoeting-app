@@ -6,6 +6,7 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 import '../../../../app/theme/toch_theme.dart';
 import '../../domain/entities/home_activity.dart';
 import '../../domain/entities/home_location.dart';
+import 'home_category_style.dart';
 
 const openFreeMapStyleUrl = 'https://tiles.openfreemap.org/styles/liberty';
 
