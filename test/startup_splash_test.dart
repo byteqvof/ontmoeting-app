@@ -20,7 +20,7 @@ void main() {
     },
   );
 
-  test('native launchscreens use the TOCH splash background consistently', () {
+  test('native launchscreens use the configured TOCH splash assets', () {
     final androidV31Styles = File(
       'android/app/src/main/res/values-v31/styles.xml',
     ).readAsStringSync();
@@ -29,14 +29,8 @@ void main() {
     ).readAsStringSync();
 
     expect(androidV31Styles, contains('@color/toch_green'));
-    expect(
-      androidV31Styles,
-      isNot(
-        contains(
-          '<item name="android:windowBackground">@drawable/launch_background</item>',
-        ),
-      ),
-    );
+    expect(androidV31Styles, contains('@drawable/launch_logo_splash'));
+    expect(androidV31Styles, contains('@drawable/launch_background'));
     expect(iosStoryboard, contains('red="0.1176470588"'));
     expect(iosStoryboard, contains('green="0.3411764706"'));
     expect(iosStoryboard, contains('blue="0.2509803922"'));
@@ -48,7 +42,7 @@ void main() {
     );
   });
 
-  testWidgets('Flutter splash matches the single launchscreen design', (
+  testWidgets('Flutter splash matches the main launch design', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -56,9 +50,9 @@ void main() {
     );
 
     expect(find.byType(TochWordmark), findsOneWidget);
-    expect(find.byType(TochMark), findsNothing);
-    expect(find.text('Ik ga toch.'), findsNothing);
-    expect(find.text('Ga je mee?'), findsNothing);
-    expect(find.text('TIK OM TE STARTEN'), findsNothing);
+    expect(find.byType(TochMark), findsOneWidget);
+    expect(find.text('Ik ga toch.'), findsOneWidget);
+    expect(find.text('Ga je mee?'), findsOneWidget);
+    expect(find.text('TIK OM TE STARTEN'), findsOneWidget);
   });
 }

@@ -33,11 +33,13 @@ import 'package:meetings_app/features/home/domain/entities/home_feed_filters.dar
 import 'package:meetings_app/features/home/domain/entities/home_location.dart';
 import 'package:meetings_app/features/home/domain/entities/meeting_location_suggestion.dart';
 import 'package:meetings_app/features/home/domain/repositories/home_repository.dart';
+import 'package:meetings_app/features/home/domain/services/activity_chat_notice_service.dart';
+import 'package:meetings_app/features/home/domain/services/activity_chat_realtime_service.dart';
 import 'package:meetings_app/features/home/domain/usecases/get_activity_chat_messages.dart';
 import 'package:meetings_app/features/home/domain/usecases/mark_activity_chat_read.dart';
 import 'package:meetings_app/features/home/domain/usecases/send_activity_chat_message.dart';
-import 'package:meetings_app/features/home/presentation/controllers/activity_chat_notice_controller.dart';
-import 'package:meetings_app/features/home/presentation/controllers/activity_chat_realtime_controller.dart';
+import 'package:meetings_app/features/home/data/controllers/activity_chat_notice_controller.dart';
+import 'package:meetings_app/features/home/data/controllers/activity_chat_realtime_controller.dart';
 import 'package:meetings_app/features/home/presentation/pages/activity_chat_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart'
     show AuthClientOptions, SupabaseClient;
@@ -78,9 +80,12 @@ void main() {
         ..registerLazySingleton(() => GetActivityChatMessages(repository))
         ..registerLazySingleton(() => SendActivityChatMessage(repository))
         ..registerLazySingleton(() => MarkActivityChatRead(repository))
-        ..registerLazySingleton<ActivityChatRealtimeController>(() => realtime)
+        ..registerLazySingleton<ActivityChatRealtimeService>(() => realtime)
         ..registerLazySingleton(
           () => ActivityChatNoticeController(_testSupabaseClient(), realtime),
+        )
+        ..registerLazySingleton<ActivityChatNoticeService>(
+          () => sl<ActivityChatNoticeController>(),
         );
 
       final authBloc = _authBloc(_FakeAuthRepository());
@@ -135,9 +140,12 @@ void main() {
       ..registerLazySingleton(() => GetActivityChatMessages(repository))
       ..registerLazySingleton(() => SendActivityChatMessage(repository))
       ..registerLazySingleton(() => MarkActivityChatRead(repository))
-      ..registerLazySingleton<ActivityChatRealtimeController>(() => realtime)
+      ..registerLazySingleton<ActivityChatRealtimeService>(() => realtime)
       ..registerLazySingleton(
         () => ActivityChatNoticeController(_testSupabaseClient(), realtime),
+      )
+      ..registerLazySingleton<ActivityChatNoticeService>(
+        () => sl<ActivityChatNoticeController>(),
       );
 
     final authBloc = _authBloc(_FakeAuthRepository());
@@ -204,9 +212,9 @@ HomeActivity _activity() {
     category: const HomeCategory(
       id: 'outside',
       label: 'Buiten',
-      icon: Icons.park_rounded,
-      color: Color(0xFF1E5740),
-      backgroundColor: Color(0xFFE6EFE9),
+      iconKey: 'outside',
+      colorHex: '#1E5740',
+      backgroundColorHex: '#E6EFE9',
     ),
     distanceKm: 1,
     distanceLabel: '1 km',

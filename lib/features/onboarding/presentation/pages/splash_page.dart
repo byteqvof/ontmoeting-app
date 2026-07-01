@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_router.dart';
 import '../../../../app/theme/toch_theme.dart';
+import '../../../../app/widgets/toch_mark.dart';
 import '../../../../app/widgets/toch_wordmark.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../../../core/utils/app_preferences.dart';

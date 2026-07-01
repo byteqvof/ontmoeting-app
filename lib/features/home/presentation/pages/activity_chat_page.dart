@@ -1039,7 +1039,6 @@ class _MessageComposer extends StatelessWidget {
                       FocusManager.instance.primaryFocus?.unfocus();
                     },
                     textInputAction: TextInputAction.newline,
-                    onTapOutside: (_) => FocusScope.of(context).unfocus(),
                     decoration: InputDecoration(
                       hintText: canSend ? 'Bericht' : 'Chat alleen lezen',
                       filled: true,

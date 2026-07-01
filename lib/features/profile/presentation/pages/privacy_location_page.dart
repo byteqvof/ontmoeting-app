@@ -64,11 +64,16 @@ class _PrivacyLocationPageState extends State<PrivacyLocationPage> {
                         size: 40,
                       ),
                       const SizedBox(width: 12),
-                      Text(
-                        'Privacy en locatie',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: colors.ink,
-                          fontWeight: FontWeight.w900,
+                      Expanded(
+                        child: Text(
+                          'Privacy en locatie',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(
+                                color: colors.ink,
+                                fontWeight: FontWeight.w900,
+                              ),
                         ),
                       ),
                     ],
