@@ -7,6 +7,7 @@ import '../../../../app/widgets/pip_mascot.dart';
 import '../../../../app/widgets/toch_design_system.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../domain/entities/home_activity.dart';
+import '../../domain/entities/home_category.dart';
 import '../../domain/entities/home_feed_filters.dart';
 import '../../domain/entities/home_location.dart';
 import '../../domain/usecases/get_current_location.dart';
@@ -21,35 +22,131 @@ class ActivitySearchPage extends StatefulWidget {
 }
 
 class _ActivitySearchPageState extends State<ActivitySearchPage> {
-  static const _recentSearches = ['Avondvissen', 'Koffie centrum', 'Hardlopen'];
-
-  static const _categories = [
-    _SearchCategory('Vissen', Icons.phishing_rounded, 'vissen'),
-    _SearchCategory('Wandelen', Icons.directions_walk_rounded, 'wandelen'),
-    _SearchCategory('Koffie', Icons.local_cafe_rounded, 'koffie'),
-    _SearchCategory('Sport', Icons.sports_basketball_rounded, 'sport'),
-    _SearchCategory('Gaming', Icons.sports_esports_rounded, 'gaming'),
-    _SearchCategory('Motor', Icons.two_wheeler_rounded, 'motor'),
-    _SearchCategory('Bordspellen', Icons.casino_rounded, 'bordspel'),
-    _SearchCategory('Foto', Icons.photo_camera_rounded, 'foto'),
-    _SearchCategory('Sociaal', Icons.groups_rounded, 'sociaal'),
-  ];
-
   final _controller = TextEditingController();
   final _getCurrentLocation = sl<GetCurrentLocation>();
   final _getHomeFeed = sl<GetHomeFeed>();
 
   HomeLocation? _location;
   List<HomeActivity> _results = const [];
+  List<HomeActivity> _discoveryActivities = const [];
+  List<HomeCategory> _discoveryCategories = const [];
   String? _activeQuery;
   String? _errorMessage;
+  String? _discoveryErrorMessage;
   bool _isSearching = false;
+  bool _isLoadingDiscovery = false;
   int _requestSerial = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _loadDiscoveryData();
+      }
+    });
+  }
 
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  List<String> get _suggestedSearches {
+    final seen = <String>{};
+    final suggestions = <String>[];
+
+    for (final activity in _discoveryActivities) {
+      final title = activity.title.trim();
+      if (title.isEmpty) {
+        continue;
+      }
+      if (seen.add(_normalizeSearchText(title))) {
+        suggestions.add(title);
+      }
+      if (suggestions.length == 3) {
+        break;
+      }
+    }
+
+    return suggestions;
+  }
+
+  Future<void> _loadDiscoveryData() async {
+    if (_isLoadingDiscovery) {
+      return;
+    }
+
+    setState(() {
+      _isLoadingDiscovery = true;
+      _discoveryErrorMessage = null;
+    });
+
+    final location = await _resolveLocation();
+    if (!mounted) {
+      return;
+    }
+    if (location == null) {
+      setState(() {
+        _isLoadingDiscovery = false;
+        _discoveryErrorMessage ??= 'Suggesties laden lukt nu niet.';
+      });
+      return;
+    }
+
+    final feedResult = await _getHomeFeed(
+      GetHomeFeedParams(
+        location: location,
+        filters: const HomeFeedFilters(distanceKm: 50, sort: homeSortStartTime),
+        forceRefresh: true,
+      ),
+    );
+    if (!mounted) {
+      return;
+    }
+
+    feedResult.fold(
+      (failure) {
+        setState(() {
+          _isLoadingDiscovery = false;
+          _discoveryErrorMessage = failure.message;
+        });
+      },
+      (feed) {
+        setState(() {
+          _isLoadingDiscovery = false;
+          _discoveryErrorMessage = null;
+          _discoveryActivities = feed.activities;
+          _discoveryCategories = _visibleCategories(feed.categories);
+        });
+      },
+    );
+  }
+
+  Future<HomeLocation?> _resolveLocation() async {
+    final existingLocation = _location;
+    if (existingLocation != null) {
+      return existingLocation;
+    }
+
+    final locationResult = await _getCurrentLocation(
+      const GetCurrentLocationParams(forceRefresh: false),
+    );
+    if (!mounted) {
+      return null;
+    }
+
+    return locationResult.fold((failure) {
+      setState(() {
+        _errorMessage ??= failure.message;
+        _discoveryErrorMessage ??= failure.message;
+      });
+      return null;
+    }, (value) {
+      _location = value;
+      return value;
+    });
   }
 
   Future<void> _submitSearch([String? rawQuery]) async {
@@ -78,25 +175,15 @@ class _ActivitySearchPageState extends State<ActivitySearchPage> {
       _isSearching = true;
     });
 
-    var location = _location;
+    final location = await _resolveLocation();
     if (location == null) {
-      final locationResult = await _getCurrentLocation(
-        const GetCurrentLocationParams(forceRefresh: false),
-      );
-      if (!mounted || serial != _requestSerial) {
-        return;
-      }
-      location = locationResult.fold((failure) {
+      if (mounted && serial == _requestSerial) {
         setState(() {
           _isSearching = false;
-          _errorMessage = failure.message;
+          _errorMessage ??= 'Zoeken lukt nu niet.';
         });
-        return null;
-      }, (value) => value);
-      if (location == null) {
-        return;
       }
-      _location = location;
+      return;
     }
 
     final feedResult = await _getHomeFeed(
@@ -127,6 +214,8 @@ class _ActivitySearchPageState extends State<ActivitySearchPage> {
           _isSearching = false;
           _results = matches;
           _errorMessage = null;
+          _discoveryActivities = feed.activities;
+          _discoveryCategories = _visibleCategories(feed.categories);
         });
       },
     );
@@ -135,6 +224,7 @@ class _ActivitySearchPageState extends State<ActivitySearchPage> {
   @override
   Widget build(BuildContext context) {
     final colors = context.toch;
+    final suggestedSearches = _suggestedSearches;
 
     return Scaffold(
       backgroundColor: colors.cream,
@@ -209,38 +299,56 @@ class _ActivitySearchPageState extends State<ActivitySearchPage> {
                       ],
                       if (!_isSearching) ...[
                         const SizedBox(height: 8),
-                        const TochSectionLabel('Recent'),
-                        const SizedBox(height: 10),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            for (final search in _recentSearches)
-                              TochPill(
-                                label: search,
-                                icon: Icons.history_rounded,
-                                onTap: () => _submitSearch(search),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 22),
-                        const TochSectionLabel('Categorieen'),
-                        const SizedBox(height: 10),
-                        GridView.count(
-                          crossAxisCount: 3,
-                          mainAxisSpacing: 10,
-                          crossAxisSpacing: 10,
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          childAspectRatio: .95,
-                          children: [
-                            for (final category in _categories)
-                              _CategorySearchTile(
-                                category: category,
-                                onTap: () => _submitSearch(category.label),
-                              ),
-                          ],
-                        ),
+                        if (_isLoadingDiscovery)
+                          const _SearchNotice(
+                            icon: Icons.travel_explore_rounded,
+                            text: 'Suggesties laden...',
+                          )
+                        else if (_discoveryErrorMessage != null &&
+                            suggestedSearches.isEmpty &&
+                            _discoveryCategories.isEmpty)
+                          _SearchNotice(
+                            icon: Icons.error_outline_rounded,
+                            text: _discoveryErrorMessage!,
+                            actionLabel: 'Opnieuw proberen',
+                            onAction: _loadDiscoveryData,
+                          ),
+                        if (suggestedSearches.isNotEmpty) ...[
+                          const TochSectionLabel('Suggesties'),
+                          const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              for (final search in suggestedSearches)
+                                TochPill(
+                                  label: search,
+                                  icon: Icons.travel_explore_rounded,
+                                  onTap: () => _submitSearch(search),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 22),
+                        ],
+                        if (_discoveryCategories.isNotEmpty) ...[
+                          const TochSectionLabel('Categorieen'),
+                          const SizedBox(height: 10),
+                          GridView.count(
+                            crossAxisCount: 3,
+                            mainAxisSpacing: 10,
+                            crossAxisSpacing: 10,
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            childAspectRatio: .95,
+                            children: [
+                              for (final category in _discoveryCategories)
+                                _CategorySearchTile(
+                                  category: category,
+                                  onTap: () => _submitSearch(category.label),
+                                ),
+                            ],
+                          ),
+                        ],
                       ],
                     ],
                   ),
@@ -473,16 +581,15 @@ class _SearchEmptyHero extends StatelessWidget {
 class _CategorySearchTile extends StatelessWidget {
   const _CategorySearchTile({required this.category, required this.onTap});
 
-  final _SearchCategory category;
+  final HomeCategory category;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.toch;
-    final skin = tochCategorySkin(category.skinKey);
 
     return Material(
-      color: skin.tint,
+      color: category.backgroundColor,
       borderRadius: BorderRadius.circular(TochRadius.md),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -494,7 +601,7 @@ class _CategorySearchTile extends StatelessWidget {
             children: [
               DecoratedBox(
                 decoration: BoxDecoration(
-                  color: skin.color,
+                  color: category.color,
                   borderRadius: BorderRadius.circular(13),
                 ),
                 child: SizedBox.square(
@@ -520,14 +627,6 @@ class _CategorySearchTile extends StatelessWidget {
       ),
     );
   }
-}
-
-class _SearchCategory {
-  const _SearchCategory(this.label, this.icon, this.skinKey);
-
-  final String label;
-  final IconData icon;
-  final String skinKey;
 }
 
 bool _matchesActivity(HomeActivity activity, String query) {
@@ -561,4 +660,16 @@ int _sortSearchResults(HomeActivity a, HomeActivity b) {
 
 String _normalizeSearchText(String value) {
   return value.toLowerCase().trim();
+}
+
+List<HomeCategory> _visibleCategories(List<HomeCategory> categories) {
+  final uniqueCategories = <String, HomeCategory>{};
+  for (final category in categories) {
+    if (category.id == 'all' || category.label.trim().isEmpty) {
+      continue;
+    }
+    uniqueCategories[category.id.isEmpty ? category.label : category.id] =
+        category;
+  }
+  return uniqueCategories.values.toList();
 }

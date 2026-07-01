@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/config/supabase_config.dart';
 import '../../../../core/utils/app_logger.dart';
 import '../../../../core/utils/supabase_function_auth.dart';
+import '../../../../core/utils/toch_category_icons.dart';
 import '../../domain/entities/activity_agenda.dart';
 import '../../domain/entities/activity_chat_message.dart';
 import '../../domain/entities/activity_completion_update.dart';
@@ -841,6 +842,7 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
         chatSummary['unread_count'] ?? chatSummary['unreadCount'],
       ),
       canSendChat: canSendChat,
+      isFavorited: _boolValue(json['is_favorited'] ?? json['isFavorited']),
     );
   }
 
@@ -902,11 +904,14 @@ class HomeRemoteDataSourceImpl implements HomeRemoteDataSource {
 
   HomeCategory _categoryFromJson(Map<String, dynamic> json) {
     final slug = _stringValue(json['slug'], fallback: 'unknown');
+    final id = _stringValue(json['id'], fallback: slug);
+    final label = _stringValue(json['label'] ?? json['title'], fallback: slug);
+    final iconKey = _stringValue(json['iconKey'] ?? json['icon_key']);
 
     return HomeCategory(
-      id: _stringValue(json['id'], fallback: slug),
-      label: _stringValue(json['label'] ?? json['title'], fallback: slug),
-      icon: _iconForKey(_stringValue(json['iconKey'] ?? json['icon_key'])),
+      id: id,
+      label: label,
+      icon: tochCategoryIcon(id: id, label: label, iconKey: iconKey),
       color: _colorFromHex(
         _stringValue(
           json['colorHex'] ?? json['color_hex'] ?? json['foreground_color'],
@@ -932,7 +937,7 @@ const _functionTimeout = Duration(seconds: 8);
 const _allCategory = HomeCategory(
   id: 'all',
   label: 'Alles',
-  icon: Icons.grid_view_rounded,
+  icon: Icons.explore_rounded,
   color: Color(0xFF19211C),
   backgroundColor: Color(0xFFFFFFFF),
 );
@@ -1183,19 +1188,4 @@ Color _colorFromHex(String hex, {required Color fallback}) {
   }
 
   return Color(normalized.length == 6 ? 0xFF000000 | value : value);
-}
-
-IconData _iconForKey(String key) {
-  return switch (key) {
-    'set_meal' || 'fishing' => Icons.set_meal_rounded,
-    'directions_walk' || 'walking' => Icons.directions_walk_rounded,
-    'local_cafe' || 'coffee' => Icons.local_cafe_rounded,
-    'sports_basketball' || 'sport' => Icons.sports_basketball_rounded,
-    'sports_esports' || 'gaming' => Icons.sports_esports_rounded,
-    'two_wheeler' || 'motor' => Icons.two_wheeler_rounded,
-    'casino' || 'boardgames' => Icons.casino_rounded,
-    'photo_camera' || 'photo' => Icons.photo_camera_rounded,
-    'favorite' || 'social' => Icons.favorite_rounded,
-    _ => Icons.grid_view_rounded,
-  };
 }

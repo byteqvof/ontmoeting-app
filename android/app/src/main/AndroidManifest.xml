@@ -42,6 +42,19 @@
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="meetingsapp" android:host="activity-chat"/>
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="meetingsapp" android:host="activity"/>
+            </intent-filter>
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https" android:host="${tochShareHost}" android:pathPrefix="/activities"/>
+                <data android:scheme="https" android:host="${tochShareHost}" android:pathPrefix="/functions/v1/activity-share"/>
+            </intent-filter>
         </activity>
         <service
             android:name="io.flutter.plugins.firebase.messaging.FlutterFirebaseMessagingService"

@@ -6,6 +6,8 @@ import '../../../../app/router/app_router.dart';
 import '../../../../app/theme/toch_theme.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../../../core/services/activity_attendance_service.dart';
+import '../../../../core/services/activity_favorite_service.dart';
+import '../../../../core/services/activity_share_service.dart';
 import '../../../../core/services/analytics_service.dart';
 import '../../../../core/services/safety_service.dart';
 import '../../../../core/widgets/safety_report_dialog.dart';
@@ -36,10 +38,13 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
   final CompleteActivity _completeActivityUseCase = sl();
   final SubmitActivityFeedback _submitActivityFeedback = sl();
   final ActivityAttendanceService _attendanceService = sl();
+  final ActivityFavoriteService _favoriteService = sl();
+  final ActivityShareService _shareService = sl();
   final SafetyService _safetyService = sl();
   bool _isParticipationPending = false;
   bool _isCompletionPending = false;
   bool _isFeedbackPending = false;
+  bool _isFavoritePending = false;
   final Set<String> _attendancePendingIds = {};
 
   @override
@@ -55,6 +60,82 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
         'group_type': _activity.groupType,
       },
     );
+    _loadFavoriteStatus();
+  }
+
+  Future<void> _loadFavoriteStatus() async {
+    try {
+      final isFavorited = await _favoriteService.getFavoriteStatus(
+        _activity.id,
+      );
+      if (!mounted || isFavorited == _activity.isFavorited) {
+        return;
+      }
+      setState(() {
+        _activity = _activity.copyWith(isFavorited: isFavorited);
+      });
+    } catch (_) {
+      // Favorieten mogen de detailpagina niet blokkeren.
+    }
+  }
+
+  Future<void> _shareActivity() async {
+    try {
+      await _shareService.shareActivity(activity: _activity);
+      AnalyticsService.instance.track(
+        'activity_shared',
+        properties: {'status': _activity.status},
+      );
+    } catch (_) {
+      if (mounted) {
+        _showMessage('Delen lukt nu niet.');
+      }
+    }
+  }
+
+  Future<void> _toggleFavorite() async {
+    if (_isFavoritePending) {
+      return;
+    }
+
+    final previous = _activity.isFavorited;
+    final next = !previous;
+    setState(() {
+      _isFavoritePending = true;
+      _activity = _activity.copyWith(isFavorited: next);
+    });
+
+    try {
+      final savedStatus = await _favoriteService.setFavorite(
+        activityId: _activity.id,
+        isFavorited: next,
+      );
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _activity = _activity.copyWith(isFavorited: savedStatus);
+        _isFavoritePending = false;
+      });
+      _showMessage(
+        savedStatus
+            ? 'Toegevoegd aan favorieten.'
+            : 'Verwijderd uit favorieten.',
+      );
+      AnalyticsService.instance.track(
+        'activity_favorite_updated',
+        properties: {'is_favorited': savedStatus},
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _activity = _activity.copyWith(isFavorited: previous);
+        _isFavoritePending = false;
+      });
+      _showMessage('Favoriet opslaan lukt nu niet.');
+    }
   }
 
   Future<void> _toggleParticipation() async {
@@ -322,6 +403,10 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
                       child: ActivityDetailHero(
                         activity: _activity,
                         onBackPressed: () => _goBack(context),
+                        onSharePressed: _shareActivity,
+                        isFavorited: _activity.isFavorited,
+                        isFavoritePending: _isFavoritePending,
+                        onFavoritePressed: _toggleFavorite,
                         onEditPressed:
                             _activity.isOwnedByCurrentUser &&
                                 !_activity.isCompleted

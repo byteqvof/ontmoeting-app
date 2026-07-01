@@ -25,6 +25,9 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        manifestPlaceholders["tochShareHost"] =
+            (project.findProperty("tochShareHost") as String?)
+                ?: "gatoch.nl"
     }
 
     buildTypes {

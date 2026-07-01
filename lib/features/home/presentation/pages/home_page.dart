@@ -21,8 +21,6 @@ import '../widgets/home_bottom_nav.dart';
 import '../widgets/home_feed_summary.dart';
 import '../widgets/home_filter_sheet.dart';
 import '../widgets/home_header.dart';
-import '../widgets/home_distance_filter.dart';
-import '../widgets/home_quick_filter_rail.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -175,39 +173,7 @@ class _HomeFeed extends StatelessWidget {
                   },
                   onFilterTap: () => _showFilters(context),
                 ),
-                HomeQuickFilterRail(
-                  timeFilters: state.feed.timeFilters,
-                  selectedTimeFilter: state.selectedTimeFilter,
-                  onTimeSelected: (filter) {
-                    context.read<HomeBloc>().add(
-                      HomeTimeFilterSelected(filter),
-                    );
-                  },
-                  distances: state.feed.distanceFilters,
-                  selectedDistanceKm: state.selectedDistanceKm,
-                  onDistanceSelected: (distanceKm) {
-                    context.read<HomeBloc>().add(
-                      HomeDistanceSelected(distanceKm),
-                    );
-                  },
-                  categories: state.feed.categories,
-                  selectedCategoryId: state.selectedCategoryId,
-                  onCategorySelected: (categoryId) {
-                    context.read<HomeBloc>().add(
-                      HomeCategorySelected(categoryId),
-                    );
-                  },
-                  onAdvancedFilters: () => _showFilters(context),
-                ),
-                HomeDistanceFilter(
-                  distances: state.feed.distanceFilters,
-                  selectedDistanceKm: state.selectedDistanceKm,
-                  onSelected: (distanceKm) {
-                    context.read<HomeBloc>().add(
-                      HomeDistanceSelected(distanceKm),
-                    );
-                  },
-                ),
+                const SizedBox(height: 16),
                 const _HostedActivitiesOverview(),
                 HomeFeedSummary(activityCount: activities.length),
                 if (activities.isEmpty)

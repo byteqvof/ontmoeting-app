@@ -9,6 +9,7 @@ import '../../../../core/di/injection_container.dart';
 import '../../../../core/services/analytics_service.dart';
 import '../../../../core/services/friendship_service.dart';
 import '../../../../core/services/safety_service.dart';
+import '../../../../core/utils/toch_category_icons.dart';
 import '../../../../core/widgets/safety_report_dialog.dart';
 import '../../../../core/widgets/toch_snack_bar.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
@@ -117,6 +118,7 @@ class _ProfileContent extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (!isOwnProfile) ...[
                   _FriendshipActionCard(profile: profile),
@@ -1068,7 +1070,11 @@ HomeActivity _homeActivityFromProfileActivity({
     category: HomeCategory(
       id: activity.category.id,
       label: activity.category.label,
-      icon: _iconForKey(activity.category.iconKey),
+      icon: tochCategoryIcon(
+        id: activity.category.id,
+        label: activity.category.label,
+        iconKey: activity.category.iconKey,
+      ),
       color: _colorFromHex(
         activity.category.foregroundColorHex,
         fallback: const Color(0xFF1E5740),
@@ -1117,21 +1123,6 @@ Color _colorFromHex(String hex, {required Color fallback}) {
   }
 
   return Color(normalized.length == 6 ? 0xFF000000 | value : value);
-}
-
-IconData _iconForKey(String key) {
-  return switch (key) {
-    'set_meal' || 'fishing' => Icons.set_meal_rounded,
-    'directions_walk' || 'walking' => Icons.directions_walk_rounded,
-    'local_cafe' || 'coffee' => Icons.local_cafe_rounded,
-    'sports_basketball' || 'sport' => Icons.sports_basketball_rounded,
-    'sports_esports' || 'gaming' => Icons.sports_esports_rounded,
-    'two_wheeler' || 'motor' => Icons.two_wheeler_rounded,
-    'casino' || 'boardgames' => Icons.casino_rounded,
-    'photo_camera' || 'photo' => Icons.photo_camera_rounded,
-    'favorite' || 'social' => Icons.favorite_rounded,
-    _ => Icons.event_rounded,
-  };
 }
 
 // ignore: unused_element

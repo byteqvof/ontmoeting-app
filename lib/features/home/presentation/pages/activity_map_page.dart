@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_router.dart';
 import '../../../../app/theme/toch_theme.dart';
-import '../../../../app/widgets/toch_design_system.dart';
 import '../../../../core/di/injection_container.dart';
 import '../../../../core/widgets/toch_snack_bar.dart';
 import '../../domain/entities/home_activity.dart';
@@ -177,7 +176,7 @@ class _ActivityMapPageState extends State<ActivityMapPage> {
     final colors = context.toch;
 
     return Scaffold(
-      backgroundColor: colors.cream,
+      backgroundColor: colors.greenDeep,
       body: SizedBox.expand(
         child: Stack(
           children: [
@@ -190,30 +189,34 @@ class _ActivityMapPageState extends State<ActivityMapPage> {
             ),
             SafeArea(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+                padding: const EdgeInsets.fromLTRB(26, 18, 26, 0),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
                         Expanded(
                           child: _MapSearchField(
                             controller: _searchController,
+                            cityName: _location.cityName,
                             isSearching: _isLocationSearching,
                             onChanged: _onSearchChanged,
                             onSubmitted: _searchLocationText,
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        IconButton.filled(
+                        const SizedBox(width: 12),
+                        IconButton(
                           tooltip: 'Filters',
                           onPressed: () => context.go(AppRoutes.home),
                           style: IconButton.styleFrom(
                             backgroundColor: colors.card.withValues(alpha: .96),
                             foregroundColor: colors.ink,
-                            fixedSize: const Size.square(48),
+                            fixedSize: const Size.square(58),
+                            elevation: 10,
+                            shadowColor: colors.ink.withValues(alpha: .18),
                           ),
-                          icon: const Icon(Icons.tune_rounded),
+                          icon: const Icon(Icons.tune_rounded, size: 22),
                         ),
                       ],
                     ),
@@ -227,20 +230,25 @@ class _ActivityMapPageState extends State<ActivityMapPage> {
                         onSelected: _selectSearchResult,
                       ),
                     ],
-                    const SizedBox(height: 12),
-                    _MapFilterChips(
-                      count: _activities.length,
-                      cityName: _location.cityName,
-                    ),
+                    const SizedBox(height: 16),
+                    const _MapFilterChips(),
                   ],
                 ),
               ),
             ),
             Positioned(
-              top: 88,
-              right: 14,
+              right: 26,
+              bottom: 218,
               child: SafeArea(
+                top: false,
                 child: IconButton.filled(
+                  style: IconButton.styleFrom(
+                    backgroundColor: colors.card.withValues(alpha: .96),
+                    foregroundColor: colors.green,
+                    fixedSize: const Size.square(52),
+                    elevation: 12,
+                    shadowColor: colors.ink.withValues(alpha: .18),
+                  ),
                   onPressed: _isLocating ? null : _recenterOnDeviceLocation,
                   icon: _isLocating
                       ? const SizedBox.square(
@@ -254,7 +262,7 @@ class _ActivityMapPageState extends State<ActivityMapPage> {
             ),
             if (_pendingSearchLocation != null)
               Positioned(
-                top: 78,
+                top: 154,
                 left: 0,
                 right: 0,
                 child: SafeArea(
@@ -273,9 +281,9 @@ class _ActivityMapPageState extends State<ActivityMapPage> {
                 ),
               ),
             Positioned(
-              left: 14,
-              right: 14,
-              bottom: 128,
+              left: 30,
+              right: 30,
+              bottom: 124,
               child: SafeArea(
                 top: false,
                 child: _MapActivityTray(
@@ -482,29 +490,77 @@ class _ActivityMapPageState extends State<ActivityMapPage> {
 }
 
 class _MapFilterChips extends StatelessWidget {
-  const _MapFilterChips({required this.count, required this.cityName});
-
-  final int count;
-  final String cityName;
+  const _MapFilterChips();
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
+    return const SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          TochPill(
-            label: '$count rond $cityName',
-            active: true,
-            icon: Icons.radio_button_checked_rounded,
-            backgroundColor: context.toch.green,
-            foregroundColor: Colors.white,
-          ),
-          const SizedBox(width: 8),
-          const TochPill(label: 'Vandaag'),
-          const SizedBox(width: 8),
-          const TochPill(label: 'Dit weekend'),
+          _MapFilterPill(label: 'Nu live', active: true, showDot: true),
+          SizedBox(width: 10),
+          _MapFilterPill(label: 'Vandaag'),
+          SizedBox(width: 10),
+          _MapFilterPill(label: 'Dit weekend'),
         ],
+      ),
+    );
+  }
+}
+
+class _MapFilterPill extends StatelessWidget {
+  const _MapFilterPill({
+    required this.label,
+    this.active = false,
+    this.showDot = false,
+  });
+
+  final String label;
+  final bool active;
+  final bool showDot;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.toch;
+    final background = active
+        ? colors.green
+        : colors.card.withValues(alpha: .94);
+    final foreground = active ? Colors.white : colors.ink;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(TochRadius.pill),
+        boxShadow: active
+            ? TochShadows.button(colors)
+            : TochShadows.card(colors),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (showDot) ...[
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: colors.orange,
+                  shape: BoxShape.circle,
+                ),
+                child: const SizedBox.square(dimension: 9),
+              ),
+              const SizedBox(width: 8),
+            ],
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: foreground,
+                fontWeight: FontWeight.w900,
+                height: 1,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -519,12 +575,14 @@ bool _isMeaningfullyDifferent(HomeLocation left, HomeLocation right) {
 class _MapSearchField extends StatelessWidget {
   const _MapSearchField({
     required this.controller,
+    required this.cityName,
     required this.isSearching,
     required this.onChanged,
     required this.onSubmitted,
   });
 
   final TextEditingController controller;
+  final String cityName;
   final bool isSearching;
   final ValueChanged<String> onChanged;
   final ValueChanged<String> onSubmitted;
@@ -536,12 +594,12 @@ class _MapSearchField extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: colors.card.withValues(alpha: .96),
-        borderRadius: BorderRadius.circular(TochRadius.pill),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
             color: colors.ink.withValues(alpha: .10),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
           ),
         ],
       ),
@@ -551,8 +609,12 @@ class _MapSearchField extends StatelessWidget {
         onSubmitted: onSubmitted,
         textInputAction: TextInputAction.search,
         decoration: InputDecoration(
-          hintText: 'Zoek plaats of adres',
-          prefixIcon: Icon(Icons.search_rounded, color: colors.green),
+          hintText: 'Zoek in $cityName',
+          hintStyle: TextStyle(
+            color: colors.green700.withValues(alpha: .72),
+            fontWeight: FontWeight.w900,
+          ),
+          prefixIcon: Icon(Icons.search_rounded, color: colors.ink3, size: 23),
           suffixIcon: isSearching
               ? Padding(
                   padding: const EdgeInsets.all(14),
@@ -567,14 +629,14 @@ class _MapSearchField extends StatelessWidget {
               : IconButton(
                   tooltip: 'Zoeken',
                   onPressed: () => onSubmitted(controller.text),
-                  icon: const Icon(Icons.arrow_forward_rounded),
+                  icon: Icon(Icons.arrow_forward_rounded, color: colors.green),
                 ),
           filled: true,
           fillColor: Colors.transparent,
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
-            horizontal: 4,
-            vertical: 14,
+            horizontal: 6,
+            vertical: 17,
           ),
         ),
       ),
@@ -754,14 +816,15 @@ class _MapActivityTray extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.toch;
-    final visibleActivities = activities.take(8).toList();
+    final activity = activities.isEmpty ? null : activities.first;
 
-    if (visibleActivities.isEmpty) {
+    if (activity == null) {
       return DecoratedBox(
         decoration: BoxDecoration(
-          color: colors.card.withValues(alpha: .94),
+          color: colors.card.withValues(alpha: .96),
           borderRadius: BorderRadius.circular(TochRadius.lg),
           border: Border.all(color: colors.line),
+          boxShadow: TochShadows.raised(colors),
         ),
         child: const Padding(
           padding: EdgeInsets.all(TochSpacing.md),
@@ -770,89 +833,234 @@ class _MapActivityTray extends StatelessWidget {
       );
     }
 
-    return SizedBox(
-      height: 112,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: visibleActivities.length,
-        separatorBuilder: (_, _) => const SizedBox(width: TochSpacing.sm),
-        itemBuilder: (context, index) {
-          final activity = visibleActivities[index];
-          return SizedBox(
-            width: 260,
-            child: Material(
-              color: colors.card.withValues(alpha: .96),
-              borderRadius: BorderRadius.circular(TochRadius.lg),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(TochRadius.lg),
-                onTap: () async {
-                  final updatedActivity = await context.push<HomeActivity>(
-                    AppRoutes.activityDetailPath(activity.id),
-                    extra: activity,
-                  );
-                  if (!context.mounted || updatedActivity == null) {
-                    return;
-                  }
-                  onActivityUpdated(updatedActivity);
-                },
-                child: Padding(
-                  padding: const EdgeInsets.all(TochSpacing.md),
-                  child: Row(
-                    children: [
-                      DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: activity.category.backgroundColor,
-                          borderRadius: BorderRadius.circular(TochRadius.md),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Material(
+          color: colors.card.withValues(alpha: .97),
+          borderRadius: BorderRadius.circular(24),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(24),
+            onTap: () async {
+              final updatedActivity = await context.push<HomeActivity>(
+                AppRoutes.activityDetailPath(activity.id),
+                extra: activity,
+              );
+              if (!context.mounted || updatedActivity == null) {
+                return;
+              }
+              onActivityUpdated(updatedActivity);
+            },
+            child: Ink(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: TochShadows.raised(colors),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Row(
+                  children: [
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: activity.category.backgroundColor,
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: SizedBox.square(
+                        dimension: 58,
+                        child: Icon(
+                          activity.category.icon,
+                          color: activity.category.color,
+                          size: 27,
                         ),
-                        child: SizedBox.square(
-                          dimension: 54,
-                          child: Icon(
-                            activity.category.icon,
-                            color: activity.category.color,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.circle, size: 8, color: colors.orange),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  activity.distanceLabel,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.labelMedium
+                                      ?.copyWith(
+                                        color: colors.orange,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            activity.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(
+                                  color: colors.ink,
+                                  fontWeight: FontWeight.w900,
+                                  height: 1.06,
+                                ),
+                          ),
+                          const SizedBox(height: 7),
+                          _MapParticipantSummary(activity: activity),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    SizedBox(
+                      width: 108,
+                      child: FilledButton(
+                        onPressed: () async {
+                          final updatedActivity = await context
+                              .push<HomeActivity>(
+                                AppRoutes.activityDetailPath(activity.id),
+                                extra: activity,
+                              );
+                          if (!context.mounted || updatedActivity == null) {
+                            return;
+                          }
+                          onActivityUpdated(updatedActivity);
+                        },
+                        style: FilledButton.styleFrom(
+                          backgroundColor: colors.green,
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.zero,
+                          minimumSize: const Size(0, 50),
+                          shape: const StadiumBorder(),
+                          textStyle: const TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 13,
                           ),
                         ),
-                      ),
-                      const SizedBox(width: TochSpacing.sm),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              activity.title,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.titleSmall
-                                  ?.copyWith(
-                                    color: colors.ink,
-                                    fontWeight: FontWeight.w900,
-                                    height: 1.12,
-                                  ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${activity.distanceLabel} - ${activity.timeLabel}',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.labelSmall
-                                  ?.copyWith(
-                                    color: colors.green700.withValues(
-                                      alpha: .68,
-                                    ),
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                            ),
-                          ],
+                        child: Text(
+                          activity.isJoined ? 'Je gaat' : 'Aansluiten',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),
-          );
-        },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MapParticipantSummary extends StatelessWidget {
+  const _MapParticipantSummary({required this.activity});
+
+  final HomeActivity activity;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.toch;
+    final avatarLabels = _avatarLabels(activity);
+
+    return Row(
+      children: [
+        SizedBox(
+          width: 54,
+          height: 22,
+          child: Stack(
+            children: [
+              for (var index = 0; index < avatarLabels.length; index++)
+                Positioned(
+                  left: index * 16,
+                  child: _MapMiniAvatar(label: avatarLabels[index]),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            activity.spotsLabel,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: colors.green700.withValues(alpha: .72),
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MapMiniAvatar extends StatelessWidget {
+  const _MapMiniAvatar({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.toch;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.green,
+        shape: BoxShape.circle,
+        border: Border.all(color: colors.card, width: 1.5),
+      ),
+      child: SizedBox.square(
+        dimension: 22,
+        child: Center(
+          child: Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 8,
+              fontWeight: FontWeight.w900,
+              height: 1,
+            ),
+          ),
+        ),
       ),
     );
   }
+}
+
+List<String> _avatarLabels(HomeActivity activity) {
+  final labels = activity.participants
+      .take(3)
+      .map((participant) => participant.initials.trim())
+      .where((initials) => initials.isNotEmpty)
+      .toList();
+  if (labels.isNotEmpty) {
+    return labels;
+  }
+  final hostInitials = _initialsFor(
+    activity.hostFullName.trim().isEmpty
+        ? activity.hostName
+        : activity.hostFullName,
+  );
+  return hostInitials.isEmpty ? const [] : [hostInitials];
+}
+
+String _initialsFor(String name) {
+  final parts = name.trim().split(RegExp(r'\s+'));
+  if (parts.isEmpty || parts.first.isEmpty) {
+    return '';
+  }
+  if (parts.length == 1) {
+    return parts.first
+        .substring(0, parts.first.length.clamp(0, 2))
+        .toUpperCase();
+  }
+  return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
 }

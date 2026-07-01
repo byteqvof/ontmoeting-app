@@ -37,6 +37,13 @@ const supabaseUrl = String.fromEnvironment(
   'SUPABASE_URL',
   defaultValue: defaultSupabaseUrl,
 );
+const tochPublicShareBaseUrl = String.fromEnvironment(
+  'TOCH_PUBLIC_SHARE_BASE_URL',
+  defaultValue: 'https://gatoch.nl',
+);
+const tochPublicShareUrlTemplate = String.fromEnvironment(
+  'TOCH_PUBLIC_SHARE_URL_TEMPLATE',
+);
 const supabaseAnonKey = String.fromEnvironment(
   'SUPABASE_ANON_KEY',
   defaultValue: defaultSupabaseAnonKey,
@@ -54,6 +61,7 @@ const supabaseActivityChatFunctionName = 'activity-chat';
 const supabaseActivityCompleteFunctionName = 'activities-complete';
 const supabaseActivityFeedbackFunctionName = 'activity-feedback';
 const supabaseActivityAttendanceFunctionName = 'activity-attendance';
+const supabaseActivityFavoritesFunctionName = 'activity-favorites';
 const supabasePushTokenFunctionName = 'push-token';
 const supabaseLocationsSearchFunctionName = 'locations-search';
 const supabaseProfilesFunctionName = 'profiles';

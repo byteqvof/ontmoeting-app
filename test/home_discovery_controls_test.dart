@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:meetings_app/app/theme/app_theme.dart';
+import 'package:meetings_app/features/home/domain/entities/home_feed_filters.dart';
 import 'package:meetings_app/features/home/presentation/widgets/home_discovery_controls.dart';
+import 'package:meetings_app/features/home/presentation/widgets/home_filter_sheet.dart';
 import 'package:meetings_app/features/home/presentation/widgets/home_header.dart';
 
 void main() {
@@ -53,5 +55,50 @@ void main() {
 
     await tester.tap(find.byTooltip('Filters'));
     expect(openedFilters, isTrue);
+  });
+
+  testWidgets('filter sheet contains distance filters and applies selection', (
+    tester,
+  ) async {
+    HomeFeedFilters? appliedFilters;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          body: Builder(
+            builder: (context) {
+              return Center(
+                child: ElevatedButton(
+                  onPressed: () async {
+                    appliedFilters = await showHomeFilterSheet(
+                      context: context,
+                      filters: const HomeFeedFilters(),
+                      categories: const [],
+                    );
+                  },
+                  child: const Text('Open filters'),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open filters'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('AFSTAND'), findsOneWidget);
+    expect(find.text('5 km'), findsOneWidget);
+    expect(find.text('10 km'), findsOneWidget);
+    expect(find.text('25 km'), findsOneWidget);
+    expect(find.text('50 km'), findsOneWidget);
+
+    await tester.tap(find.text('25 km'));
+    await tester.tap(find.text('Toepassen'));
+    await tester.pumpAndSettle();
+
+    expect(appliedFilters?.distanceKm, 25);
   });
 }

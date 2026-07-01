@@ -9,6 +9,8 @@ import 'package:meetings_app/app/theme/app_theme.dart';
 import 'package:meetings_app/core/di/injection_container.dart';
 import 'package:meetings_app/core/errors/failures.dart';
 import 'package:meetings_app/core/services/activity_attendance_service.dart';
+import 'package:meetings_app/core/services/activity_favorite_service.dart';
+import 'package:meetings_app/core/services/activity_share_service.dart';
 import 'package:meetings_app/core/services/safety_report_reason.dart';
 import 'package:meetings_app/core/services/safety_service.dart';
 import 'package:meetings_app/features/auth/domain/entities/auth_oauth_provider.dart';
@@ -60,6 +62,12 @@ void main() {
       ..registerLazySingleton(() => SubmitActivityFeedback(homeRepository))
       ..registerLazySingleton<ActivityAttendanceService>(
         _FakeActivityAttendanceService.new,
+      )
+      ..registerLazySingleton<ActivityFavoriteService>(
+        _FakeActivityFavoriteService.new,
+      )
+      ..registerLazySingleton<ActivityShareService>(
+        () => const ActivityShareService(),
       )
       ..registerLazySingleton<SafetyService>(_FakeSafetyService.new)
       ..registerLazySingleton(() => GetProfile(_FakeProfileRepository()));
@@ -352,6 +360,21 @@ class _FakeActivityAttendanceService extends ActivityAttendanceService {
     required String profileId,
     required ActivityAttendanceStatus status,
   }) async {}
+}
+
+class _FakeActivityFavoriteService extends ActivityFavoriteService {
+  _FakeActivityFavoriteService() : super(_fakeSupabaseClient);
+
+  @override
+  Future<bool> getFavoriteStatus(String activityId) async => false;
+
+  @override
+  Future<bool> setFavorite({
+    required String activityId,
+    required bool isFavorited,
+  }) async {
+    return isFavorited;
+  }
 }
 
 class _FakeSafetyService extends SafetyService {

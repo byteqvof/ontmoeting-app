@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/toch_theme.dart';
+import '../../../../core/utils/toch_category_icons.dart';
 import '../../domain/entities/profile_interest.dart';
 
 class ProfileInterestsCard extends StatelessWidget {
@@ -13,33 +14,36 @@ class ProfileInterestsCard extends StatelessWidget {
     final colors = context.toch;
     final uniqueInterests = _uniqueInterests(interests);
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colors.card,
-        borderRadius: BorderRadius.circular(TochRadius.lg),
-        border: Border.all(color: colors.line),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(TochSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Interesses',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: colors.green700.withValues(alpha: .68),
-                fontWeight: FontWeight.w900,
+    return SizedBox(
+      width: double.infinity,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: colors.card,
+          borderRadius: BorderRadius.circular(TochRadius.lg),
+          border: Border.all(color: colors.line),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(TochSpacing.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Interesses',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: colors.green700.withValues(alpha: .68),
+                  fontWeight: FontWeight.w900,
+                ),
               ),
-            ),
-            const SizedBox(height: TochSpacing.sm),
-            Wrap(
-              spacing: TochSpacing.xs,
-              runSpacing: TochSpacing.xs,
-              children: uniqueInterests.map((interest) {
-                return _InterestChip(interest: interest);
-              }).toList(),
-            ),
-          ],
+              const SizedBox(height: TochSpacing.sm),
+              Wrap(
+                spacing: TochSpacing.xs,
+                runSpacing: TochSpacing.xs,
+                children: uniqueInterests.map((interest) {
+                  return _InterestChip(interest: interest);
+                }).toList(),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -72,7 +76,15 @@ class _InterestChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(_iconForKey(interest.iconKey), color: foreground, size: 16),
+            Icon(
+              tochCategoryIcon(
+                id: interest.id,
+                label: interest.label,
+                iconKey: interest.iconKey,
+              ),
+              color: foreground,
+              size: 16,
+            ),
             const SizedBox(width: 6),
             Text(
               interest.label,
@@ -117,14 +129,4 @@ Color _colorFromHex(String hex, {required Color fallback}) {
   }
 
   return Color(normalized.length == 6 ? 0xFF000000 | value : value);
-}
-
-IconData _iconForKey(String key) {
-  return switch (key) {
-    'set_meal' || 'fishing' => Icons.set_meal_rounded,
-    'directions_walk' || 'walking' => Icons.directions_walk_rounded,
-    'local_cafe' || 'coffee' => Icons.local_cafe_rounded,
-    'photo_camera' || 'photo' => Icons.photo_camera_rounded,
-    _ => Icons.favorite_rounded,
-  };
 }

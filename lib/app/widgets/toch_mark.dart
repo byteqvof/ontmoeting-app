@@ -14,8 +14,8 @@ class TochMark extends StatelessWidget {
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: backgroundColor ?? colors.green,
-        borderRadius: BorderRadius.circular(size * .22),
+        color: backgroundColor ?? Colors.transparent,
+        borderRadius: BorderRadius.circular(size * .5),
         boxShadow: [
           BoxShadow(
             color: colors.green.withValues(alpha: .18),
@@ -26,11 +26,13 @@ class TochMark extends StatelessWidget {
       ),
       child: SizedBox.square(
         dimension: size,
-        child: Center(
-          child: Icon(
-            Icons.place_rounded,
-            color: colors.cream,
-            size: size * .58,
+        child: Padding(
+          padding: EdgeInsets.all(size * .04),
+          child: Image.asset(
+            'assets/pip/pip-icon.png',
+            fit: BoxFit.contain,
+            filterQuality: FilterQuality.high,
+            semanticLabel: 'Pip',
           ),
         ),
       ),

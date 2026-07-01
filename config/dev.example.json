@@ -4,6 +4,8 @@
   "TOCH_ENABLE_PUSH": true,
   "SUPABASE_URL": "https://pmnymluxikcmqehlbxlt.supabase.co",
   "SUPABASE_ANON_KEY": "sb_publishable_q9O8Q1jmRZ-9PVGdj_9dYg_S24tTwwt",
+  "TOCH_PUBLIC_SHARE_BASE_URL": "https://gatoch.nl",
+  "TOCH_PUBLIC_SHARE_URL_TEMPLATE": "",
   "POSTHOG_API_KEY": "",
   "POSTHOG_HOST": "https://eu.i.posthog.com",
   "SENTRY_DSN": "",
@@ -13,5 +15,5 @@
   "FIREBASE_ANDROID_APP_ID": "1:724429202361:android:28b9277d3ba5dd0c7f8c68",
   "FIREBASE_IOS_APP_ID": "",
   "FIREBASE_IOS_BUNDLE_ID": "nl.gatoch.toch",
-  "FIREBASE_API_KEY": "AIzaSyBQnYmZ4c0mW1dcF82Xmvq_WseK9OA3JdQ"
+  "FIREBASE_API_KEY": "your-firebase-api-key"
 }

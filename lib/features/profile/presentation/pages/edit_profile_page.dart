@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../../app/theme/toch_theme.dart';
 import '../../../../core/di/injection_container.dart';
+import '../../../../core/utils/toch_category_icons.dart';
 import '../../../../core/widgets/toch_snack_bar.dart';
 import '../../../home/domain/entities/home_feed_filters.dart';
 import '../../domain/entities/profile.dart';
@@ -537,7 +538,11 @@ class _EditInterestChip extends StatelessWidget {
       selected: selected,
       label: Text(interest.label),
       avatar: Icon(
-        _iconForKey(interest.iconKey),
+        tochCategoryIcon(
+          id: interest.id,
+          label: interest.label,
+          iconKey: interest.iconKey,
+        ),
         size: 18,
         color: selected
             ? colors.cream
@@ -627,21 +632,6 @@ Color _colorFromHex(String hex, {required Color fallback}) {
   }
 
   return Color(normalized.length == 6 ? 0xFF000000 | value : value);
-}
-
-IconData _iconForKey(String key) {
-  return switch (key) {
-    'set_meal' || 'fishing' => Icons.set_meal_rounded,
-    'directions_walk' || 'walking' => Icons.directions_walk_rounded,
-    'local_cafe' || 'coffee' => Icons.local_cafe_rounded,
-    'sports_basketball' || 'sport' => Icons.sports_basketball_rounded,
-    'sports_esports' || 'gaming' => Icons.sports_esports_rounded,
-    'two_wheeler' || 'motor' => Icons.two_wheeler_rounded,
-    'casino' || 'boardgames' => Icons.casino_rounded,
-    'photo_camera' || 'photo' => Icons.photo_camera_rounded,
-    'favorite' || 'social' => Icons.favorite_rounded,
-    _ => Icons.interests_rounded,
-  };
 }
 
 String? _mimeTypeForFileName(String fileName) {

@@ -38,6 +38,10 @@ Copy-Item config\dev.example.json config\dev.local.json
 - `FIREBASE_ANDROID_APP_ID`, `FIREBASE_IOS_APP_ID`: platform-specifieke
   Firebase app-id. `FIREBASE_APP_ID` blijft alleen als legacy fallback bestaan.
 - `FIREBASE_IOS_BUNDLE_ID`: iOS bundle id, standaard `nl.gatoch.toch`.
+- `TOCH_PUBLIC_SHARE_BASE_URL`: publieke basis-URL voor deelbare
+  activiteitlinks, standaard `https://gatoch.nl`.
+- `TOCH_PUBLIC_SHARE_URL_TEMPLATE`: optionele volledige template, bijvoorbeeld
+  `https://gatoch.nl/a/{activityId}`. Laat leeg voor `/activities/{id}`.
 
 Voor productie mag fake phone verification nooit aan staan. De code negeert die
 flag buiten `TOCH_ENV=dev`, maar controleer buildconfig alsnog expliciet.
@@ -88,3 +92,30 @@ gebruik niet de Android app-id voor TestFlight.
 Een Firebase service-account private key hoort nooit in deze repo. Sla die alleen
 als Supabase secret op aan backendzijde en roteer hem direct als hij ooit in chat,
 logs of git terechtkomt.
+
+## Deelbare activiteitlinks
+
+De app deelt activiteiten als publieke HTTPS-links:
+
+```text
+https://gatoch.nl/activities/<activity-id>
+```
+
+Die pagina moet op het domein een gewone webpagina met OpenGraph-tags tonen en
+mag daarna de app openen via `meetingsapp://activity/<activity-id>`. De backend
+bevat hiervoor de Supabase Edge Function `activity-share`; deploy deze publiek:
+
+```powershell
+cd C:\Users\Gebruiker\Desktop\toch\meeting-app-backend
+npm run deploy:function:activity-share
+```
+
+Voor echte app-links zijn daarnaast domeinverificatiebestanden nodig:
+
+- Android: `https://gatoch.nl/.well-known/assetlinks.json` met package
+  `com.toch.app` en de SHA-256 fingerprint(s) van je debug/release signing key.
+- iOS: `https://gatoch.nl/.well-known/apple-app-site-association` met app id
+  `<APPLE_TEAM_ID>.nl.gatoch.toch` en pad `/activities/*`.
+
+Zolang die bestanden nog niet staan, blijft de link klikbaar als webpagina, maar
+opent Android/iOS de app niet altijd automatisch.

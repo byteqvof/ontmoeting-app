@@ -97,18 +97,18 @@ class AuthSocialProofCard extends StatelessWidget {
                   height: 42,
                   child: Stack(
                     children: [
-                      Positioned(left: 0, child: _AuthProofAvatar(label: 'SV')),
+                      Positioned(left: 0, child: _AuthProofAvatar(tone: 0)),
                       Positioned(
                         left: 27,
-                        child: _AuthProofAvatar(label: 'RH'),
+                        child: _AuthProofAvatar(tone: 1),
                       ),
                       Positioned(
                         left: 54,
-                        child: _AuthProofAvatar(label: 'JB'),
+                        child: _AuthProofAvatar(tone: 2),
                       ),
                       Positioned(
                         left: 81,
-                        child: _AuthProofAvatar(label: 'EM'),
+                        child: _AuthProofAvatar(tone: 3),
                       ),
                     ],
                   ),
@@ -116,7 +116,7 @@ class AuthSocialProofCard extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    '3.400+ anderen zijn al lid',
+                    'Ontdek wat er dichtbij gebeurt',
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w900,
                       color: colors.ink,
@@ -129,13 +129,13 @@ class AuthSocialProofCard extends StatelessWidget {
             Row(
               children: const [
                 Expanded(
-                  child: _AuthProofStat(value: '1.240', label: 'activiteiten'),
+                  child: _AuthProofStat(value: 'Live', label: 'activiteiten'),
                 ),
                 Expanded(
-                  child: _AuthProofStat(value: '180', label: 'nu actief'),
+                  child: _AuthProofStat(value: 'Rustig', label: 'aansluiten'),
                 ),
                 Expanded(
-                  child: _AuthProofStat(value: '+85', label: 'connecties'),
+                  child: _AuthProofStat(value: 'Dichtbij', label: 'ontdekken'),
                 ),
               ],
             ),
@@ -147,17 +147,17 @@ class AuthSocialProofCard extends StatelessWidget {
 }
 
 class _AuthProofAvatar extends StatelessWidget {
-  const _AuthProofAvatar({required this.label});
+  const _AuthProofAvatar({required this.tone});
 
-  final String label;
+  final int tone;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.toch;
-    final color = switch (label) {
-      'SV' => const Color(0xFF347E70),
-      'RH' => const Color(0xFF93623B),
-      'JB' => const Color(0xFF5E8B3A),
+    final color = switch (tone) {
+      0 => const Color(0xFF347E70),
+      1 => const Color(0xFF93623B),
+      2 => const Color(0xFF5E8B3A),
       _ => const Color(0xFFD2703C),
     };
 
@@ -170,14 +170,7 @@ class _AuthProofAvatar extends StatelessWidget {
         shape: BoxShape.circle,
         border: Border.all(color: colors.card, width: 3),
       ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w900,
-          fontSize: 12,
-        ),
-      ),
+      child: const Icon(Icons.person_rounded, color: Colors.white, size: 19),
     );
   }
 }

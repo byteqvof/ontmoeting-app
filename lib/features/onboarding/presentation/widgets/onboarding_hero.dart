@@ -17,16 +17,16 @@ class OnboardingHero extends StatelessWidget {
     final data = switch (kind) {
       OnboardingHeroKind.activity => const _HeroData(
         icon: Icons.phishing_rounded,
-        label: 'Vissen',
-        title: 'Avondvissen\naan de Maas',
-        badge: 'Je gaat mee',
+        label: 'Activiteit',
+        title: 'Iets buiten\ndoen',
+        badge: 'Sluit aan',
         accent: Color(0xFF347E70),
       ),
       OnboardingHeroKind.nearby => const _HeroData(
         icon: Icons.map_rounded,
         label: 'Vlakbij',
-        title: 'Koffie in\nhet centrum',
-        badge: '3 plekken vrij',
+        title: 'Plan in\nde buurt',
+        badge: 'Plek vrij',
         accent: Color(0xFFE0913A),
       ),
       OnboardingHeroKind.trust => const _HeroData(

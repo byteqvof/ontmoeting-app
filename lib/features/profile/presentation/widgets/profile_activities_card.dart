@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/toch_theme.dart';
+import '../../../../core/utils/toch_category_icons.dart';
 import '../../domain/entities/profile_activity.dart';
 
 class ProfileActivitiesCard extends StatelessWidget {
@@ -127,7 +128,11 @@ class _ProfileActivityTile extends StatelessWidget {
                   child: SizedBox.square(
                     dimension: 42,
                     child: Icon(
-                      _iconForKey(activity.category.iconKey),
+                      tochCategoryIcon(
+                        id: activity.category.id,
+                        label: activity.category.label,
+                        iconKey: activity.category.iconKey,
+                      ),
                       color: categoryColor,
                       size: 22,
                     ),
@@ -294,19 +299,4 @@ Color _colorFromHex(String hex, {required Color fallback}) {
   }
 
   return Color(normalized.length == 6 ? 0xFF000000 | value : value);
-}
-
-IconData _iconForKey(String key) {
-  return switch (key) {
-    'set_meal' || 'fishing' => Icons.set_meal_rounded,
-    'directions_walk' || 'walking' => Icons.directions_walk_rounded,
-    'local_cafe' || 'coffee' => Icons.local_cafe_rounded,
-    'sports_basketball' || 'sport' => Icons.sports_basketball_rounded,
-    'sports_esports' || 'gaming' => Icons.sports_esports_rounded,
-    'two_wheeler' || 'motor' => Icons.two_wheeler_rounded,
-    'casino' || 'boardgames' => Icons.casino_rounded,
-    'photo_camera' || 'photo' => Icons.photo_camera_rounded,
-    'favorite' || 'social' => Icons.favorite_rounded,
-    _ => Icons.event_rounded,
-  };
 }
