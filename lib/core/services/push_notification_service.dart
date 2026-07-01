@@ -9,6 +9,14 @@ import '../config/supabase_config.dart';
 import '../utils/app_logger.dart';
 import '../utils/supabase_function_auth.dart';
 
+enum PushNotificationPermissionResult {
+  authorized,
+  provisional,
+  denied,
+  unavailable,
+  failed,
+}
+
 class PushNotificationService {
   PushNotificationService(this._client);
 
@@ -134,10 +142,11 @@ class PushNotificationService {
     return profileId;
   }
 
-  Future<void> registerForCurrentUser() async {
+  Future<PushNotificationPermissionResult>
+  requestPermissionAndRegisterForCurrentUser() async {
     if (!_canUsePush) {
       AppLogger.debug('Push registration disabled: ${diagnosticSummary()}');
-      return;
+      return PushNotificationPermissionResult.unavailable;
     }
 
     try {
@@ -147,25 +156,47 @@ class PushNotificationService {
         'Push permission status: ${settings.authorizationStatus.name}',
       );
       if (settings.authorizationStatus == AuthorizationStatus.denied) {
+        return PushNotificationPermissionResult.denied;
+      }
+
+      final registered = await _registerCurrentDeviceToken();
+      if (!registered) {
+        return PushNotificationPermissionResult.failed;
+      }
+
+      if (settings.authorizationStatus == AuthorizationStatus.provisional) {
+        return PushNotificationPermissionResult.provisional;
+      }
+      return PushNotificationPermissionResult.authorized;
+    } catch (error, stackTrace) {
+      AppLogger.debug(
+        'Push registration skipped',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return PushNotificationPermissionResult.failed;
+    }
+  }
+
+  Future<void> registerForCurrentUserIfPermissionAlreadyGranted() async {
+    if (!_canUsePush) {
+      AppLogger.debug('Push registration disabled: ${diagnosticSummary()}');
+      return;
+    }
+
+    try {
+      await _ensureInitialized();
+      final settings = await FirebaseMessaging.instance
+          .getNotificationSettings();
+      final status = settings.authorizationStatus;
+      AppLogger.debug('Existing push permission status: ${status.name}');
+
+      if (status != AuthorizationStatus.authorized &&
+          status != AuthorizationStatus.provisional) {
         return;
       }
 
-      final apnsReady = await _waitForAppleApnsToken();
-      if (!apnsReady) {
-        return;
-      }
-
-      final token = await FirebaseMessaging.instance.getToken();
-      if (token != null && token.isNotEmpty) {
-        await _registerToken(token);
-      } else {
-        AppLogger.debug('Push registration skipped: empty FCM token');
-      }
-
-      _tokenRefreshSubscription ??= FirebaseMessaging.instance.onTokenRefresh
-          .listen((token) {
-            unawaited(_registerToken(token));
-          });
+      await _registerCurrentDeviceToken();
     } catch (error, stackTrace) {
       AppLogger.debug(
         'Push registration skipped',
@@ -217,6 +248,30 @@ class PushNotificationService {
     );
     _lastRegisteredToken = token;
     AppLogger.debug('Push token registered for $_pushPlatform');
+  }
+
+  Future<bool> _registerCurrentDeviceToken() async {
+    final apnsReady = await _waitForAppleApnsToken();
+    if (!apnsReady) {
+      return false;
+    }
+
+    final token = await FirebaseMessaging.instance.getToken();
+    if (token == null || token.isEmpty) {
+      AppLogger.debug('Push registration skipped: empty FCM token');
+      return false;
+    }
+
+    await _registerToken(token);
+    _startTokenRefreshListener();
+    return true;
+  }
+
+  void _startTokenRefreshListener() {
+    _tokenRefreshSubscription ??= FirebaseMessaging.instance.onTokenRefresh
+        .listen((token) {
+          unawaited(_registerToken(token));
+        });
   }
 
   Future<bool> _waitForAppleApnsToken() async {

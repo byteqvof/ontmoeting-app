@@ -130,13 +130,13 @@ class AccountTrustService {
     );
     if (pendingPhone != phoneNumber) {
       throw const AccountTrustException(
-        'Vraag eerst een ontwikkelcode aan voor dit nummer.',
+        'Vraag eerst een code aan voor dit nummer.',
       );
     }
 
     if (token.trim().length < 4) {
       throw const AccountTrustException(
-        'Gebruik in ontwikkelmodus een code van minimaal 4 tekens.',
+        'Gebruik een code van minimaal 4 tekens.',
       );
     }
 
@@ -202,7 +202,7 @@ class AccountTrustService {
         stackTrace: stackTrace,
       );
       throw const AccountTrustException(
-        'Ontwikkelverificatie is niet ingeschakeld op de backend.',
+        'Telefoonverificatie is nu niet beschikbaar. Probeer het later opnieuw.',
       );
     }
   }

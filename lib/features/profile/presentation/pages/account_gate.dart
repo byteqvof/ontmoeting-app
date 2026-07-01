@@ -288,8 +288,8 @@ class _PhoneVerificationPageState extends State<_PhoneVerificationPage> {
                       const SizedBox(height: TochSpacing.xs),
                       Text(
                         tochFakePhoneVerificationEnabled
-                            ? 'Ontwikkelmodus: SMS wordt nu gesimuleerd. Dit is alleen bedoeld voor lokaal testen.'
-                            : 'Dit helpt wegwerpaccounts en spam beperken. Je nummer wordt via Supabase Auth bevestigd.',
+                            ? 'Testmodus: we sturen nu geen echte sms. Gebruik dit alleen tijdens testen.'
+                            : 'Dit helpt wegwerpaccounts en spam beperken. Je nummer wordt veilig bevestigd.',
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           color: colors.ink3,
                           fontWeight: FontWeight.w700,
@@ -551,13 +551,13 @@ String _phoneRequestErrorMessage(Object error) {
       message.contains('provider') ||
       message.contains('disabled') ||
       message.contains('not enabled')) {
-    return 'SMS is nog niet ingesteld in Supabase Auth. Gebruik tijdelijk de ontwikkelmodus of koppel een SMS-provider.';
+    return 'Telefoonverificatie is nu nog niet beschikbaar. Probeer het later opnieuw.';
   }
   if (message.contains('phone') || message.contains('invalid')) {
     return 'Controleer het telefoonnummer en probeer opnieuw.';
   }
 
-  return 'Code sturen lukt nu niet. Details staan in de debug-console.';
+  return 'Code sturen lukt nu niet. Probeer het later opnieuw.';
 }
 
 String _phoneVerifyErrorMessage(Object error) {
@@ -573,7 +573,7 @@ String _phoneVerifyErrorMessage(Object error) {
     return 'Deze code klopt niet. Controleer de code opnieuw.';
   }
 
-  return 'Code controleren lukt niet. Details staan in de debug-console.';
+  return 'Code controleren lukt nu niet. Probeer het opnieuw.';
 }
 
 String _currentGateUserKey(BuildContext context) {

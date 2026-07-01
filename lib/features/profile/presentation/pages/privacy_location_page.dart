@@ -1,11 +1,45 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/toch_theme.dart';
 import '../../../../app/widgets/toch_design_system.dart';
 
-class PrivacyLocationPage extends StatelessWidget {
-  const PrivacyLocationPage({super.key});
+class PrivacyLocationPage extends StatefulWidget {
+  const PrivacyLocationPage({this.requestLocationPermission, super.key});
+
+  final Future<LocationPermission> Function()? requestLocationPermission;
+
+  @override
+  State<PrivacyLocationPage> createState() => _PrivacyLocationPageState();
+}
+
+class _PrivacyLocationPageState extends State<PrivacyLocationPage> {
+  bool _isRequestingLocation = false;
+  String? _locationStatusMessage;
+
+  Future<void> _requestLocationPermission() async {
+    if (_isRequestingLocation) {
+      return;
+    }
+
+    setState(() {
+      _isRequestingLocation = true;
+      _locationStatusMessage = null;
+    });
+
+    final request =
+        widget.requestLocationPermission ?? _requestDeviceLocationPermission;
+    final permission = await request();
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _isRequestingLocation = false;
+      _locationStatusMessage = _locationMessageFor(permission);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,34 +78,38 @@ class PrivacyLocationPage extends StatelessWidget {
               Expanded(
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(18, 0, 18, 28),
-                  children: const [
-                    _PrivacyMapPreview(),
-                    SizedBox(height: TochSpacing.md),
+                  children: [
+                    const _PrivacyMapPreview(),
+                    const SizedBox(height: TochSpacing.md),
                     _PrivacyTile(
                       icon: Icons.my_location_rounded,
                       title: 'Locatie gebruiken',
                       body:
                           'TOCH gebruikt je locatie om activiteiten in de buurt te tonen. Je live locatie wordt niet als eventlocatie opgeslagen.',
+                      actionLabel: 'Locatie toestaan',
+                      isBusy: _isRequestingLocation,
+                      statusMessage: _locationStatusMessage,
+                      onActionPressed: _requestLocationPermission,
                     ),
-                    _PrivacyTile(
+                    const _PrivacyTile(
                       icon: Icons.place_outlined,
                       title: 'Meetingplek',
                       body:
                           'Bij een activiteit wordt alleen de plek opgeslagen die de organisator zelf kiest, zoals een plein, cafe of adres.',
                     ),
-                    _PrivacyTile(
+                    const _PrivacyTile(
                       icon: Icons.phone_android_rounded,
                       title: 'Telefoonstatus',
                       body:
-                          'Je telefoonnummer blijft in Supabase Auth. In de publieke database bewaren we alleen of je telefoon bevestigd is.',
+                          'Je telefoonnummer wordt alleen gebruikt om je account te bevestigen. Andere gebruikers zien je nummer niet.',
                     ),
-                    _PrivacyTile(
+                    const _PrivacyTile(
                       icon: Icons.analytics_outlined,
                       title: 'Analytics',
                       body:
                           'Analytics mag geen telefoonnummer, chattekst, exacte GPS of vrije rapporttekst bevatten.',
                     ),
-                    _PrivacyTile(
+                    const _PrivacyTile(
                       icon: Icons.flag_outlined,
                       title: 'Meldingen en blokkades',
                       body:
@@ -86,6 +124,33 @@ class PrivacyLocationPage extends StatelessWidget {
       ),
     );
   }
+}
+
+Future<LocationPermission> _requestDeviceLocationPermission() async {
+  var permission = await Geolocator.checkPermission();
+  if (permission == LocationPermission.denied ||
+      permission == LocationPermission.unableToDetermine) {
+    permission = await Geolocator.requestPermission();
+  }
+
+  if (permission == LocationPermission.deniedForever) {
+    await Geolocator.openAppSettings();
+  }
+
+  return permission;
+}
+
+String _locationMessageFor(LocationPermission permission) {
+  return switch (permission) {
+    LocationPermission.always ||
+    LocationPermission.whileInUse => 'Locatie is toegestaan.',
+    LocationPermission.denied =>
+      'Locatie is geweigerd. Je kunt dit later opnieuw toestaan.',
+    LocationPermission.deniedForever =>
+      'Locatie is permanent geweigerd. Pas dit aan via app-instellingen.',
+    LocationPermission.unableToDetermine =>
+      'Locatiestatus kon niet worden bepaald. Probeer het opnieuw.',
+  };
 }
 
 class _PrivacyMapPreview extends StatelessWidget {
@@ -190,11 +255,19 @@ class _PrivacyTile extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.body,
+    this.actionLabel,
+    this.statusMessage,
+    this.isBusy = false,
+    this.onActionPressed,
   });
 
   final IconData icon;
   final String title;
   final String body;
+  final String? actionLabel;
+  final String? statusMessage;
+  final bool isBusy;
+  final VoidCallback? onActionPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -235,6 +308,34 @@ class _PrivacyTile extends StatelessWidget {
                         fontWeight: FontWeight.w700,
                       ),
                     ),
+                    if (statusMessage != null) ...[
+                      const SizedBox(height: TochSpacing.sm),
+                      Text(
+                        statusMessage!,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: colors.green,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
+                    if (actionLabel != null) ...[
+                      const SizedBox(height: TochSpacing.sm),
+                      FilledButton(
+                        onPressed: isBusy ? null : onActionPressed,
+                        style: FilledButton.styleFrom(
+                          minimumSize: const Size(0, 42),
+                          shape: const StadiumBorder(),
+                        ),
+                        child: isBusy
+                            ? const SizedBox.square(
+                                dimension: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Text(actionLabel!),
+                      ),
+                    ],
                   ],
                 ),
               ),

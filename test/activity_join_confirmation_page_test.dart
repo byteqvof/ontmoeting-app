@@ -6,6 +6,7 @@ import 'package:meetings_app/app/router/app_router.dart';
 import 'package:meetings_app/features/home/domain/entities/home_activity.dart';
 import 'package:meetings_app/features/home/domain/entities/home_category.dart';
 import 'package:meetings_app/features/home/presentation/pages/activity_join_confirmation_page.dart';
+import 'package:meetings_app/core/services/push_notification_service.dart';
 
 void main() {
   testWidgets('shows joined confirmation with activity and actions', (

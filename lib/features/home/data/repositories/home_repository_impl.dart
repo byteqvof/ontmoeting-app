@@ -427,7 +427,7 @@ class HomeRepositoryImpl implements HomeRepository {
     }
     if (error is FunctionException && error.status >= 500) {
       return const ServerFailure(
-        'De activiteitenservice is tijdelijk niet beschikbaar.',
+        'Activiteiten laden lukt nu niet. Probeer het later opnieuw.',
       );
     }
     return UnknownFailure(error.toString());
@@ -534,7 +534,7 @@ class HomeRepositoryImpl implements HomeRepository {
       }
       if (error.status >= 500) {
         return const ServerFailure(
-          'De activiteitenservice is tijdelijk niet beschikbaar.',
+          'Activiteit bijwerken lukt nu niet. Probeer het later opnieuw.',
         );
       }
     }
@@ -558,7 +558,7 @@ class HomeRepositoryImpl implements HomeRepository {
 
     if (error is FunctionException && error.status >= 500) {
       return const ServerFailure(
-        'De chatservice is tijdelijk niet beschikbaar.',
+        'Chat openen lukt nu niet. Probeer het later opnieuw.',
       );
     }
 

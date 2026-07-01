@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:meetings_app/app/router/app_router.dart';
 import 'package:meetings_app/app/theme/app_theme.dart';
 import 'package:meetings_app/core/di/injection_container.dart';
 import 'package:meetings_app/core/errors/failures.dart';
@@ -42,6 +43,7 @@ import 'package:meetings_app/features/home/domain/usecases/complete_activity.dar
 import 'package:meetings_app/features/home/domain/usecases/set_activity_participation.dart';
 import 'package:meetings_app/features/home/domain/usecases/submit_activity_feedback.dart';
 import 'package:meetings_app/features/home/presentation/pages/activity_detail_page.dart';
+import 'package:meetings_app/features/home/presentation/pages/activity_join_confirmation_page.dart';
 import 'package:meetings_app/features/profile/domain/entities/create_profile_draft.dart';
 import 'package:meetings_app/features/profile/domain/entities/profile.dart';
 import 'package:meetings_app/features/profile/domain/entities/profile_activity.dart';
@@ -130,6 +132,91 @@ void main() {
 
     expect(find.text('Open activiteit'), findsOneWidget);
     expect(find.text(activity.title), findsNothing);
+  });
+
+  testWidgets('joining from detail returns the updated activity to the opener', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final activity = _activity();
+    final authRepository = _FakeAuthRepository();
+    final authBloc = _authBloc(authRepository);
+    addTearDown(authBloc.close);
+
+    HomeActivity? returnedActivity;
+    final router = GoRouter(
+      initialLocation: '/',
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) {
+            return StatefulBuilder(
+              builder: (context, setState) {
+                return Scaffold(
+                  body: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Result joined: ${returnedActivity?.isJoined ?? false}',
+                        ),
+                        ElevatedButton(
+                          onPressed: () async {
+                            final result = await context.push<HomeActivity>(
+                              '/activities/${activity.id}',
+                            );
+                            setState(() {
+                              returnedActivity = result;
+                            });
+                          },
+                          child: const Text('Open activiteit'),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+        ),
+        GoRoute(
+          path: '/activities/:activityId',
+          builder: (context, state) => ActivityDetailPage(activity: activity),
+        ),
+        GoRoute(
+          path: AppRoutes.activityJoinConfirmation,
+          builder: (context, state) => ActivityJoinConfirmationPage(
+            activity: state.extra! as HomeActivity,
+          ),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      BlocProvider.value(
+        value: authBloc,
+        child: MaterialApp.router(
+          theme: AppTheme.light.copyWith(platform: TargetPlatform.iOS),
+          routerConfig: router,
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open activiteit'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Ga mee'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Je gaat!'), findsOneWidget);
+
+    await tester.tap(find.text('Terug naar ontdekken'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Result joined: true'), findsOneWidget);
   });
 }
 

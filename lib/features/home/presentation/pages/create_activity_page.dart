@@ -709,97 +709,72 @@ class _CreateActivityDateTimeSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<CreateActivityBloc, CreateActivityState>(
       builder: (context, state) {
-        return _CreateActivityActionRow(
-          icon: Icons.calendar_month_outlined,
-          label: 'Wanneer',
-          value: '${state.dateLabel} - ${state.timeLabel}',
-          warning: state.hasFutureStart
-              ? null
-              : 'Kies een moment dat nog moet komen.',
-          onTap: () => _showDateTimeSheet(context, state),
-        );
-      },
-    );
-  }
+        final colors = context.toch;
 
-  Future<void> _showDateTimeSheet(
-    BuildContext context,
-    CreateActivityState state,
-  ) {
-    final colors = context.toch;
-    return showModalBottomSheet<void>(
-      context: context,
-      useSafeArea: true,
-      showDragHandle: true,
-      backgroundColor: colors.cream,
-      builder: (sheetContext) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-          child: BlocBuilder<CreateActivityBloc, CreateActivityState>(
-            bloc: context.read<CreateActivityBloc>(),
-            builder: (context, state) {
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Wanneer?',
-                    style: Theme.of(sheetContext).textTheme.titleLarge
-                        ?.copyWith(
-                          color: colors.ink,
-                          fontWeight: FontWeight.w900,
-                        ),
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Wanneer',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: colors.green700.withValues(alpha: .55),
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final shortcut in const ['Vandaag', 'Morgen', 'Weekend'])
+                  _DateShortcutChip(
+                    label: shortcut,
+                    selected: _isSameDate(
+                      state.selectedDate,
+                      _dateForShortcut(shortcut),
+                    ),
+                    onSelected: () {
+                      context.read<CreateActivityBloc>().add(
+                        CreateActivityDateShortcutSelected(shortcut),
+                      );
+                    },
                   ),
-                  const SizedBox(height: 14),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      for (final shortcut in const [
-                        'Vandaag',
-                        'Morgen',
-                        'Weekend',
-                      ])
-                        _DateShortcutChip(
-                          label: shortcut,
-                          selected: _isSameDate(
-                            state.selectedDate,
-                            _dateForShortcut(shortcut),
-                          ),
-                          onSelected: () {
-                            sheetContext.read<CreateActivityBloc>().add(
-                              CreateActivityDateShortcutSelected(shortcut),
-                            );
-                          },
-                        ),
-                    ],
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: _DateTimePickerTile(
+                    label: 'Datum',
+                    value: state.dateLabel,
+                    icon: Icons.calendar_month_rounded,
+                    onTap: () => _pickDate(context, state),
                   ),
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _DateTimePickerTile(
-                          label: 'Datum',
-                          value: state.dateLabel,
-                          icon: Icons.calendar_month_rounded,
-                          onTap: () => _pickDate(sheetContext, state),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _DateTimePickerTile(
-                          label: 'Tijd',
-                          value: state.timeLabel,
-                          icon: Icons.schedule_rounded,
-                          onTap: () => _pickTime(sheetContext, state),
-                        ),
-                      ),
-                    ],
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _DateTimePickerTile(
+                    label: 'Tijd',
+                    value: state.timeLabel,
+                    icon: Icons.schedule_rounded,
+                    onTap: () => _pickTime(context, state),
                   ),
-                ],
-              );
-            },
-          ),
+                ),
+              ],
+            ),
+            if (!state.hasFutureStart) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Kies een moment dat nog moet komen.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colors.orange,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ],
         );
       },
     );
@@ -840,7 +815,7 @@ class _CreateActivityDateTimeSection extends StatelessWidget {
         hour: state.selectedHour,
         minute: state.selectedMinute,
       ),
-      initialEntryMode: TimePickerEntryMode.input,
+      initialEntryMode: TimePickerEntryMode.dial,
       helpText: 'Kies een tijd',
       cancelText: 'Annuleer',
       confirmText: 'Kies',
@@ -957,6 +932,12 @@ class _DateTimePickerTile extends StatelessWidget {
                     ),
                   ],
                 ),
+              ),
+              const SizedBox(width: 6),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: colors.green700.withValues(alpha: .45),
+                size: 20,
               ),
             ],
           ),
@@ -1203,88 +1184,6 @@ class _CreateActivityTextRow extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _CreateActivityActionRow extends StatelessWidget {
-  const _CreateActivityActionRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.onTap,
-    this.warning,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-  final VoidCallback onTap;
-  final String? warning;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.toch;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Material(
-          color: colors.card,
-          borderRadius: BorderRadius.circular(TochRadius.md),
-          shadowColor: colors.ink.withValues(alpha: .06),
-          elevation: 2,
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(TochRadius.md),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 14, 14),
-              child: Row(
-                children: [
-                  _RowIcon(icon),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _InlineRowLabel(label),
-                        const SizedBox(height: 2),
-                        Text(
-                          value,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodyLarge
-                              ?.copyWith(
-                                color: colors.ink,
-                                fontSize: 15.5,
-                                fontWeight: FontWeight.w800,
-                                height: 1.18,
-                              ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(
-                    Icons.chevron_right_rounded,
-                    color: colors.ink4,
-                    size: 20,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        if (warning != null) ...[
-          const SizedBox(height: 6),
-          Text(
-            warning!,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: colors.orange,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ],
-      ],
     );
   }
 }

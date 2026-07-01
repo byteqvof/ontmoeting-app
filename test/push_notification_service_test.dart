@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -84,4 +86,17 @@ void main() {
       isFalse,
     );
   });
+
+  test(
+    'authenticated app startup does not request notification permission',
+    () {
+      final appDart = File('lib/app/app.dart').readAsStringSync();
+
+      expect(
+        appDart,
+        contains('registerForCurrentUserIfPermissionAlreadyGranted'),
+      );
+      expect(appDart, isNot(contains('push.registerForCurrentUser()')));
+    },
+  );
 }

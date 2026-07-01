@@ -140,7 +140,7 @@ class _EmailVerificationPendingContent extends StatelessWidget {
                 const SizedBox(width: TochSpacing.sm),
                 Expanded(
                   child: Text(
-                    'De link opent TOCH automatisch en bevestigt je e-mailadres via Supabase.',
+                    'De link opent TOCH automatisch en bevestigt je e-mailadres.',
                     style: Theme.of(context).textTheme.labelMedium?.copyWith(
                       color: colors.green700,
                       fontWeight: FontWeight.w800,

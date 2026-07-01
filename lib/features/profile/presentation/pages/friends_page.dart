@@ -70,7 +70,7 @@ class _FriendsPageState extends State<FriendsPage> {
                   icon: Icons.group_off_outlined,
                   title: 'Vrienden zijn nog niet bereikbaar',
                   body:
-                      'Deze functie kan nu geen verbinding maken met de vriendenservice. Probeer opnieuw na de laatste backend-update.',
+                      'We kunnen je vrienden nu niet laden. Controleer je verbinding en probeer het opnieuw.',
                   actionLabel: 'Opnieuw proberen',
                   onAction: _refresh,
                 );
