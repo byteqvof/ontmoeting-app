@@ -38,6 +38,38 @@ void main() {
 
     expect(find.text(activity.title), findsOneWidget);
   });
+
+  testWidgets('activity detail hero share and favorite buttons are actionable', (
+    tester,
+  ) async {
+    final activity = _activity();
+    var shareTapped = false;
+    var favoriteTapped = false;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          body: ActivityDetailHero(
+            activity: activity,
+            isFavorited: true,
+            onSharePressed: () => shareTapped = true,
+            onFavoritePressed: () => favoriteTapped = true,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byTooltip('Deel activiteit'), findsOneWidget);
+    expect(find.byTooltip('Verwijder uit favorieten'), findsOneWidget);
+    expect(find.byIcon(Icons.bookmark_rounded), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Deel activiteit'));
+    await tester.tap(find.byTooltip('Verwijder uit favorieten'));
+
+    expect(shareTapped, isTrue);
+    expect(favoriteTapped, isTrue);
+  });
 }
 
 HomeActivity _activity() {

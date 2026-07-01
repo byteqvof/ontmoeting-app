@@ -7,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../core/constants/app_constants.dart';
 import '../core/di/injection_container.dart';
 import '../core/services/push_notification_service.dart';
+import '../core/utils/activity_deep_links.dart';
 import '../core/utils/app_logger.dart';
 import '../features/auth/presentation/bloc/auth_bloc.dart';
 import '../features/home/presentation/widgets/activity_chat_notice_host.dart';
@@ -91,6 +92,12 @@ class _AppViewState extends State<_AppView> {
       if (activityId != null && activityId.isNotEmpty) {
         _handlePushChatOpen(activityId);
       }
+      return;
+    }
+
+    final activityId = activityIdFromActivityDetailDeepLink(uri);
+    if (activityId != null && activityId.isNotEmpty) {
+      _handlePushActivityOpen(activityId);
       return;
     }
 

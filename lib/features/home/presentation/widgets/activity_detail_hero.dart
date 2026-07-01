@@ -10,12 +10,20 @@ class ActivityDetailHero extends StatelessWidget {
     required this.activity,
     this.onBackPressed,
     this.onEditPressed,
+    this.onSharePressed,
+    this.onFavoritePressed,
+    this.isFavorited = false,
+    this.isFavoritePending = false,
     super.key,
   });
 
   final HomeActivity activity;
   final VoidCallback? onBackPressed;
   final VoidCallback? onEditPressed;
+  final VoidCallback? onSharePressed;
+  final VoidCallback? onFavoritePressed;
+  final bool isFavorited;
+  final bool isFavoritePending;
 
   @override
   Widget build(BuildContext context) {
@@ -72,9 +80,10 @@ class ActivityDetailHero extends StatelessWidget {
                       const Spacer(),
                       TochRoundButton(
                         icon: Icons.ios_share_rounded,
+                        tooltip: 'Deel activiteit',
                         dark: true,
                         size: 40,
-                        onPressed: () {},
+                        onPressed: onSharePressed,
                       ),
                       const SizedBox(width: 8),
                       if (onEditPressed != null) ...[
@@ -87,10 +96,17 @@ class ActivityDetailHero extends StatelessWidget {
                         const SizedBox(width: 8),
                       ],
                       TochRoundButton(
-                        icon: Icons.bookmark_border_rounded,
+                        icon: isFavorited
+                            ? Icons.bookmark_rounded
+                            : Icons.bookmark_border_rounded,
+                        tooltip: isFavorited
+                            ? 'Verwijder uit favorieten'
+                            : 'Voeg toe aan favorieten',
                         dark: true,
                         size: 40,
-                        onPressed: () {},
+                        onPressed: isFavoritePending
+                            ? null
+                            : onFavoritePressed,
                       ),
                     ],
                   ),

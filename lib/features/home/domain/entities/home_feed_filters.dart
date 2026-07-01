@@ -55,6 +55,8 @@ class HomeFeedFilters extends Equatable {
   }
 
   bool get hasAdvancedFilters =>
+      distanceKm != 10 ||
+      dateFilter != homeDateFilterAll ||
       categoryIds.isNotEmpty ||
       targetAgeBands.isNotEmpty ||
       targetGenders.isNotEmpty ||
@@ -62,8 +64,7 @@ class HomeFeedFilters extends Equatable {
       availableOnly ||
       minParticipants != null ||
       maxParticipants != null ||
-      sort != homeSortDistance ||
-      dateFilter == homeDateFilterCustom;
+      sort != homeSortDistance;
 
   HomeFeedFilters copyWith({
     int? distanceKm,

@@ -320,7 +320,7 @@ class _CreateActivityFormRows extends StatelessWidget {
         _CreateActivityTextRow(
           label: 'Titel',
           icon: Icons.edit_rounded,
-          hintText: 'Avondvissen aan de Maas',
+          hintText: 'bijv. iets doen in de buurt',
           onChanged: (value) {
             context.read<CreateActivityBloc>().add(
               CreateActivityTitleChanged(value),

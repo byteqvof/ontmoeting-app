@@ -135,6 +135,21 @@ class _HomeFilterSheetState extends State<HomeFilterSheet> {
                       controller: scrollController,
                       padding: const EdgeInsets.fromLTRB(20, 4, 20, 18),
                       children: [
+                        _SectionTitle('Afstand'),
+                        const _SectionHelper(
+                          'Kies hoe breed je rondom je huidige plaats wilt zoeken.',
+                        ),
+                        _DistanceChoices(
+                          selectedDistanceKm: _draft.distanceKm,
+                          onChanged: (distanceKm) {
+                            setState(
+                              () => _draft = _draft.copyWith(
+                                distanceKm: distanceKm,
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: TochSpacing.lg),
                         _SectionTitle('Datum'),
                         const _SectionHelper(
                           'Gebruik datumfilters om alleen activiteiten te zien die echt binnen jouw planning vallen.',
@@ -282,9 +297,7 @@ class _HomeFilterSheetState extends State<HomeFilterSheet> {
                             child: OutlinedButton(
                               onPressed: () {
                                 setState(
-                                  () => _draft = HomeFeedFilters(
-                                    distanceKm: widget.filters.distanceKm,
-                                  ),
+                                  () => _draft = const HomeFeedFilters(),
                                 );
                               },
                               child: const Text('Reset'),
@@ -311,6 +324,32 @@ class _HomeFilterSheetState extends State<HomeFilterSheet> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _DistanceChoices extends StatelessWidget {
+  const _DistanceChoices({
+    required this.selectedDistanceKm,
+    required this.onChanged,
+  });
+
+  final int selectedDistanceKm;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final distance in const [5, 10, 25, 50])
+          ChoiceChip(
+            label: Text('$distance km'),
+            selected: selectedDistanceKm == distance,
+            onSelected: (_) => onChanged(distance),
+          ),
+      ],
     );
   }
 }

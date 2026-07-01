@@ -68,6 +68,34 @@ void main() {
     expect(find.text('Sport'), findsOneWidget);
     expect(find.text('Buiten'), findsOneWidget);
   });
+
+  testWidgets('profile interests card fills the available profile width', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: const Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: 360,
+              child: Column(
+                children: [
+                  ProfileInterestsCard(
+                    interests: [_sportInterest, _outsideInterest],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final cardWidth = tester.getSize(find.byType(DecoratedBox).first).width;
+
+    expect(cardWidth, 360);
+  });
 }
 
 const _sportInterest = ProfileInterest(

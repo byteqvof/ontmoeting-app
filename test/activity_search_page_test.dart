@@ -42,6 +42,10 @@ void main() {
       MaterialApp(theme: AppTheme.light, home: const ActivitySearchPage()),
     );
 
+    repository.completeFeed(_feed([_fishingActivity(), _coffeeActivity()]));
+    await tester.pumpAndSettle();
+    repository.prepareNextFeed();
+
     await tester.enterText(find.byType(TextField), 'avond');
     await tester.testTextInput.receiveAction(TextInputAction.search);
     await tester.pump();
@@ -56,7 +60,9 @@ void main() {
     expect(find.text('1 resultaat'), findsOneWidget);
   });
 
-  testWidgets('recent and category buttons execute searches', (tester) async {
+  testWidgets('suggestions and categories come from backend feed', (
+    tester,
+  ) async {
     final repository = _FakeHomeRepository();
     _registerSearchDependencies(repository);
 
@@ -64,13 +70,25 @@ void main() {
       MaterialApp(theme: AppTheme.light, home: const ActivitySearchPage()),
     );
 
-    await tester.tap(find.text('Avondvissen'));
+    repository.completeFeed(_feed([_fishingActivity(), _coffeeActivity()]));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Avondvissen'), findsNothing);
+    expect(find.text('Hardlopen'), findsNothing);
+    expect(find.text('Avondvissen aan de Maas'), findsOneWidget);
+    expect(find.text('Koffie'), findsOneWidget);
+
+    repository.prepareNextFeed();
+    await tester.tap(find.text('Avondvissen aan de Maas'));
     await tester.pump();
-    expect(find.text('Zoeken naar "Avondvissen"...'), findsOneWidget);
+    expect(
+      find.text('Zoeken naar "Avondvissen aan de Maas"...'),
+      findsOneWidget,
+    );
 
     repository.completeFeed(_feed([_fishingActivity(), _coffeeActivity()]));
     await tester.pumpAndSettle();
-    expect(find.text('Avondvissen aan de Maas'), findsOneWidget);
+    expect(find.text('Avondvissen aan de Maas'), findsWidgets);
 
     repository.prepareNextFeed();
     await tester.drag(find.byType(ListView), const Offset(0, -700));

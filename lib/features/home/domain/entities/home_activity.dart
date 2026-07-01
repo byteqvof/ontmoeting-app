@@ -50,6 +50,7 @@ class HomeActivity extends Equatable {
     this.chatLastMessageType = 'user',
     this.chatUnreadCount = 0,
     this.canSendChat = false,
+    this.isFavorited = false,
   });
 
   final String id;
@@ -95,6 +96,7 @@ class HomeActivity extends Equatable {
   final String chatLastMessageType;
   final int chatUnreadCount;
   final bool canSendChat;
+  final bool isFavorited;
 
   bool get isCompleted => status == 'completed';
 
@@ -135,6 +137,7 @@ class HomeActivity extends Equatable {
     int? chatUnreadCount,
     bool? canSendChat,
     bool? hostFeedbackSubmitted,
+    bool? isFavorited,
   }) {
     return HomeActivity(
       id: id,
@@ -182,6 +185,7 @@ class HomeActivity extends Equatable {
       chatLastMessageType: chatLastMessageType ?? this.chatLastMessageType,
       chatUnreadCount: chatUnreadCount ?? this.chatUnreadCount,
       canSendChat: canSendChat ?? this.canSendChat,
+      isFavorited: isFavorited ?? this.isFavorited,
     );
   }
 
@@ -254,5 +258,6 @@ class HomeActivity extends Equatable {
     chatLastMessageType,
     chatUnreadCount,
     canSendChat,
+    isFavorited,
   ];
 }

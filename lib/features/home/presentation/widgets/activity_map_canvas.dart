@@ -9,6 +9,10 @@ import '../../domain/entities/home_location.dart';
 
 const openFreeMapStyleUrl = 'https://tiles.openfreemap.org/styles/liberty';
 
+@visibleForTesting
+Widget Function(BuildContext context, ActivityMapCanvas widget)?
+debugActivityMapCanvasBuilder;
+
 class ActivityMapCanvas extends StatefulWidget {
   const ActivityMapCanvas({
     required this.location,
@@ -65,10 +69,10 @@ class _ActivityMapCanvasState extends State<ActivityMapCanvas> {
     await controller.addCircle(
       CircleOptions(
         geometry: LatLng(widget.location.latitude, widget.location.longitude),
-        circleRadius: 7,
-        circleColor: '#F2994A',
+        circleRadius: widget.interactive ? 9 : 7,
+        circleColor: '#E0913A',
         circleStrokeColor: '#FFFFFF',
-        circleStrokeWidth: 2,
+        circleStrokeWidth: 3,
       ),
     );
 
@@ -77,10 +81,10 @@ class _ActivityMapCanvasState extends State<ActivityMapCanvas> {
         .map(
           (activity) => CircleOptions(
             geometry: LatLng(activity.latitude, activity.longitude),
-            circleRadius: widget.interactive ? 8 : 6,
-            circleColor: '#1E5740',
+            circleRadius: widget.interactive ? 10 : 7,
+            circleColor: _colorToHex(activity.category.color),
             circleStrokeColor: '#FFFFFF',
-            circleStrokeWidth: 2,
+            circleStrokeWidth: widget.interactive ? 4 : 2,
           ),
         )
         .toList();
@@ -105,8 +109,13 @@ class _ActivityMapCanvasState extends State<ActivityMapCanvas> {
 
   @override
   Widget build(BuildContext context) {
+    final debugBuilder = debugActivityMapCanvasBuilder;
+    if (debugBuilder != null) {
+      return debugBuilder(context, widget);
+    }
+
     return ColoredBox(
-      color: const Color(0xFFE7EBE0),
+      color: const Color(0xFFE8ECE2),
       child: Stack(
         children: [
           MapLibreMap(
@@ -181,4 +190,9 @@ class _ActivityMapCanvasState extends State<ActivityMapCanvas> {
       ),
     );
   }
+}
+
+String _colorToHex(Color color) {
+  final value = color.toARGB32() & 0x00FFFFFF;
+  return '#${value.toRadixString(16).padLeft(6, '0').toUpperCase()}';
 }

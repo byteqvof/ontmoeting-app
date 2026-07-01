@@ -246,16 +246,16 @@ class _SocialProofStrip extends StatelessWidget {
           height: 34,
           child: Stack(
             children: [
-              Positioned(left: 0, child: _ProofAvatar(label: 'SV')),
-              Positioned(left: 24, child: _ProofAvatar(label: 'RH')),
-              Positioned(left: 48, child: _ProofAvatar(label: 'JB')),
+              Positioned(left: 0, child: _ProofAvatar(tone: 0)),
+              Positioned(left: 24, child: _ProofAvatar(tone: 1)),
+              Positioned(left: 48, child: _ProofAvatar(tone: 2)),
             ],
           ),
         ),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
-            'Sanne, Rick en buurtgenoten\ndoen al mee',
+            'Mensen in je buurt\ndoen al mee',
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
               color: Colors.white.withValues(alpha: .82),
               fontWeight: FontWeight.w800,
@@ -270,16 +270,16 @@ class _SocialProofStrip extends StatelessWidget {
 }
 
 class _ProofAvatar extends StatelessWidget {
-  const _ProofAvatar({required this.label});
+  const _ProofAvatar({required this.tone});
 
-  final String label;
+  final int tone;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.toch;
-    final avatarColor = switch (label) {
-      'SV' => const Color(0xFF347E70),
-      'RH' => const Color(0xFF93623B),
+    final avatarColor = switch (tone) {
+      0 => const Color(0xFF347E70),
+      1 => const Color(0xFF93623B),
       _ => const Color(0xFF5E8B3A),
     };
 
@@ -292,14 +292,7 @@ class _ProofAvatar extends StatelessWidget {
         border: Border.all(color: colors.green, width: 2),
       ),
       alignment: Alignment.center,
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 10,
-          fontWeight: FontWeight.w900,
-        ),
-      ),
+      child: const Icon(Icons.person_rounded, color: Colors.white, size: 16),
     );
   }
 }

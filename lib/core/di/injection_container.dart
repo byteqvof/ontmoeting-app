@@ -50,6 +50,8 @@ import '../../features/profile/presentation/bloc/profile_bloc.dart';
 import '../../features/profile/presentation/bloc/profile_setup_bloc.dart';
 import '../services/account_trust_service.dart';
 import '../services/activity_attendance_service.dart';
+import '../services/activity_favorite_service.dart';
+import '../services/activity_share_service.dart';
 import '../services/analytics_service.dart';
 import '../services/push_notification_service.dart';
 import '../services/safety_service.dart';
@@ -69,6 +71,8 @@ Future<void> configureDependencies() async {
     ..registerLazySingleton(() => PushNotificationService(sl()))
     ..registerLazySingleton(() => AccountTrustService(sl(), sl()))
     ..registerLazySingleton(() => ActivityAttendanceService(sl()))
+    ..registerLazySingleton(() => ActivityFavoriteService(sl()))
+    ..registerLazySingleton(() => const ActivityShareService())
     ..registerLazySingleton(() => SafetyService(sl()))
     ..registerLazySingleton(() => FriendshipService(sl()))
     ..registerLazySingleton<AuthRemoteDataSource>(
